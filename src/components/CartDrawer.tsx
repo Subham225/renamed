@@ -619,7 +619,7 @@ export default function CartDrawer({
         if (data.success && data.url) {
           window.location.href = data.url;
         } else {
-          console.error('PhonePe API Error: ' + (JSON.stringify(data.details) || data.error || 'Unknown error')); setPaymentError('PhonePe API Error: ' + (JSON.stringify(data.details) || data.error || 'Unknown error'));
+          console.error('PhonePe API Error: ' + (data.details || data.error || 'Unknown error')); setPaymentError('PhonePe API Error: ' + (data.details || data.error || 'Unknown error'));
         }
       }).catch(err => {
         setIsLoading(false);
