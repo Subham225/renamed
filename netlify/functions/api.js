@@ -17,8 +17,10 @@ app.post('*/create-phonepe-payment', async (req, res) => {
     const { order, successUrl, cancelUrl } = req.body;
     
     const envMerchantId = process.env.PHONEPE_MERCHANT_ID || '';
-    // Use production if PHONEPE_ENV is 'production' OR if a real merchant ID is provided (doesn't have PGTEST)
-    const isProd = process.env.PHONEPE_ENV === 'production' || (envMerchantId.length > 5 && !envMerchantId.includes('PGTEST'));
+    // If explicitly sandbox, force it. Otherwise infer from environment or keys.
+    const isProd = process.env.PHONEPE_ENV === 'sandbox' || process.env.PHONEPE_ENV === 'test' 
+      ? false 
+      : (process.env.PHONEPE_ENV === 'production' || (envMerchantId.length > 5 && !envMerchantId.includes('PGTEST')));
     
     const merchantId = isProd ? (envMerchantId || 'M22E1O78XXTHQ') : 'PGTESTPAYUAT86';
     const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
@@ -92,7 +94,9 @@ app.post('*/check-phonepe-status', async (req, res) => {
     const { transactionId } = req.body;
     
     const envMerchantId = process.env.PHONEPE_MERCHANT_ID || '';
-    const isProd = process.env.PHONEPE_ENV === 'production' || (envMerchantId.length > 5 && !envMerchantId.includes('PGTEST'));
+    const isProd = process.env.PHONEPE_ENV === 'sandbox' || process.env.PHONEPE_ENV === 'test' 
+      ? false 
+      : (process.env.PHONEPE_ENV === 'production' || (envMerchantId.length > 5 && !envMerchantId.includes('PGTEST')));
     const merchantId = isProd ? (envMerchantId || 'M22E1O78XXTHQ') : 'PGTESTPAYUAT86';
     const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
     const saltIndex = isProd ? (process.env.PHONEPE_SALT_INDEX || '1') : '1';

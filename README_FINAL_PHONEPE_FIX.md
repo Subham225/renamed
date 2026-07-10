@@ -1,11 +1,13 @@
-Bhai, apni je screenshot ta diyechen ote clear dekha jacche je PhonePe er payment page e upor-e `PGTESTPAYUAT86` lekha asche. Er mane holo Netlify theke production er mode ta thik bhabe apply hoche na, ba `PHONEPE_ENV` variable ta Netlify theke read hote parche na, jar jonne o automatic test/sandbox mode-e chole jacche.
+Bhai, ebar ashol karon ta dhora poreche! 
+Amar lekha code ta ektu beshi smart hote giye problem korechilo: jodi apni Netlify te environment variable e ashol Merchant ID (live credentials) boshiye rakhen, tahole amar code `PHONEPE_ENV=sandbox` theke thakleo force kore prod mode e niye jacchilo.
 
-**Ami code-e ekta choto fix kore diyechi:**
-Ekhon theke Netlify jodi `PHONEPE_ENV=production` thik bhabe read nao korte pare, kintu apni Netlify dashboard e ashol `PHONEPE_MERCHANT_ID` set kore thaken (jar nam e 'PGTEST' nei), tahole ei code ta nijey thekei dhore nebe je apni production e achen, aar live payment e niye jabe.
+Tai jodi kono bhul / non-activated merchant id thake, o bar bar production URL e request pathacchilo ar tai "Error 404" (Not Found) aschilo. Aar ashol merchant id theke thakar jonne o kono vabei sandbox e fire jacchilo na.
+
+**Ami code-e ekta fix kore diyechi:**
+Ekhon jodi apni Netlify te `PHONEPE_ENV` er value `sandbox` set kora thake, tahole baki onno jotoi Live ID theke thakuk na keno, o strict bhabe test/sandbox mode ei jabe! Ete ar 404 error ba mode clash korbena.
 
 **Apnake ekhon ki korte hobe?**
-1. Ami ei update ta kore diyechi `netlify/functions/api.js` file er moddhe.
-2. Apni just ekbar file gulo (ekhon je zip download korben theke) extract kore GitHub-e notun update gulo upload kore din (jemon age korlen).
-3. Ebar Netlify te build hoye gelei, jokhon checkout korben tokhon aar `PGTESTPAYUAT86` dekhabe na, apnar ashol live PhonePe Payment page khule jabe. (Ekdom ashol merchant nam dekhabe upore).
-
-**Mone Rakhben:** Netlify er dashboard e **Site configuration > Environment variables** e giye apnar ashol `PHONEPE_MERCHANT_ID` aar `PHONEPE_SALT_KEY` jeno thik thik bhabe add kora thake setao ekbar check kore neben, noyto kintu kaaj korbena.
+1. Ekhon je files gulo download korben (zip theke extract kore), setake GitHub e upload (push) kore din.
+2. Netlify te jodi apni ekhon **test** korte chan, tahole `PHONEPE_ENV` = `sandbox` rakhar pasapasi baki Merchant ID / Salt key gulo delete kore dite paren ba theke dileo kkhoti nei ekhon.
+3. Netlify te build shesh hole, test payment ekdom thik bhabe kaaj korbe. (Test payment e PGTESTPAYUAT86 dekhabe).
+4. Aar jokhon ashol taka nite chaiben, tokhon shudu `PHONEPE_ENV` take delete kore deben ba `production` likhe deben ar sathe ashol Merchant ID / Salt Key jure deben (tobe seta obbosoi PhonePe theke approved thakte hobe, nahole 404 asbe).
