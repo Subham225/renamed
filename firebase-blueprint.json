@@ -1,0 +1,114 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Item template in catalog database",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "category": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" }
+      },
+      "required": ["id", "name", "price", "category", "image", "description"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A placed checkout order with full receipt details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "recipientPhone": { "type": "string" },
+        "streetAddress": { "type": "string" },
+        "pincode": { "type": "string" },
+        "city": { "type": "string" },
+        "landmark": { "type": "string" },
+        "paymentMode": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "customerName",
+        "customerPhone",
+        "recipientName",
+        "recipientPhone",
+        "streetAddress",
+        "pincode",
+        "city",
+        "paymentMode",
+        "total",
+        "status",
+        "date"
+      ]
+    },
+    "Slide": {
+      "title": "Slide",
+      "description": "Promo home page carousel banner slice with customizable picture",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "image": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "buttonText": { "type": "string" },
+        "accentColor": { "type": "string" }
+      },
+      "required": ["id", "image", "title", "subtitle"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Custom lookup gallery picture for front page display, managed by administrators",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "image": { "type": "string" }
+      },
+      "required": ["id", "image"]
+    },
+    "DeliveryAgent": {
+      "title": "DeliveryAgent",
+      "description": "Information about registered delivery riders (such as Google integrated or passcode)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "type": { "type": "string" },
+        "passcode": { "type": "string" }
+      },
+      "required": ["id", "name", "type"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Exhaustive product list synced across devices"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer purchase transaction records"
+    },
+    "/slides/{slideId}": {
+      "schema": "Slide",
+      "description": "Front page promo carousel slides state dynamic controls"
+    },
+    "/gallery/{galleryId}": {
+      "schema": "GalleryItem",
+      "description": "Visual decoration lookbook items list"
+    },
+    "/delivery_riders/{riderId}": {
+      "schema": "DeliveryAgent",
+      "description": "Dynamically registered active deliverers"
+    }
+  }
+}

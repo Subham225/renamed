@@ -1,0 +1,299 @@
+186:        if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
+187-        if (sortBy === "reviews")
+188:          return (b.reviewsCount || 0) - (a.reviewsCount || 0);
+189-        return 0;
+190-      });
+191-    }
+192-
+193-    return list;
+194-  }, [products, categoryId, searchQuery, sortBy]);
+195-
+196-  const displayedProducts = processedProducts.slice(0, visibleCount);
+197-
+198-  const ProductCard = ({ prod }: { prod: Product }) => {
+199-    const discount = prod.originalPrice
+200-      ? Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)
+201-      : 0;
+202-
+203:    return (
+204-      <div
+205-        id={`product-card-${prod.id}`}
+206-        key={prod.id}
+207-        onClick={() => onSelectProduct(prod)}
+208-        className="bg-white rounded-2xl overflow-hidden border border-slate-100/90 hover:border-slate-200 hover:shadow-md transition-all duration-300 group flex flex-col justify-between cursor-pointer text-left h-full"
+209-      >
+210-        <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0">
+211-          <img
+212-            src={prod.image}
+213-            alt={prod.name}
+214-            referrerPolicy="no-referrer"
+215-            onError={(e) => {
+216-              (e.target as HTMLImageElement).src = "/logo.png";
+217-            }}
+218-            className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-300"
+219-          />
+220-          {discount > 0 && (
+221-            <span className="absolute top-2 left-2 bg-red-600 text-white text-[8px] sm:text-[10px] font-black tracking-wider px-2 py-0.5 rounded-md uppercase shadow-sm">
+222-              {discount}% OFF
+223-            </span>
+224-          )}
+225-          {prod.adminNote && (
+226-            <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-0.5 shadow-sm uppercase">
+227-              <Zap className="w-2.5 h-2.5 fill-current" /> {prod.adminNote}
+228-            </span>
+229-          )}
+230-        </div>
+231-        
+232-        <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between gap-3">
+233-          <div className="space-y-1">
+234-            <div className="flex items-center gap-1 t-9 font-semibold text-amber-500">
+235-              <div className="flex items-center bg-amber-50 rounded px-1 sm:px-1.5 py-0.5 border border-amber-100 gap-0.5 text-[9px] sm:text-xs">
+236-                <Star className="w-2.5 h-2.5 fill-current" />
+237-                <span>{prod.rating}</span>
+238-              </div>
+239-              <span className="text-[10px] sm:text-xs text-slate-400 font-normal">
+240-                ({prod.reviewsCount})
+241-              </span>
+242-            </div>
+243-            <h4 className="font-extrabold text-slate-800 text-xs sm:text-sm leading-snug line-clamp-2 uppercase tracking-tight group-hover:text-pink-600 transition-colors">
+244-              {prod.name}
+245-            </h4>
+246-          </div>
+247-          <div className="flex items-end justify-between mt-1">
+248-            <div className="flex flex-col">
+249-              <div className="flex items-baseline gap-1 sm:gap-1.5">
+250-                <span className="text-sm sm:text-base font-black text-slate-950">
+251-                  ₹
+252-                  {prod.options?.hasWeightOptions
+253-                    ? getWeightPrice(prod, getStartingWeight(prod))
+254-                    : prod.price}
+255-                </span>
+256-                {prod.originalPrice && (
+257-                  <span className="text-[10px] sm:text-xs text-slate-400 line-through font-medium">
+258-                    ₹{prod.originalPrice}
+259-                  </span>
+260-                )}
+261-              </div>
+262-              <span className="text-[7.5px] sm:text-[10px] text-pink-500 font-extrabold tracking-wide uppercase mt-0.5">
+263-                Incl. taxes
+264-              </span>
+265-            </div>
+266-            <div className="bg-slate-900 hover:bg-slate-800 text-white p-2 rounded-lg sm:rounded-xl transition-all shadow-sm group-hover:shadow-md shrink-0">
+267-              <ShoppingBag className="w-4 h-4" />
+268-            </div>
+269-          </div>
+270-        </div>
+271-      </div>
+272-    );
+273-  };
+274-
+275-  const renderCuratedRow = (title: string, subtitle: string, items: Product[]) => {
+276-    if (items.length === 0) return null;
+277:    return (
+278-      <div className="max-w-7xl mx-auto px-4 py-8 w-full border-b border-slate-100 last:border-0">
+279-        <div className="flex items-center justify-between mb-6">
+280-          <div>
+281-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{title}</h3>
+282-            {subtitle && <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">{subtitle}</p>}
+283-          </div>
+284-        </div>
+285-        <div className="overflow-x-auto pb-4 custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+286-          <div className="flex gap-4 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-6 min-w-max sm:min-w-0">
+287-            {items.slice(0, 8).map(prod => (
+288-              <div key={prod.id} className="w-[200px] sm:w-auto h-full">
+289-                <ProductCard prod={prod} />
+290-              </div>
+291-            ))}
+292-          </div>
+293-        </div>
+294-      </div>
+295-    );
+296-  };
+297-
+298-  const renderCuratedBanner = (title: string, subtitle: string, items: Product[], bannerImage: string, fallbackBg: string) => {
+299-    if (items.length === 0) return null;
+300:    return (
+301-      <div className="max-w-7xl mx-auto px-4 py-8 w-full border-b border-slate-100 last:border-0">
+302-        {/* Banner */}
+303-        <div className="relative w-full h-40 sm:h-56 rounded-2xl sm:rounded-3xl overflow-hidden mb-8 group shadow-sm">
+304-          {bannerImage ? (
+305-            <img 
+306-              src={bannerImage} 
+307-              alt={title}
+308-              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+309-            />
+310-          ) : (
+311-            <div className={`w-full h-full bg-gradient-to-r ${fallbackBg}`} />
+312-          )}
+313-          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
+314-          <div className="absolute inset-0 flex flex-col justify-center px-8 sm:px-12 text-white">
+315-            <h3 className="text-2xl sm:text-4xl font-black uppercase tracking-tight drop-shadow-md mb-2">{title}</h3>
+316-            <p className="text-xs sm:text-sm font-bold tracking-wide text-white/90 uppercase">{subtitle}</p>
+317-          </div>
+318-        </div>
+319-
+320-        {/* Products */}
+321-        <div className="overflow-x-auto pb-4 custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+322-          <div className="flex gap-4 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-6 min-w-max sm:min-w-0">
+323-            {items.slice(0, 8).map(prod => (
+324-              <div key={prod.id} className="w-[200px] sm:w-auto h-full">
+325-                <ProductCard prod={prod} />
+326-              </div>
+327-            ))}
+328-          </div>
+329-        </div>
+330-      </div>
+331-    );
+332-  };
+333-
+334:  return (
+335-    <div className="w-full bg-slate-50 min-h-screen flex flex-col">
+336-      <Helmet>
+337-        <title>{categoryName} - Rocx Cakes</title>
+338-      </Helmet>
+339-
+340-      {/* Hero Banner Section */}
+341-      <div className="relative w-full h-[250px] sm:h-[350px] overflow-hidden">
+342-        <img src={pageData.banner} alt={categoryName} className="w-full h-full object-cover object-center" />
+343-        <div className={`absolute inset-0 bg-gradient-to-t ${pageData.bgStyle}`} />
+344-        
+345-        {/* Navigation Over Banner */}
+346-        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+347-          <button
+348-            onClick={onBack}
+349-            className="flex items-center gap-1.5 text-xs font-black text-white hover:text-white/80 transition-colors uppercase tracking-wider bg-black/20 px-3 py-2 rounded-full backdrop-blur-sm border border-white/10"
+350-          >
+351-            <ArrowLeft className="w-4 h-4" /> Back to Home
+352-          </button>
+353-          <button
+354-            onClick={handleShare}
+355-            className="flex items-center gap-1.5 text-xs font-black text-white hover:text-white/80 transition-colors uppercase tracking-wider bg-black/20 px-3 py-2 rounded-full backdrop-blur-sm border border-white/10"
+356-          >
+357-            {isCopied ? (
+358-              <>
+359-                <Check className="w-4 h-4" /> Copied
+360-              </>
+361-            ) : (
+362-              <>
+363-                <Share2 className="w-4 h-4" /> Share
+364-              </>
+365-            )}
+366-          </button>
+367-        </div>
+368-
+369-        {/* Banner Content */}
+370-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 mt-8">
+371-          <h1 className="text-4xl sm:text-5xl font-black text-white uppercase tracking-tight mb-4 drop-shadow-sm">
+372-            {categoryName}
+373-          </h1>
+374-          <p className={`text-sm sm:text-base font-bold ${pageData.textColor} max-w-2xl drop-shadow-sm`}>
+375-            {pageData.text}
+376-          </p>
+377-        </div>
+378-      </div>
+379-
+380-      {/* Subcategories Grid */}
+381-      {subs.length > 0 && (
+382-        <div className="max-w-7xl mx-auto px-4 py-10 w-full">
+383-          <div className="text-center mb-8">
+384-            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Types of {categoryName}</h3>
+385-            <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-wider">Explore Collections</p>
+386-          </div>
+387-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+388-            {subs.map((sub, i) => (
+389-              <div 
+390-                key={sub.id || i}
+391-                onClick={() => onSelectCategory?.(sub.id as CategoryID)}
+392-                className="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col"
+393-              >
+394-                <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-50 mb-3 relative">
+395-                  {sub.image ? (
+396-                    <img 
+397-                      src={sub.image} 
+398-                      alt={sub.name}
+399-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+400-                    />
+401-                  ) : (
+402-                    <div className="w-full h-full flex items-center justify-center bg-slate-100">
+403-                      <Sparkles className="w-8 h-8 text-slate-300" />
+404-                    </div>
+405-                  )}
+406-                  <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+407-                </div>
+408-                <h4 className="text-center font-extrabold text-xs sm:text-sm text-slate-800 leading-tight group-hover:text-pink-600 transition-colors">
+409-                  {sub.name}
+410-                </h4>
+411-              </div>
+412-            ))}
+413-          </div>
+414-        </div>
+415-      )}
+416-
+417-      {/* SPECIAL CURATED SECTIONS FOR CAKES */}
+418-      {categoryId === 'cakes' && (
+419-        <div className="w-full bg-white">
+420-          {renderCuratedRow("Cakes with Flowers", "Perfect Combos", cakesWithFlowers)}
+421-          {renderCuratedBanner(
+422-            "Cakes For Him", 
+423-            "The finest selections for him", 
+424-            cakesForHim, 
+425-            storeConfig?.cakesForHimBannerImage || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=80",
+426-            "from-slate-800 to-slate-900"
+427-          )}
+428-          {renderCuratedBanner(
+429-            "Cakes For Her", 
+430-            "Elegant and sweet just like her", 
+431-            cakesForHer, 
+432-            storeConfig?.cakesForHerBannerImage || "https://images.unsplash.com/photo-1514517220017-8ce97a34a7b6?auto=format&fit=crop&w=1200&q=80",
+433-            "from-pink-500 to-pink-700"
+434-          )}
+435-        </div>
+436-      )}
+437-
+438-      {/* SPECIAL CURATED SECTIONS FOR FLOWERS */}
+439-      {categoryId === 'flowers' && (
+440-        <div className="w-full bg-white">
+441-          {renderCuratedRow("Flowers with Cakes", "A Complete Surprise", flowersWithCakes)}
+442-          {renderCuratedRow("Flowers with Chocolates", "Sweet & Romantic", flowersWithChocolates)}
+443-        </div>
+444-      )}
+445-
+446-      {/* Products Section Header & Filters */}
+447-      <div className={`max-w-7xl mx-auto px-4 w-full ${subs.length === 0 && categoryId !== 'cakes' && categoryId !== 'flowers' ? 'pt-8' : 'pt-8'}`}>
+448-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+449-          <div>
+450-            <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+451-              All {categoryName}
+452-              <span className="text-[10px] bg-slate-200 text-slate-700 font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
+453-                {processedProducts.length} Items
+454-              </span>
+455-            </h2>
+456-          </div>
+457-          
+458-          <div className="flex flex-col sm:flex-row items-center gap-3">
+459-            {/* Search Box */}
+460-            <div className="relative w-full sm:w-64">
+461-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+462-              <input
+463-                type="text"
+464-                placeholder="Search products..."
+465-                value={searchQuery}
+466-                onChange={(e) => setSearchQuery(e.target.value)}
+467-                className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all placeholder:text-slate-400"
+468-              />
+469-            </div>
+470-            {/* Sort Dropdown */}
+471-            <div className="relative w-full sm:w-auto">
+472-              <SlidersHorizontal className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+473-              <select
+474-                value={sortBy}
+475-                onChange={(e) => setSortBy(e.target.value as any)}
+476-                className="w-full sm:w-auto pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer"
+477-              >
+478-                <option value="default">Sort: Recommended</option>
+479-                <option value="priceAsc">Price Tags: Low to High (₹)</option>
+480-                <option value="priceDesc">Price Tags: High to Low (₹)</option>
+481-                <option value="rating">User Ratings: Stars ⭐</option>
+482-                <option value="reviews">Popular Choice: Reviews Count</option>
+483-              </select>
+484-            </div>
