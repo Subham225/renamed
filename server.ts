@@ -758,8 +758,12 @@ Delivery: ${order.deliveryDate || 'N/A'} (${order.deliveryTimeSlot || 'N/A'})
       // Read PhonePe settings or default to official pre-prod sandbox credentials for offline-first testing
       // Always use sandbox keys for now since Prod keys are returning 404
       // PROD keys
-      const isProd = process.env.PHONEPE_ENV === 'production';
-      const merchantId = isProd ? (process.env.PHONEPE_MERCHANT_ID || 'M22E1O78XXTHQ') : 'PGTESTPAYUAT86';
+      const envEnv = String(process.env.PHONEPE_ENV || '').trim().toLowerCase();
+      const envMerchant = (process.env.PHONEPE_MERCHANT_ID || '').trim();
+      
+      const isProd = envEnv === 'production' && envMerchant.length > 5 && envMerchant !== 'M22E1O78XXTHQ';
+      
+      const merchantId = isProd ? envMerchant : 'PGTESTPAYUAT86';
       const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
       const saltIndex = isProd ? (process.env.PHONEPE_SALT_INDEX || '1') : '1';
       const baseUrl = isProd ? 'https://api.phonepe.com/apis/hermes' : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
@@ -849,8 +853,12 @@ Delivery: ${order.deliveryDate || 'N/A'} (${order.deliveryTimeSlot || 'N/A'})
 
       // Always use sandbox keys for now since Prod keys are returning 404
       // PROD keys
-      const isProd = process.env.PHONEPE_ENV === 'production';
-      const merchantId = isProd ? (process.env.PHONEPE_MERCHANT_ID || 'M22E1O78XXTHQ') : 'PGTESTPAYUAT86';
+      const envEnv = String(process.env.PHONEPE_ENV || '').trim().toLowerCase();
+      const envMerchant = (process.env.PHONEPE_MERCHANT_ID || '').trim();
+      
+      const isProd = envEnv === 'production' && envMerchant.length > 5 && envMerchant !== 'M22E1O78XXTHQ';
+      
+      const merchantId = isProd ? envMerchant : 'PGTESTPAYUAT86';
       const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
       const saltIndex = isProd ? (process.env.PHONEPE_SALT_INDEX || '1') : '1';
       const baseUrl = isProd ? 'https://api.phonepe.com/apis/hermes' : 'https://api-preprod.phonepe.com/apis/pg-sandbox';

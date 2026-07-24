@@ -248,7 +248,24 @@ export interface StoreConfigItem {
   tag: string;
 }
 
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  pincodes: string;
+  basePrice: number;
+  allowExpress: boolean;
+}
+
+export interface DeliveryTimeSlot {
+  id: string;
+  label: string;
+  surcharge: number;
+  type: "standard" | "fixed" | "midnight" | "express";
+}
+
 export interface StoreConfig {
+  deliveryZones?: DeliveryZone[];
+  deliveryTimeSlots?: DeliveryTimeSlot[];
   aboutPoints: string[];
   aboutBgImage: string;
   cakeSubcategories: StoreConfigItem[];

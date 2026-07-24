@@ -45,6 +45,7 @@ export default function CategoryDetailPage({
   isRichLayout = false,
 }: CategoryDetailPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [randomOrderMap] = useState(() => new Map<string, number>());
   const [sortBy, setSortBy] = useState<
     "default" | "priceAsc" | "priceDesc" | "rating" | "reviews"
   >("default");
@@ -188,10 +189,17 @@ export default function CategoryDetailPage({
           return (b.reviewsCount || 0) - (a.reviewsCount || 0);
         return 0;
       });
+
+    } else {
+      list.sort((a, b) => {
+        if (!randomOrderMap.has(a.id)) randomOrderMap.set(a.id, Math.random());
+        if (!randomOrderMap.has(b.id)) randomOrderMap.set(b.id, Math.random());
+        return randomOrderMap.get(a.id)! - randomOrderMap.get(b.id)!;
+      });
     }
 
     return list;
-  }, [products, categoryId, searchQuery, sortBy]);
+  }, [products, categoryId, searchQuery, sortBy, randomOrderMap]);
 
   const displayedProducts = processedProducts;
 

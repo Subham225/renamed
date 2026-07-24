@@ -52,6 +52,7 @@ interface CartDrawerProps {
   categories?: Category[];
   products?: Product[];
   onTrackOrder?: (orderId: string) => void;
+  storeConfig?: import("../types").StoreConfig;
 }
 
 type CheckoutStep =
@@ -87,6 +88,7 @@ export default function CartDrawer({
   categories = [],
   products = [],
   onTrackOrder,
+  storeConfig,
 }: CartDrawerProps) {
   // Multi-step checkout states
   const [step, setStep] = useState<CheckoutStep>("cart");
@@ -341,18 +343,87 @@ export default function CartDrawer({
 
   let deliverySubtotal = 0;
   if (cartItems.length > 0) {
-    const isTwoHourSelected =
-      formData.deliveryTimeSlot === "2 Hours Express Delivery" ||
-      (formData.deliveryTimeSlot === "Any Time On Specified Date" &&
-        cartItems.some(
-          (item) =>
-            item.product.isTwoHourDelivery ||
-            item.product.category === "two_hours_delivery" ||
-            item.product.categories?.includes("two_hours_delivery"),
-        ));
+    // 1. Determine zone base price
+    let basePrice = 250;
+    const activePincode = formData.pincode || deliveryPincode || "";
+    
+    if (storeConfig?.deliveryZones && storeConfig.deliveryZones.length > 0) {
+      const matchedZone = storeConfig.deliveryZones.find(z => {
+        if (z.pincodes === "*") return false;
+        const pins = z.pincodes.split(',').map(p => p.trim());
+        return pins.includes(activePincode);
+      });
+      
+      if (matchedZone) {
+        basePrice = matchedZone.basePrice;
+      } else {
+        const defaultZone = storeConfig.deliveryZones.find(z => z.pincodes === "*");
+        if (defaultZone) basePrice = defaultZone.basePrice;
+      }
+    } else {
+      // Hardcoded fallback according to rules if config is missing
+      const zone1 = ['721301', '721302', '721306', '721305'];
+      const zone2 = ['721101', '721102', '721303', '721145'];
+      if (zone1.includes(activePincode)) basePrice = 100;
+      else if (zone2.includes(activePincode)) basePrice = 200;
+      else basePrice = 250;
+    }
 
-    // As per requirement: "150rs sudhu 2 hours delivery te thakbe baad baki by default 100 hbe"
-    deliverySubtotal = isTwoHourSelected ? 150 : 100;
+    // 2. Determine time slot surcharge
+    let surcharge = 0;
+    const selectedSlotLabel = formData.deliveryTimeSlot;
+    
+    // Auto-select 2 hour express if any cart item demands it and user selected "Any Time"
+    const hasTwoHourProduct = cartItems.some(
+      (item) =>
+        item.product.isTwoHourDelivery ||
+        item.product.category === "two_hours_delivery" ||
+        item.product.categories?.includes("two_hours_delivery"),
+    );
+    
+    // Check if active zone allows express
+    let zoneAllowsExpress = true;
+    if (storeConfig?.deliveryZones && storeConfig.deliveryZones.length > 0) {
+      const matchedZone = storeConfig.deliveryZones.find(z => {
+        if (z.pincodes === "*") return false;
+        return z.pincodes.split(',').map(p => p.trim()).includes(activePincode);
+      });
+      if (matchedZone) {
+        zoneAllowsExpress = matchedZone.allowExpress;
+      } else {
+        const defaultZone = storeConfig.deliveryZones.find(z => z.pincodes === "*");
+        if (defaultZone) zoneAllowsExpress = defaultZone.allowExpress;
+      }
+    }
+
+    let effectiveSlotLabel = (hasTwoHourProduct && selectedSlotLabel === "Any Time On Specified Date") 
+      ? "2 Hours Express Delivery" 
+      : selectedSlotLabel;
+      
+    if (effectiveSlotLabel === "2 Hours Express Delivery" && (!zoneAllowsExpress || !hasTwoHourProduct)) {
+        if (!hasTwoHourProduct) {
+            // User manually selected it? If so, we only allow it if hasTwoHourProduct is true? No, the rule is anyone can choose it.
+            // Oh wait, can anyone choose express? "If someone choose 2 hours express delivery ₹ 50 will be added... (only Available in Kharagpur ,midnapur,salua,kalaikunda)"
+            // So yes, anyone can choose it if zone allows.
+        }
+        if (!zoneAllowsExpress) {
+            effectiveSlotLabel = "Any Time On Specified Date"; // fallback
+        }
+    }
+
+    if (storeConfig?.deliveryTimeSlots && storeConfig.deliveryTimeSlots.length > 0) {
+      const matchedSlot = storeConfig.deliveryTimeSlots.find(ts => ts.label === effectiveSlotLabel);
+      if (matchedSlot) {
+        surcharge = matchedSlot.surcharge;
+      }
+    } else {
+      // Hardcoded fallback
+      if (effectiveSlotLabel === "2 Hours Express Delivery") surcharge = 50;
+      else if (effectiveSlotLabel === "Midnight Delivery (11:30 PM - 12:00 AM)") surcharge = 100;
+      else if (effectiveSlotLabel !== "Any Time On Specified Date") surcharge = 100; // Fixed time slots
+    }
+
+    deliverySubtotal = basePrice + surcharge;
   }
 
   const activeCouponObject = coupons.find(
@@ -491,12 +562,24 @@ export default function CartDrawer({
     setStep("checkout_payment");
   };
 
-  const isTwoHourDeliveryAvailable = cartItems.some(
-    (item) =>
-      item.product.isTwoHourDelivery ||
-      item.product.category === "two_hours_delivery" ||
-      item.product.categories?.includes("two_hours_delivery"),
-  );
+  // Determine if active zone allows express delivery
+  const activePincodeForExpress = formData.pincode || deliveryPincode || "";
+  let activeZoneAllowsExpress = true; // Default fallback if no config
+  if (storeConfig?.deliveryZones && storeConfig.deliveryZones.length > 0) {
+    const matchedZone = storeConfig.deliveryZones.find(z => {
+      if (z.pincodes === "*") return false;
+      const pins = z.pincodes.split(',').map(p => p.trim());
+      return pins.includes(activePincodeForExpress);
+    });
+    if (matchedZone) {
+      activeZoneAllowsExpress = matchedZone.allowExpress;
+    } else {
+      const defaultZone = storeConfig.deliveryZones.find(z => z.pincodes === "*");
+      if (defaultZone) activeZoneAllowsExpress = defaultZone.allowExpress;
+    }
+  }
+
+  const isTwoHourDeliveryAvailable = activeZoneAllowsExpress;
 
   const hasCakeInCart = cartItems.some((item) => {
     const cat = (item.product.category || "").toLowerCase();
@@ -1314,55 +1397,39 @@ export default function CartDrawer({
                         }
                         className="w-full text-xs font-black p-3 border border-pink-200 bg-white rounded-xl focus:ring-1 focus:ring-pink-500 cursor-pointer"
                       >
-                        {isTwoHourDeliveryAvailable && (
-                          <option value="2 Hours Express Delivery">
-                            🚀 2 Hours Express Delivery - Only Available in
-                            Kharagpur, Midnapore, Salua, Kalaikunda
-                          </option>
+                        {storeConfig?.deliveryTimeSlots ? (
+                          storeConfig.deliveryTimeSlots.map(ts => {
+                            if (ts.type === "express" && !isTwoHourDeliveryAvailable) return null;
+                            return (
+                              <option key={ts.id} value={ts.label}>
+                                {ts.label} {ts.surcharge > 0 ? `(+₹${ts.surcharge})` : ''}
+                              </option>
+                            );
+                          })
+                        ) : (
+                          <>
+                            {isTwoHourDeliveryAvailable && (
+                              <option value="2 Hours Express Delivery">
+                                🚀 2 Hours Express Delivery - Only Available in Kharagpur, Midnapore, Salua, Kalaikunda
+                              </option>
+                            )}
+                            <option value="Any Time On Specified Date">Standard Delivery (Any Time)</option>
+                            <option value="Fixed Time: 10 AM to 11 AM">Fixed Time: 10 AM to 11 AM</option>
+                            <option value="Fixed Time: 11 AM to 12 PM">Fixed Time: 11 AM to 12 PM</option>
+                            <option value="Fixed Time: 12 PM to 1 PM">Fixed Time: 12 PM to 1 PM</option>
+                            <option value="Fixed Time: 1 PM to 2 PM">Fixed Time: 1 PM to 2 PM</option>
+                            <option value="Fixed Time: 2 PM to 3 PM">Fixed Time: 2 PM to 3 PM</option>
+                            <option value="Fixed Time: 3 PM to 4 PM">Fixed Time: 3 PM to 4 PM</option>
+                            <option value="Fixed Time: 4 PM to 5 PM">Fixed Time: 4 PM to 5 PM</option>
+                            <option value="Fixed Time: 5 PM to 6 PM">Fixed Time: 5 PM to 6 PM</option>
+                            <option value="Fixed Time: 6 PM to 7 PM">Fixed Time: 6 PM to 7 PM</option>
+                            <option value="Fixed Time: 7 PM to 8 PM">Fixed Time: 7 PM to 8 PM</option>
+                            <option value="Fixed Time: 8 PM to 9 PM">Fixed Time: 8 PM to 9 PM</option>
+                            <option value="Fixed Time: 10 PM to 11 PM">Fixed Time: 10 PM to 11 PM</option>
+                            <option value="Midnight Delivery (11:30 PM - 12:00 AM)">Midnight Delivery (11:30 PM - 12:00 AM)</option>
+                          </>
                         )}
-                        <option value="Standard Delivery (Any Time)">
-                          Standard Delivery (Any Time)
-                        </option>
-                        <option value="Fixed Time: 10 AM to 11 AM">
-                          Fixed Time: 10 AM to 11 AM
-                        </option>
-                        <option value="Fixed Time: 11 AM to 12 PM">
-                          Fixed Time: 11 AM to 12 PM
-                        </option>
-                        <option value="Fixed Time: 12 PM to 1 PM">
-                          Fixed Time: 12 PM to 1 PM
-                        </option>
-                        <option value="Fixed Time: 1 PM to 2 PM">
-                          Fixed Time: 1 PM to 2 PM
-                        </option>
-                        <option value="Fixed Time: 2 PM to 3 PM">
-                          Fixed Time: 2 PM to 3 PM
-                        </option>
-                        <option value="Fixed Time: 3 PM to 4 PM">
-                          Fixed Time: 3 PM to 4 PM
-                        </option>
-                          <option value="Fixed Time: 4 PM to 5 PM">
-                            Fixed Time: 4 PM to 5 PM
-                          </option>
-                          <option value="Fixed Time: 5 PM to 6 PM">
-                            Fixed Time: 5 PM to 6 PM
-                          </option>
-                          <option value="Fixed Time: 6 PM to 7 PM">
-                            Fixed Time: 6 PM to 7 PM
-                          </option>
-                          <option value="Fixed Time: 7 PM to 8 PM">
-                            Fixed Time: 7 PM to 8 PM
-                          </option>
-                          <option value="Fixed Time: 8 PM to 9 PM">
-                            Fixed Time: 8 PM to 9 PM
-                          </option>
-                          <option value="Fixed Time: 10 PM to 11 PM">
-                            Fixed Time: 10 PM to 11 PM
-                          </option>
-                          <option value="Midnight Delivery 11 PM to 12 AM">
-                            Midnight Delivery (11 PM to 12 AM)
-                          </option>
-                        </select>
+                      </select>
                         <p className="text-[10px] text-pink-600 font-black italic mt-0.5">
                           Selected slot will be baked & shipped according to
                           schedule!

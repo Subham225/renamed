@@ -16,13 +16,13 @@ app.post('*/create-phonepe-payment', async (req, res) => {
   try {
     const { order, successUrl, cancelUrl } = req.body;
     
-    const envMerchantId = process.env.PHONEPE_MERCHANT_ID || '';
-    // If explicitly sandbox, force it. Otherwise infer from environment or keys.
-    const isProd = process.env.PHONEPE_ENV === 'sandbox' || process.env.PHONEPE_ENV === 'test' 
-      ? false 
-      : (process.env.PHONEPE_ENV === 'production' || (envMerchantId.length > 5 && !envMerchantId.includes('PGTEST')));
+    const envEnv = String(process.env.PHONEPE_ENV || '').trim().toLowerCase();
+    const envMerchant = (process.env.PHONEPE_MERCHANT_ID || '').trim();
     
-    const merchantId = isProd ? (envMerchantId || 'M22E1O78XXTHQ') : 'PGTESTPAYUAT86';
+    // Only use production if explicitly asked and a real merchant ID is provided
+    const isProd = envEnv === 'production' && envMerchant.length > 5 && envMerchant !== 'M22E1O78XXTHQ';
+    
+    const merchantId = isProd ? envMerchant : 'PGTESTPAYUAT86';
     const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
     const saltIndex = isProd ? (process.env.PHONEPE_SALT_INDEX || '1') : '1';
     
@@ -93,11 +93,13 @@ app.post('*/check-phonepe-status', async (req, res) => {
   try {
     const { transactionId } = req.body;
     
-    const envMerchantId = process.env.PHONEPE_MERCHANT_ID || '';
-    const isProd = process.env.PHONEPE_ENV === 'sandbox' || process.env.PHONEPE_ENV === 'test' 
-      ? false 
-      : (process.env.PHONEPE_ENV === 'production' || (envMerchantId.length > 5 && !envMerchantId.includes('PGTEST')));
-    const merchantId = isProd ? (envMerchantId || 'M22E1O78XXTHQ') : 'PGTESTPAYUAT86';
+    const envEnv = String(process.env.PHONEPE_ENV || '').trim().toLowerCase();
+    const envMerchant = (process.env.PHONEPE_MERCHANT_ID || '').trim();
+    
+    // Only use production if explicitly asked and a real merchant ID is provided
+    const isProd = envEnv === 'production' && envMerchant.length > 5 && envMerchant !== 'M22E1O78XXTHQ';
+    
+    const merchantId = isProd ? envMerchant : 'PGTESTPAYUAT86';
     const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
     const saltIndex = isProd ? (process.env.PHONEPE_SALT_INDEX || '1') : '1';
     

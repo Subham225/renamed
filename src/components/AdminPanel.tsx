@@ -36,6 +36,7 @@ import {
 } from "../types";
 import { ACCESSORY_ADDONS } from "../data";
 import SubcategoryEditor from "./SubcategoryEditor";
+import DeliveryConfigEditor from "./DeliveryConfigEditor";
 import {
   subscribeToSellersFromFirestore,
   saveSellerToFirestore,
@@ -199,6 +200,9 @@ export default function AdminPanel({
     | "reviews"
     | "sellers"
     | "gifts_curation"
+    | "cakes_curation"
+    | "flowers_curation"
+    | "delivery"
   >("orders");
 
   const [reviewSelectedCategory, setReviewSelectedCategory] =
@@ -1010,6 +1014,16 @@ export default function AdminPanel({
                 }`}
               >
                 <span>🛠 Store Customizer</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("delivery")}
+                className={`py-3.5 px-4 flex items-center gap-1.5 border-b-2 shrink-0 transition-all cursor-pointer ${
+                  activeTab === "delivery"
+                    ? "border-pink-600 text-pink-600"
+                    : "border-transparent text-slate-500"
+                }`}
+              >
+                <span>🚚 Delivery & Pricing</span>
               </button>
               <button
                 onClick={() => setActiveTab("reviews")}
@@ -4243,6 +4257,17 @@ export default function AdminPanel({
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* TAB: DELIVERY ENGINE */}
+              {activeTab === "delivery" && (
+                <DeliveryConfigEditor
+                  localConfig={localConfig}
+                  onUpdateStoreConfig={(config) => {
+                    setLocalConfig(config);
+                    if (onUpdateStoreConfig) onUpdateStoreConfig(config);
+                  }}
+                />
               )}
 
               {/* TAB 8: STORE CUSTOMIZER SETTINGS PANEL */}

@@ -598,6 +598,28 @@ export async function deleteGalleryItemFromFirestore(itemId: string): Promise<vo
 
 // 6. STORE SETTINGS CONFIGURATION DB METHODS
 export const DEFAULT_STORE_CONFIG: StoreConfig = {
+  deliveryZones: [
+    { id: 'zone_1', name: 'Zone 1 (Local)', pincodes: '721301, 721302, 721306, 721305', basePrice: 100, allowExpress: true },
+    { id: 'zone_2', name: 'Zone 2 (Mid)', pincodes: '721101, 721102, 721303, 721145', basePrice: 200, allowExpress: true },
+    { id: 'zone_default', name: 'Rest of Areas', pincodes: '*', basePrice: 250, allowExpress: false }
+  ],
+  deliveryTimeSlots: [
+    { id: 'ts_standard', label: 'Any Time On Specified Date', surcharge: 0, type: 'standard' },
+    { id: 'ts_express', label: '2 Hours Express Delivery', surcharge: 50, type: 'express' },
+    { id: 'ts_midnight', label: 'Midnight Delivery (11:30 PM - 12:00 AM)', surcharge: 100, type: 'midnight' },
+    { id: 'ts_f_10_11', label: '10am-11am', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_11_12', label: '11am-12pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_12_1', label: '12pm-1pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_1_2', label: '1pm-2pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_2_3', label: '2pm-3pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_3_4', label: '3pm-4pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_4_5', label: '4pm-5pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_5_6', label: '5pm-6pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_6_7', label: '6pm-7pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_7_8', label: '7pm-8pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_8_9', label: '8pm-9pm', surcharge: 100, type: 'fixed' },
+    { id: 'ts_f_10_11pm', label: '10pm-11pm', surcharge: 100, type: 'fixed' }
+  ],
   aboutPoints: [
     'Freshly baked and hand-delivered with care.',
     'Personalized gifts, flowers, plants, cakes, and combo boxes in one place.',

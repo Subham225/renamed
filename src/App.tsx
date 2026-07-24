@@ -118,6 +118,7 @@ export default function App() {
   );
   const [categorySource, setCategorySource] = useState<'top' | 'grid' | 'nav'>('top');
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [appRandomOrderMap] = useState(() => new Map<string, number>());
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -352,6 +353,16 @@ export default function App() {
     let newConfig = { ...config };
     if (converted) {
       newConfig.cakeSubcategories = cleanSubcategories;
+    }
+
+    if (!newConfig.deliveryZones) {
+      newConfig.deliveryZones = DEFAULT_STORE_CONFIG.deliveryZones;
+      converted = true;
+    }
+
+    if (!newConfig.deliveryTimeSlots) {
+      newConfig.deliveryTimeSlots = DEFAULT_STORE_CONFIG.deliveryTimeSlots;
+      converted = true;
     }
 
     if (
@@ -1270,7 +1281,7 @@ export default function App() {
 
   // --- FILTERED PRODUCTS ---
   const filteredProducts = useMemo(() => {
-    return visibleProductsCatalog.filter((prod) => {
+    let list = visibleProductsCatalog.filter((prod) => {
       // Exclude add-ons / no category products from main product grids
       if (!prod.category || prod.category === "accessories") {
         return false;
@@ -1397,7 +1408,16 @@ export default function App() {
 
       return true;
     });
-  }, [selectedCategory, searchQuery, productsCatalog]);
+
+    if (!searchQuery.trim()) {
+      list.sort((a, b) => {
+        if (!appRandomOrderMap.has(a.id)) appRandomOrderMap.set(a.id, Math.random());
+        if (!appRandomOrderMap.has(b.id)) appRandomOrderMap.set(b.id, Math.random());
+        return appRandomOrderMap.get(a.id)! - appRandomOrderMap.get(b.id)!;
+      });
+    }
+    return list;
+  }, [selectedCategory, searchQuery, productsCatalog, appRandomOrderMap]);
 
   const selectedCategoryName = useMemo(() => {
     if (searchQuery.trim()) return `Search Results for "${searchQuery}"`;
@@ -1996,6 +2016,7 @@ export default function App() {
           setSelectedTrackOrderId(orderId);
           setIsTrackOpen(true);
         }}
+        storeConfig={storeConfig}
       />
 
       <WishlistDrawer
