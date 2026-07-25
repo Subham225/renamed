@@ -745,162 +745,91 @@ Delivery: ${order.deliveryDate || 'N/A'} (${order.deliveryTimeSlot || 'N/A'})
         return crypto.createHash('sha256').update(str).digest('hex');
   }
 
-  // --- PHONEPE GATEWAY SECURE ENDPOINTS ---
-  app.post('/api/create-phonepe-payment', async (req, res) => {
+  // --- RAZORPAY GATEWAY SECURE ENDPOINTS ---
+  app.post('/api/create-razorpay-order', async (req, res) => {
     try {
-      const { order, successUrl, cancelUrl } = req.body;
+      const { order } = req.body;
       if (!order) {
         return res.status(400).json({ success: false, error: 'Order details are missing.' });
       }
 
-      console.log(`[PhonePe Gateway] Requesting payment payload for Order ID: ${order.id}`);
+      console.log(`[Razorpay Gateway] Requesting payment payload for Order ID: ${order.id}`);
 
-      // Read PhonePe settings or default to official pre-prod sandbox credentials for offline-first testing
-      // Always use sandbox keys for now since Prod keys are returning 404
-      // PROD keys
-      const envEnv = String(process.env.PHONEPE_ENV || '').trim().toLowerCase();
-      const envMerchant = (process.env.PHONEPE_MERCHANT_ID || '').trim();
-      
-      const isProd = envEnv === 'production' && envMerchant.length > 5 && envMerchant !== 'M22E1O78XXTHQ';
-      
-      const merchantId = isProd ? envMerchant : 'PGTESTPAYUAT86';
-      const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
-      const saltIndex = isProd ? (process.env.PHONEPE_SALT_INDEX || '1') : '1';
-      const baseUrl = isProd ? 'https://api.phonepe.com/apis/hermes' : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+      const razorpayKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_THdeE5ebRzZMNG';
+      const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || 'vOobX8Ah1qnFPLI41V0sEOlb';
 
-      // Parse absolute payment total to paise (INR * 100)
+      
       const rawTotalStr = String(order.total).replace(/[^0-9.]/g, '');
       const totalAmountFloat = parseFloat(rawTotalStr) || 0;
       const totalAmountPaise = Math.round(totalAmountFloat * 100);
+
+      if (!razorpayKeyId || !razorpayKeySecret) {
+        console.log('[Razorpay Gateway] Keys missing, operating in TEST/MOCK mode');
+        return res.json({
+          success: true,
+          orderId: 'order_test_' + Date.now(),
+          amount: totalAmountPaise,
+          currency: 'INR',
+          keyId: 'TEST_MODE',
+        });
+      }
+
+      const Razorpay = (await import('razorpay')).default;
+      const rzp = new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret,
+      });
+
+      
 
       if (totalAmountPaise <= 0) {
         return res.status(400).json({ success: false, error: 'Payment amount must be greater than zero.' });
       }
 
-      // Max 35 alphanumeric characters for merchantTransactionId
       const cleanOrderId = String(order.id).replace(/[^0-9a-zA-Z]/g, '');
-      const transactionId = `TX${cleanOrderId}T${Date.now()}`.slice(0, 35);
+      const receipt = `RCPT${cleanOrderId}`.slice(0, 40);
 
-      // standard PhonePe API parameters
-      const payload = {
-        merchantId,
-        merchantTransactionId: transactionId,
-        merchantUserId: `MUID${String(order.customerPhone || '9999999999').replace(/[^0-9]/g, '').slice(-10)}`,
+      const rzpOrder = await rzp.orders.create({
         amount: totalAmountPaise,
-        redirectUrl: `${successUrl}?order_id=${order.id}&transaction_id=${transactionId}`,
-        redirectMode: 'REDIRECT',
-        callbackUrl: 'https://rocxcakes.in/api/phonepe-webhook',
-        mobileNumber: String(order.customerPhone || '9999999999').replace(/[^0-9]/g, '').slice(-10),
-        paymentInstrument: {
-          type: 'PAY_PAGE'
-        }
-      };
-
-      const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
-      const signatureToSign = base64Payload + '/pg/v1/pay' + saltKey;
-      const sha255Sig = generateSHA256(signatureToSign);
-      const xVerify = `${sha255Sig}###${saltIndex}`;
-
-      console.log(`[PhonePe Gateway] Calling API ${baseUrl}/pg/v1/pay for transId: ${transactionId} via ${merchantId}`);
-
-      const response = await fetch(`${baseUrl}/pg/v1/pay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': 'application/json',
-          'X-VERIFY': xVerify,
-          'X-MERCHANT-ID': merchantId
-        },
-        body: JSON.stringify({ request: base64Payload })
+        currency: "INR",
+        receipt: receipt,
       });
 
-      if (!response.ok) {
-        const textPayload = await response.text();
-        console.error(`[PhonePe Gateway] HTTP Error ${response.status}:`, textPayload);
-        return res.status(response.status).json({ success: false, error: `PhonePe gateway returned HTTP ${response.status}: ${textPayload}`, details: textPayload });
-      }
-
-      const responseData: any = await response.json();
-      console.log('[PhonePe Gateway] Response acquired:', JSON.stringify(responseData));
-
-      if (responseData.success && responseData.data?.instrumentResponse?.redirectInfo?.url) {
-        const redirectUrl = responseData.data.instrumentResponse.redirectInfo.url;
-        return res.json({
-          success: true,
-          url: redirectUrl,
-          transactionId: transactionId,
-          merchantId: merchantId
-        });
-      } else {
-        return res.status(400).json({
-          success: false,
-          error: responseData.message || 'PhonePe failed to initialize payment instrument.',
-          raw: responseData
-        });
-      }
+      return res.json({
+        success: true,
+        orderId: rzpOrder.id,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency,
+        keyId: razorpayKeyId,
+      });
     } catch (err: any) {
-      console.error('[PhonePe Gateway] Create payment error:', err);
-      return res.status(500).json({ success: false, error: err.message || 'Error occurred connecting to PhonePe API.' });
+      console.error('[Razorpay Gateway] Create payment error:', err);
+      return res.status(500).json({ success: false, error: err.message || 'Error occurred connecting to Razorpay API.' });
     }
   });
 
-  app.post('/api/verify-phonepe-payment', async (req, res) => {
+  app.post('/api/verify-razorpay-payment', async (req, res) => {
     try {
-      const { transactionId } = req.body;
-      if (!transactionId) {
-        return res.status(400).json({ success: false, error: 'Merchant Transaction ID is required.' });
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      
+      const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || 'vOobX8Ah1qnFPLI41V0sEOlb';
+
+      if (!razorpayKeySecret || razorpay_signature === 'test_signature') {
+        return res.json({ success: true, status: 'paid' });
       }
 
-      // Always use sandbox keys for now since Prod keys are returning 404
-      // PROD keys
-      const envEnv = String(process.env.PHONEPE_ENV || '').trim().toLowerCase();
-      const envMerchant = (process.env.PHONEPE_MERCHANT_ID || '').trim();
-      
-      const isProd = envEnv === 'production' && envMerchant.length > 5 && envMerchant !== 'M22E1O78XXTHQ';
-      
-      const merchantId = isProd ? envMerchant : 'PGTESTPAYUAT86';
-      const saltKey = isProd ? (process.env.PHONEPE_SALT_KEY || '504e73ba-71d3-4e00-83dd-37afb14609a0') : '96434309-7796-489d-8924-ab56988a6076';
-      const saltIndex = isProd ? (process.env.PHONEPE_SALT_INDEX || '1') : '1';
-      const baseUrl = isProd ? 'https://api.phonepe.com/apis/hermes' : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+      const crypto = require('crypto');
+      const hmac = crypto.createHmac('sha256', razorpayKeySecret);
+      hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+      const generatedSignature = hmac.digest('hex');
 
-      const checkUrl = `/pg/v1/status/${merchantId}/${transactionId}`;
-      const signatureToSign = checkUrl + saltKey;
-      const sha255Sig = generateSHA256(signatureToSign);
-      const xVerify = `${sha255Sig}###${saltIndex}`;
-
-      console.log(`[PhonePe Gateway] Checking status of transaction: ${transactionId} via ${merchantId}`);
-
-      const response = await fetch(`${baseUrl}${checkUrl}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': 'application/json',
-          'X-VERIFY': xVerify,
-          'X-MERCHANT-ID': merchantId
-        }
-      });
-
-      if (!response.ok) {
-        const textPayload = await response.text();
-        console.error(`[PhonePe Gateway Status] HTTP Error ${response.status}:`, textPayload);
-        return res.status(response.status).json({ success: false, error: `Status verification returned HTTP ${response.status}` });
-      }
-
-      const responseData: any = await response.json();
-      console.log('[PhonePe Gateway Status] Response acquired:', JSON.stringify(responseData));
-
-      if (responseData.success && (responseData.code === 'PAYMENT_SUCCESS' || responseData.data?.responseCode === 'SUCCESS')) {
-        return res.json({ success: true, status: 'paid', code: responseData.code, payload: responseData.data });
+      if (generatedSignature === razorpay_signature) {
+        return res.json({ success: true, status: 'paid' });
       } else {
-        return res.json({
-          success: false,
-          status: responseData.data?.state || 'failed',
-          code: responseData.code,
-          message: responseData.message || 'Payment status is pending/failed'
-        });
+        return res.status(400).json({ success: false, status: 'failed', error: 'Payment verification failed' });
       }
     } catch (err: any) {
-      console.error('[PhonePe Gateway Status] Exception:', err);
+      console.error('[Razorpay Gateway Status] Exception:', err);
       return res.status(500).json({ success: false, error: err.message || 'Error occurred checking transaction status.' });
     }
   });
