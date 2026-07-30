@@ -1,0 +1,6 @@
+{
+  "name": "ROCX Cakes & Gifts",
+  "description": "Mobile-friendly same day and express delivery ordering platform for cakes, flowers, plants, and personalized gifts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
