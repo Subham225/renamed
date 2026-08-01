@@ -76,7 +76,7 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
             <MapPin className="w-4 h-4 text-indigo-500" />
             Delivery Zones (Pincodes & Base Prices)
           </h4>
-          <button onClick={addZone} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-black rounded-lg hover:bg-indigo-100 flex items-center gap-1.5">
+          <button type="button" onClick={addZone} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-black rounded-lg hover:bg-indigo-100 flex items-center gap-1.5">
             <Plus className="w-3 h-3" /> Add Zone
           </button>
         </div>
@@ -125,7 +125,7 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
                 </label>
               </div>
               <div className="col-span-12 md:col-span-1 flex items-center justify-end h-full pt-4">
-                <button onClick={() => removeZone(idx)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100">
+                <button type="button" onClick={() => removeZone(idx)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -140,7 +140,7 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
             <Clock className="w-4 h-4 text-indigo-500" />
             Time Slots & Surcharges
           </h4>
-          <button onClick={addTimeSlot} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-black rounded-lg hover:bg-indigo-100 flex items-center gap-1.5">
+          <button type="button" onClick={addTimeSlot} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-black rounded-lg hover:bg-indigo-100 flex items-center gap-1.5">
             <Plus className="w-3 h-3" /> Add Time Slot
           </button>
         </div>
@@ -182,7 +182,7 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
                 />
               </div>
               <div className="col-span-12 md:col-span-1 flex items-center justify-end h-full pt-4">
-                <button onClick={() => removeTimeSlot(idx)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100">
+                <button type="button" onClick={() => removeTimeSlot(idx)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -192,7 +192,7 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
       </div>
 
       <div className="flex justify-end pt-4">
-        <button
+        <button type="button"
           onClick={saveConfig}
           className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black text-sm flex items-center gap-2 hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all"
         >

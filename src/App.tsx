@@ -2011,12 +2011,12 @@ export default function App() {
         coupons={coupons}
         onAddToCart={handleAddToCart}
         categories={categoriesCatalog}
+        storeConfig={storeConfig}
         products={visibleProductsCatalog}
         onTrackOrder={(orderId) => {
           setSelectedTrackOrderId(orderId);
           setIsTrackOpen(true);
         }}
-        storeConfig={storeConfig}
       />
 
       <WishlistDrawer

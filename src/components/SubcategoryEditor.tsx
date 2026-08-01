@@ -126,7 +126,7 @@ export default function SubcategoryEditor({
         </div>
       </div>
       <div className="space-y-4 max-h-[365px] overflow-y-auto pr-1">
-        {[0, 1, 2, 3].map((index) => {
+        {defaultIds.map((_, index) => {
           const item = list[index] || {
             id: defaultIds[index],
             name: defaultNames[index],

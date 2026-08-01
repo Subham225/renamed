@@ -11,7 +11,7 @@ import {
   Check,
   Sparkles,
   PhoneCall,
-  Share2,
+  Share2, Image,
 } from "lucide-react";
 import {
   Product,
@@ -313,7 +313,7 @@ export default function CategoryDetailPage({
     return (
       <div className="max-w-7xl mx-auto px-4 py-8 w-full border-b border-slate-100 last:border-0">
         {/* Banner */}
-        <div className="relative w-full h-40 sm:h-56 rounded-2xl sm:rounded-3xl overflow-hidden mb-8 group shadow-sm">
+        <div className="relative w-full h-24 sm:h-32 rounded-2xl sm:rounded-3xl overflow-hidden mb-8 group shadow-sm">
           {bannerImage ? (
             <img 
               src={bannerImage} 
@@ -346,6 +346,20 @@ export default function CategoryDetailPage({
 
   const isMainCategory = isRichLayout && ["cakes", "flowers", "plants", "gifts", "personalized_gifts", "chocolates", "combos", "anniversary"].includes(categoryId);
 
+
+  const tastePickSubcategories = storeConfig?.tastePickSubcategories?.length 
+    ? storeConfig.tastePickSubcategories 
+    : [
+        { id: "taste_chocolate", name: "Chocolate", tag: "Rich & Dark", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
+        { id: "taste_vanilla", name: "Vanilla", tag: "Classic Delight", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80" },
+        { id: "taste_strawberry", name: "Strawberry", tag: "Berry Love", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80" },
+        { id: "taste_butterscotch", name: "Butterscotch", tag: "Crunchy & Sweet", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80" },
+        { id: "taste_blackforest", name: "Black Forest", tag: "Cherry & Cream", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80" },
+        { id: "taste_redvelvet", name: "Red Velvet", tag: "Lush & Soft", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80" },
+        { id: "taste_pineapple", name: "Pineapple", tag: "Tropical", image: "https://images.unsplash.com/photo-1517593674696-6e3e1572c4ce?auto=format&fit=crop&w=400&q=80" },
+        { id: "taste_fruit", name: "Fruit Cake", tag: "Fresh & Healthy", image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80" }
+      ];
+
   return (
     <div className="w-full bg-slate-50 min-h-screen flex flex-col">
       <Helmet>
@@ -355,7 +369,7 @@ export default function CategoryDetailPage({
       {isMainCategory ? (
         <>
           {/* Hero Banner Section */}
-          <div className="relative w-full h-[250px] sm:h-[350px] overflow-hidden">
+          <div className="relative w-full h-[100px] sm:h-[130px] overflow-hidden">
             <img src={pageData.banner} alt={categoryName} className="w-full h-full object-cover object-center" />
             <div className={`absolute inset-0 bg-gradient-to-t ${pageData.bgStyle}`} />
             
@@ -431,6 +445,53 @@ export default function CategoryDetailPage({
             </div>
           )}
 
+      {categoryId === 'cakes' && isMainCategory && (
+        <div className="max-w-7xl mx-auto px-4 py-10 w-full border-t border-slate-100">
+          <div className="mb-6 flex justify-between items-end">
+            <div>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Your Taste Pick</h3>
+              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Delicious Selections</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {tastePickSubcategories.map((sub, i) => (
+              <div 
+                key={sub.id || i}
+                onClick={() => onSelectCategory?.(sub.id as CategoryID)}
+                className="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col"
+              >
+                <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-50 mb-3 relative">
+                  {sub.image ? (
+                    <img 
+                      src={sub.image} 
+                      alt={sub.name}
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                      <Image className="w-12 h-12 opacity-50" />
+                    </div>
+                  )}
+                  {sub.tag && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex items-end justify-center p-3">
+                      <span className="text-[10px] font-black text-white tracking-widest uppercase text-center drop-shadow-md">
+                        {sub.tag}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-center px-1">
+                  <h4 className="font-black text-sm text-slate-800 group-hover:text-pink-600 transition-colors line-clamp-1">
+                    {sub.name}
+                  </h4>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
           {/* SPECIAL CURATED SECTIONS FOR CAKES */}
           {categoryId === 'cakes' && isMainCategory && (
             <div className="w-full bg-white">
@@ -463,56 +524,7 @@ export default function CategoryDetailPage({
       ) : null}
 
       
-      {categoryId === 'cakes' && isMainCategory && (
-        <div className="max-w-7xl mx-auto px-4 py-10 w-full border-t border-slate-100">
-          <div className="mb-6 flex justify-between items-end">
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Your Taste Pick</h3>
-              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Delicious Selections</p>
-            </div>
-          </div>
-          <div className="overflow-x-auto pb-6 custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-            <div className="flex gap-4 min-w-max">
-               {processedProducts.filter(p => p.rating && p.rating >= 4.8).slice(0, 8).map(prod => (
-                 <div key={prod.id} className="w-[140px] sm:w-[160px] flex-none group">
-                   <div 
-                     className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md cursor-pointer border border-slate-100 transition-all duration-300 h-full flex flex-col"
-                     onClick={() => onSelectProduct?.(prod)}
-                   >
-                     <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0">
-                       <img
-                         src={prod.image}
-                         alt={prod.name}
-                         className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                         referrerPolicy="no-referrer"
-                         onError={(e) => {
-                           (e.target as HTMLImageElement).src = "/logo.png";
-                         }}
-                       />
-                       {prod.originalPrice && prod.price < prod.originalPrice && (
-                         <span className="absolute top-2 left-2 bg-red-600 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md uppercase shadow-sm">
-                           {Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% OFF
-                         </span>
-                       )}
-                     </div>
-                     <div className="p-3 text-center flex flex-col justify-between flex-1">
-                       <h4 className="font-extrabold text-[11px] text-slate-800 line-clamp-2 leading-tight group-hover:text-pink-600 transition-colors">
-                         {prod.name}
-                       </h4>
-                       <div className="mt-2 flex items-center justify-center gap-1.5">
-                         <span className="text-[13px] font-black text-pink-600">₹{prod.price}</span>
-                         {prod.originalPrice && (
-                           <span className="text-[10px] font-bold text-slate-400 line-through">₹{prod.originalPrice}</span>
-                         )}
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-               ))}
-            </div>
-          </div>
-        </div>
-      )}
+
       
       {/* Products Section Header & Filters */}
       <div className={`max-w-7xl mx-auto px-4 w-full ${isMainCategory ? 'pt-8' : 'pt-4'}`}>
@@ -567,7 +579,7 @@ export default function CategoryDetailPage({
               <SlidersHorizontal className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as CategoryID)}
                 className="w-full sm:w-auto pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer"
               >
                 <option value="default">Sort: Recommended</option>

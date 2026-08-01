@@ -398,6 +398,20 @@ export default function AdminPanel({
       id: sc.id,
       name: `${sc.name} (Cake Subcategory)`,
     }));
+    const currentTastePicks = storeConfig?.tastePickSubcategories?.length ? storeConfig.tastePickSubcategories : [
+  { id: "taste_chocolate", name: "Chocolate", tag: "Rich & Dark", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_vanilla", name: "Vanilla", tag: "Classic Delight", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_strawberry", name: "Strawberry", tag: "Berry Love", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_butterscotch", name: "Butterscotch", tag: "Crunchy & Sweet", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_blackforest", name: "Black Forest", tag: "Cherry & Cream", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_redvelvet", name: "Red Velvet", tag: "Lush & Soft", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_pineapple", name: "Pineapple", tag: "Tropical", image: "https://images.unsplash.com/photo-1517593674696-6e3e1572c4ce?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_fruit", name: "Fruit Cake", tag: "Fresh & Healthy", image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80" }
+];
+    const tastePickSubs = currentTastePicks.map((sc) => ({
+      id: sc.id,
+      name: `${sc.name} (Taste Pick)`,
+    }));
 
     const finalSubs = defaultSubs.map((ds) => {
       const match = dynamicSubs.find((ds2) => ds2.id === ds.id);
@@ -408,6 +422,7 @@ export default function AdminPanel({
       ...categories.map((c) => ({ id: c.id, name: c.name })),
       ...finalSubs,
       ...dynamicSubs.filter((ds) => !finalSubs.some((fs) => fs.id === ds.id)),
+      ...tastePickSubs,
     ];
 
     const uniqueMap = new Map();
@@ -935,7 +950,18 @@ export default function AdminPanel({
               >
                 <span>👫 Gifts Curation</span>
               </button>
+              
               <button
+                onClick={() => setActiveTab("taste_pick_curation")}
+                className={`py-3.5 px-4 flex items-center gap-1.5 border-b-2 shrink-0 transition-all cursor-pointer ${
+                  activeTab === "taste_pick_curation"
+                    ? "border-pink-600 text-pink-600"
+                    : "border-transparent text-slate-500"
+                }`}
+              >
+                <span>😋 Taste Pick</span>
+              </button>
+<button
                 onClick={() => setActiveTab("cakes_curation")}
                 className={`py-3.5 px-4 flex items-center gap-1.5 border-b-2 shrink-0 transition-all cursor-pointer ${
                   activeTab === "cakes_curation"
@@ -1815,7 +1841,90 @@ export default function AdminPanel({
                 </div>
               )}
 
-              {activeTab === "cakes_curation" && (
+              
+              {activeTab === "taste_pick_curation" && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-3xl p-5 border border-pink-100 shadow-sm text-left">
+                    <h3 className="text-sm sm:text-base font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-tight mb-4">
+                      <span>😋</span> Taste Pick Curation
+                    </h3>
+                    <p className="text-xs text-slate-500 mb-6 font-semibold">Select which flavor section each cake belongs to in the "Your Taste Pick" area.</p>
+                    <div className="relative mb-6">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search products..."
+                        className="w-full pl-9 pr-4 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                        onChange={(e) => {
+                          const val = e.target.value.toLowerCase();
+                          const items = document.querySelectorAll(".taste-pick-curation-item");
+                          items.forEach((item) => {
+                            const title = item.getAttribute("data-name")?.toLowerCase() || "";
+                            if (title.includes(val)) {
+                              (item as HTMLElement).style.display = "flex";
+                            } else {
+                              (item as HTMLElement).style.display = "none";
+                            }
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                      {products.map((prod) => {
+                        return (
+                          <div
+                            key={prod.id}
+                            data-name={prod.name}
+                            className="taste-pick-curation-item flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl flex-wrap gap-3"
+                          >
+                            <div className="flex items-center gap-3 min-w-[150px]">
+                              <img src={prod.image} className="w-12 h-12 object-cover rounded-xl" alt={prod.name} />
+                              <div>
+                                <h4 className="font-extrabold text-xs text-slate-800 line-clamp-1 max-w-[150px]">{prod.name}</h4>
+                                <span className="text-[9px] font-bold text-slate-500 uppercase">{prod.category}</span>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {(storeConfig?.tastePickSubcategories?.length ? storeConfig.tastePickSubcategories : [
+  { id: "taste_chocolate", name: "Chocolate", tag: "Rich & Dark", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_vanilla", name: "Vanilla", tag: "Classic Delight", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_strawberry", name: "Strawberry", tag: "Berry Love", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_butterscotch", name: "Butterscotch", tag: "Crunchy & Sweet", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_blackforest", name: "Black Forest", tag: "Cherry & Cream", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_redvelvet", name: "Red Velvet", tag: "Lush & Soft", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_pineapple", name: "Pineapple", tag: "Tropical", image: "https://images.unsplash.com/photo-1517593674696-6e3e1572c4ce?auto=format&fit=crop&w=400&q=80" },
+  { id: "taste_fruit", name: "Fruit Cake", tag: "Fresh & Healthy", image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80" }
+]).map((flavor) => {
+                                const isAssigned = prod.categories?.includes(flavor.id) || prod.category === flavor.id;
+                                return (
+                                  <button
+                                    key={flavor.id}
+                                    onClick={() => {
+                                      const cats = prod.categories ? [...prod.categories] : [];
+                                      if (isAssigned) {
+                                        const idx = cats.indexOf(flavor.id);
+                                        if (idx > -1) cats.splice(idx, 1);
+                                      } else {
+                                        if (!cats.includes(flavor.id)) cats.push(flavor.id);
+                                      }
+                                      onUpdateProduct({ ...prod, categories: cats });
+                                    }}
+                                    className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isAssigned ? "bg-pink-500 text-white border-pink-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                  >
+                                    {isAssigned ? `✓ ${flavor.name.replace(' (Taste Pick)', '')}` : `+ ${flavor.name.replace(' (Taste Pick)', '')}`}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+{activeTab === "cakes_curation" && (
                 <div className="space-y-6">
                   <div className="bg-white rounded-3xl p-5 border border-pink-100 shadow-sm text-left">
                     <h3 className="text-sm sm:text-base font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-tight mb-4">
@@ -4876,6 +4985,29 @@ export default function AdminPanel({
                         })}
                       </div>
                     </div>
+                    {/* YOUR TASTE PICK FLAVORS */}
+                    <SubcategoryEditor
+                      title="Your Taste Pick Flavors"
+                      icon="😋"
+                      description="Customize flavors for the 'Your Taste Pick' section in Cakes (Chocolate, Vanilla, etc.)"
+                      configKey="tastePickSubcategories"
+                      defaultIds={["taste_chocolate", "taste_vanilla", "taste_strawberry", "taste_butterscotch", "taste_blackforest", "taste_redvelvet", "taste_pineapple", "taste_fruit"]}
+                      defaultNames={["Chocolate", "Vanilla", "Strawberry", "Butterscotch", "Black Forest", "Red Velvet", "Pineapple", "Fruit Cake"]}
+                      defaultTags={["Rich & Dark", "Classic Delight", "Berry Love", "Crunchy & Sweet", "Cherry & Cream", "Lush & Soft", "Tropical", "Fresh & Healthy"]}
+                      defaultImages={[
+                        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1517593674696-6e3e1572c4ce?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80"
+                      ]}
+                      localConfig={localConfig}
+                      setLocalConfig={setLocalConfig}
+                    />
+
                     {/* THIRD PANEL: GIFTS & COMBOS CATEGORY CARDS */}
                     <SubcategoryEditor
                       title="4 Main Gift & Combo cards"

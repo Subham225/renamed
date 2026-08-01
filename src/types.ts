@@ -269,6 +269,7 @@ export interface StoreConfig {
   aboutPoints: string[];
   aboutBgImage: string;
   cakeSubcategories: StoreConfigItem[];
+  tastePickSubcategories?: StoreConfigItem[];
   flowerSubcategories?: StoreConfigItem[];
   plantSubcategories?: StoreConfigItem[];
   chocolateSubcategories?: StoreConfigItem[];
