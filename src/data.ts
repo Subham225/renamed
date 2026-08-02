@@ -66,10 +66,16 @@ export const CATEGORIES: Category[] = [
     displayOrder: 3,
   },
   {
+    id: 'birthday',
+    name: 'Birthday',
+    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=300&q=80',
+    displayOrder: 4,
+  },
+  {
     id: 'plants',
     name: 'Plants',
     image: 'https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=300&q=80',
-    displayOrder: 4,
+    displayOrder: 5,
   },
   {
     id: 'gifts',

@@ -1847,6 +1847,7 @@ export default function App() {
             categoriesCatalog.find((c) => c.id === selectedCategory)?.name ||
             {
               two_hours_delivery: "2 Hours Express Delivery",
+              birthday: "Birthday Special Gifts & Cakes",
               photo_cake: "Photo Cakes",
               bento_cake: "Bento Cakes",
               pinata_cake: "Pinata Cakes",

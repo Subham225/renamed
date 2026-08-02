@@ -31,6 +31,10 @@ import {
   GalleryItem,
   StoreConfig,
   StoreConfigItem,
+  FlowerCurationConfig,
+  BirthdayCurationConfig,
+  PlantCurationConfig,
+  TastePickItem,
   DELIVERY_AGENTS,
   DeliveryAgent,
 } from "../types";
@@ -113,6 +117,2033 @@ interface AdminPanelProps {
   storeConfig?: StoreConfig;
   onUpdateStoreConfig?: (config: StoreConfig) => void;
   onDeleteRider?: (id: string) => void;
+}
+
+function TastePickCurationTab({
+  localConfig,
+  setLocalConfig,
+  onUpdateStoreConfig,
+  products,
+}: {
+  localConfig: StoreConfig | null;
+  setLocalConfig: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  products: Product[];
+}) {
+  const defaultTastePickItems: TastePickItem[] = [
+    { id: "taste_redvelvet", name: "Red Velvet", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_whiteforest", name: "White Forest", image: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_strawberry", name: "Strawberry", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_blueberry", name: "Blueberry", image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_rasmalai", name: "Rasmalai", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_fruit", name: "Fresh Fruit", image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_mango", name: "Mango Delight", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_butterscotch", name: "Butterscotch Crunch", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_kitkat", name: "Kitkat & Gems", image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80", productIds: [] },
+  ];
+
+  const currentCategories: TastePickItem[] = (localConfig?.tastePickCategories && localConfig.tastePickCategories.length > 0)
+    ? localConfig.tastePickCategories
+    : defaultTastePickItems;
+
+  const [selectedCatId, setSelectedCatId] = useState<string>("taste_redvelvet");
+  const [prodSearch, setProdSearch] = useState<string>("");
+
+  const activeCategory = currentCategories.find((c) => c.id === selectedCatId) || currentCategories[0];
+
+  const updateCategory = (id: string, updatedFields: Partial<TastePickItem>) => {
+    if (!localConfig) return;
+    const updated = currentCategories.map((cat) =>
+      cat.id === id ? { ...cat, ...updatedFields } : cat
+    );
+    const newConfig = { ...localConfig, tastePickCategories: updated };
+    setLocalConfig(newConfig);
+  };
+
+  const handleSave = () => {
+    if (!localConfig) return;
+    const newConfig = { ...localConfig, tastePickCategories: currentCategories };
+    if (onUpdateStoreConfig) onUpdateStoreConfig(newConfig);
+    alert("Taste Pick categories updated successfully!");
+  };
+
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(prodSearch.toLowerCase()) ||
+    p.category.toLowerCase().includes(prodSearch.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto text-left">
+      {/* Header Banner */}
+      <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-lg relative overflow-hidden">
+        <div className="relative z-10 space-y-2">
+          <span className="text-[10px] bg-pink-600 text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest inline-block">
+            YOUR TASTE, YOUR PICK CURATION
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black text-white">
+            Manage 9 Flavor Categories & Featured Products
+          </h2>
+          <p className="text-xs text-slate-300 max-w-2xl font-medium">
+            Customize category names, replace images, and pick which products feature under each of the 9 "Your Taste, Your Pick" flavor cards on the cake landing page.
+          </p>
+        </div>
+      </div>
+
+      {/* Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: 9 Taste Pick List */}
+        <div className="lg:col-span-5 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+              Flavor Categories
+            </h3>
+            <span className="text-[10px] font-bold text-pink-600 bg-pink-50 px-2.5 py-0.5 rounded-full">
+              {currentCategories.length} Categories
+            </span>
+          </div>
+
+          <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+            {currentCategories.map((cat) => {
+              const isSelected = cat.id === activeCategory.id;
+              const productCount = cat.productIds?.length || 0;
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => setSelectedCatId(cat.id)}
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 ${
+                    isSelected
+                      ? "bg-pink-50/70 border-pink-500 shadow-xs"
+                      : "bg-slate-50 border-slate-150 hover:bg-slate-100"
+                  }`}
+                >
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0 bg-white"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-black text-slate-900 truncate">{cat.name}</h4>
+                    <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                      {productCount > 0 ? `🎯 ${productCount} assigned products` : "⚡ Keyword auto-matched"}
+                    </span>
+                  </div>
+                  {isSelected && (
+                    <div className="w-2.5 h-2.5 rounded-full bg-pink-600 shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: Category Settings & Product Assignment */}
+        <div className="lg:col-span-7 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase">
+                Editing: <span className="text-pink-600">{activeCategory.name}</span>
+              </h3>
+              <span className="text-[10px] text-slate-400 font-mono">ID: {activeCategory.id}</span>
+            </div>
+            <img
+              src={activeCategory.image}
+              alt={activeCategory.name}
+              className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-xs"
+            />
+          </div>
+
+          {/* 1. Category Details */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                Category Title
+              </label>
+              <input
+                type="text"
+                value={activeCategory.name}
+                onChange={(e) => updateCategory(activeCategory.id, { name: e.target.value })}
+                className="w-full text-xs font-bold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                Category Cover Image
+              </label>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={activeCategory.image}
+                  placeholder="https://images.unsplash.com/..."
+                  onChange={(e) => updateCategory(activeCategory.id, { image: e.target.value })}
+                  className="w-full text-xs font-mono p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                />
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        try {
+                          const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                          updateCategory(activeCategory.id, { image: base64 });
+                        } catch (err) {
+                          alert("Image upload failed.");
+                        }
+                      }
+                    }}
+                    className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Featured Products */}
+          <div className="space-y-3 pt-3 border-t border-slate-100">
+            <div>
+              <h4 className="text-xs font-black uppercase text-slate-900">
+                Featured Products ({activeCategory.productIds?.length || 0} Selected)
+              </h4>
+              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                Check specific products to explicitly feature under this category. Leave unchecked to rely on automatic flavor keyword search.
+              </p>
+            </div>
+
+            {/* Currently selected tag badges */}
+            {activeCategory.productIds && activeCategory.productIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 p-2.5 bg-pink-50/60 rounded-xl border border-pink-100">
+                {activeCategory.productIds.map((pId) => {
+                  const prod = products.find((p) => p.id === pId);
+                  return (
+                    <span
+                      key={pId}
+                      className="inline-flex items-center gap-1.5 bg-white text-pink-700 text-[10px] font-black px-2.5 py-1 rounded-lg border border-pink-200 shadow-2xs"
+                    >
+                      <span>{prod?.name || pId}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedPids = (activeCategory.productIds || []).filter((id) => id !== pId);
+                          updateCategory(activeCategory.id, { productIds: updatedPids });
+                        }}
+                        className="text-pink-400 hover:text-pink-800 font-bold ml-1 text-xs cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Search Box */}
+            <input
+              type="text"
+              value={prodSearch}
+              onChange={(e) => setProdSearch(e.target.value)}
+              placeholder="🔍 Search products by name..."
+              className="w-full text-xs font-semibold p-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+            />
+
+            {/* Products Selector List */}
+            <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 bg-slate-50/40">
+              {filteredProducts.map((prod) => {
+                const isAssigned = activeCategory.productIds?.includes(prod.id);
+                return (
+                  <label
+                    key={prod.id}
+                    className={`flex items-center gap-3 p-2.5 cursor-pointer transition-colors ${
+                      isAssigned ? "bg-pink-50/80" : "hover:bg-slate-100/80"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!isAssigned}
+                      onChange={(e) => {
+                        const current = activeCategory.productIds || [];
+                        const updated = e.target.checked
+                          ? [...current, prod.id]
+                          : current.filter((id) => id !== prod.id);
+                        updateCategory(activeCategory.id, { productIds: updated });
+                      }}
+                      className="w-4 h-4 text-pink-600 rounded border-slate-300 focus:ring-pink-500"
+                    />
+                    <img
+                      src={prod.image}
+                      alt={prod.name}
+                      className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0 bg-white"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-800 truncate">{prod.name}</p>
+                      <span className="text-[9px] text-slate-400 font-bold">₹{prod.price}</span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between shadow-sm">
+        <p className="text-[11px] text-slate-500 font-medium">
+          Save updates to Firestore. Changes will reflect instantly on the client cake landing page.
+        </p>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md transition-all cursor-pointer"
+        >
+          Save Taste Pick Curation
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CakesCurationTab({
+  localConfig,
+  setLocalConfig,
+  onUpdateStoreConfig,
+}: {
+  localConfig: StoreConfig | null;
+  setLocalConfig: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => void;
+}) {
+  const defaultQuickCategories: StoreConfigItem[] = [
+    { id: "cakes", name: "All Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80", tag: "cakes" },
+    { id: "birthday", name: "Birthday Cakes", image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=400&q=80", tag: "birthday" },
+    { id: "anniversary", name: "Anniversary Cakes", image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=400&q=80", tag: "anniversary" },
+    { id: "photo_cake", name: "Photo Cakes", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80", tag: "photo_cake" },
+    { id: "heart_shape", name: "Heart Shape Cakes", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80", tag: "heart_shape" },
+    { id: "kids_cake", name: "Kids Cakes", image: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80", tag: "kids_cake" },
+  ];
+
+  const currentQuickCats = (localConfig?.quickCakeCategories && localConfig.quickCakeCategories.length > 0)
+    ? localConfig.quickCakeCategories
+    : defaultQuickCategories;
+
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+
+  const updateQuickCat = (index: number, updated: Partial<StoreConfigItem>) => {
+    if (!localConfig) return;
+    const list = [...currentQuickCats];
+    list[index] = { ...list[index], ...updated };
+    setLocalConfig({ ...localConfig, quickCakeCategories: list });
+  };
+
+  const addQuickCat = () => {
+    if (!localConfig) return;
+    const newCat: StoreConfigItem = {
+      id: `cat_${Date.now()}`,
+      name: "New Cake Category",
+      image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
+      tag: "cakes",
+    };
+    setLocalConfig({
+      ...localConfig,
+      quickCakeCategories: [...currentQuickCats, newCat],
+    });
+  };
+
+  const deleteQuickCat = (index: number) => {
+    if (!localConfig) return;
+    const list = currentQuickCats.filter((_, i) => i !== index);
+    setLocalConfig({ ...localConfig, quickCakeCategories: list });
+  };
+
+  const handleSave = () => {
+    if (!localConfig) return;
+    const newConfig = {
+      ...localConfig,
+      quickCakeCategories: currentQuickCats,
+    };
+    if (onUpdateStoreConfig) onUpdateStoreConfig(newConfig);
+    alert("Cake Landing top circle categories updated successfully!");
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto text-left">
+      {/* Header Banner */}
+      <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-lg relative overflow-hidden">
+        <div className="relative z-10 space-y-2">
+          <span className="text-[10px] bg-pink-600 text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest inline-block">
+            CAKE LANDING TOP CIRCLE CATEGORIES
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black text-white">
+            Manage Top Circle Tabs & Images
+          </h2>
+          <p className="text-xs text-slate-300 max-w-2xl font-medium">
+            Edit the circular category icons shown at the top of the Cake Landing Page (All Cakes, Birthday Cakes, Anniversary Cakes, Photo Cakes, Heart Shape Cakes, Kids Cakes). Change titles, replace photos via URL or local device file upload, add new circle tabs, or reorder them.
+          </p>
+        </div>
+      </div>
+
+      {/* Grid of Circular Top Categories */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 uppercase">
+              Top Circle Category Tabs ({currentQuickCats.length})
+            </h3>
+            <p className="text-[10px] text-slate-400 font-semibold">
+              These round icons appear directly below the top announcement banner on the cake landing page.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={addQuickCat}
+            className="px-3.5 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 font-black text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-pink-200"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Circle Category
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {currentQuickCats.map((cat, idx) => (
+            <div
+              key={cat.id || idx}
+              className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 space-y-3 relative group"
+            >
+              {/* Header preview inside card */}
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-pink-500 shrink-0 bg-white shadow-2xs">
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black text-slate-900 truncate">{cat.name}</h4>
+                    <span className="text-[9px] font-mono text-slate-400 block truncate">ID: {cat.id}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => deleteQuickCat(idx)}
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer shrink-0"
+                  title="Remove category"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Input: Name */}
+              <div>
+                <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                  Category Display Title
+                </label>
+                <input
+                  type="text"
+                  value={cat.name}
+                  onChange={(e) => updateQuickCat(idx, { name: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                />
+              </div>
+
+              {/* Input: Target Category ID */}
+              <div>
+                <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                  Target Category Filter Key
+                </label>
+                <input
+                  type="text"
+                  value={cat.id}
+                  onChange={(e) => updateQuickCat(idx, { id: e.target.value })}
+                  placeholder="cakes / birthday / anniversary / photo_cake..."
+                  className="w-full text-[10.5px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                />
+              </div>
+
+              {/* Input: Image URL + Device Upload */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-0.5">
+                  Circle Photo Image URL
+                </label>
+                <input
+                  type="text"
+                  value={cat.image}
+                  onChange={(e) => updateQuickCat(idx, { image: e.target.value })}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full text-[10px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                />
+
+                <div>
+                  <label className="text-[9px] text-pink-700 font-extrabold uppercase block mb-1">
+                    Or Upload Image File from Local Device
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        try {
+                          setUploadingIdx(idx);
+                          const base64 = await compressImageFile(e.target.files[0], 600, 0.6);
+                          updateQuickCat(idx, { image: base64 });
+                        } catch (err) {
+                          alert("Image compression failed.");
+                        } finally {
+                          setUploadingIdx(null);
+                        }
+                      }
+                    }}
+                    className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
+                  />
+                  {uploadingIdx === idx && (
+                    <span className="text-[9px] text-pink-600 animate-pulse block mt-1">
+                      Compressing & uploading photo...
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between shadow-sm">
+        <p className="text-[11px] text-slate-500 font-medium">
+          Save updates to Firestore database. Changes will reflect live on the top circle tabs immediately.
+        </p>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md transition-all cursor-pointer"
+        >
+          Save Cakes Curation
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FlowersCurationTab({
+  localConfig,
+  setLocalConfig,
+  onUpdateStoreConfig,
+}: {
+  localConfig: StoreConfig | null;
+  setLocalConfig: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => void;
+}) {
+  const fc = localConfig?.flowerCuration || {};
+  const [activeSubTab, setActiveSubTab] = useState<
+    "hero" | "trending" | "type" | "color" | "collection" | "pairings" | "occasion" | "banners"
+  >("hero");
+
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+
+  const updateFC = (updated: Partial<FlowerCurationConfig>) => {
+    if (!localConfig) return;
+    const newFC = { ...localConfig.flowerCuration, ...updated };
+    setLocalConfig({ ...localConfig, flowerCuration: newFC });
+  };
+
+  const handleSave = () => {
+    if (!localConfig) return;
+    if (onUpdateStoreConfig) onUpdateStoreConfig(localConfig);
+    alert("Flowers Curation saved successfully!");
+  };
+
+  const handleFileUpload = async (
+    file: File,
+    key: string,
+    onSuccess: (base64: string) => void
+  ) => {
+    try {
+      setUploadingKey(key);
+      const base64 = await compressImageFile(file, 800, 0.6);
+      onSuccess(base64);
+    } catch (err) {
+      alert("Image upload failed.");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const defaultTrending: StoreConfigItem[] = [
+    { id: "new_arrival", name: "New Arrival Flowers", image: "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=400&q=80" },
+    { id: "best_selling", name: "Best Selling Flowers", image: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=400&q=80" },
+    { id: "exclusive", name: "Exclusive Flowers", image: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=400&q=80" },
+    { id: "bouquet", name: "Flowers Bouquet", image: "https://images.unsplash.com/photo-1591886960571-74d43a9d4166?auto=format&fit=crop&w=400&q=80" },
+    { id: "arrangements", name: "Flower Arrangements", image: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80" },
+    { id: "combos", name: "Flower Combos", image: "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultByType: StoreConfigItem[] = [
+    { id: "roses", name: "Roses", image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80" },
+    { id: "orchids", name: "Orchids", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
+    { id: "lilies", name: "Lilies", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "gerberas", name: "Gerberas", image: "https://images.unsplash.com/photo-1508784411316-02b8cd4d3a3a?auto=format&fit=crop&w=400&q=80" },
+    { id: "carnations", name: "Carnations", image: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80" },
+    { id: "mixed", name: "Mixed Flowers", image: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultByColor: StoreConfigItem[] = [
+    { id: "red", name: "Red", image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80" },
+    { id: "pink", name: "Pink", image: "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=400&q=80" },
+    { id: "yellow", name: "Yellow", image: "https://images.unsplash.com/photo-1508784411316-02b8cd4d3a3a?auto=format&fit=crop&w=400&q=80" },
+    { id: "white", name: "White", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "purple", name: "Purple", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
+    { id: "mixed_color", name: "Mixed", image: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultByCollection: StoreConfigItem[] = [
+    { id: "premium", name: "Premium Flowers", image: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80" },
+    { id: "basket", name: "Basket Arrangements", image: "https://images.unsplash.com/photo-1591886960571-74d43a9d4166?auto=format&fit=crop&w=400&q=80" },
+    { id: "exotic", name: "Exotic Flowers", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultLuxuryPairings: StoreConfigItem[] = [
+    { id: "flowers_cakes", name: "Flowers & Cakes", image: "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=400&q=80" },
+    { id: "flowers_teddies", name: "Flowers & Teddies", image: "https://images.unsplash.com/photo-1559454403-b8fb88521f11?auto=format&fit=crop&w=400&q=80" },
+    { id: "flowers_chocolates", name: "Flowers & Chocolates", image: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=400&q=80" },
+    { id: "chocolates_bouquet", name: "Chocolates Bouquet", image: "https://images.unsplash.com/photo-1511389026070-a14ae610a1be?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultByOccasion: StoreConfigItem[] = [
+    { id: "birthday", name: "Birthday", image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=400&q=80" },
+    { id: "anniversary", name: "Anniversary", image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=400&q=80" },
+    { id: "love", name: "Love & Affection", image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80" },
+    { id: "wedding", name: "Wedding", image: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80" },
+    { id: "congrats", name: "Congratulations", image: "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=400&q=80" },
+    { id: "thank_you", name: "Thank you", image: "https://images.unsplash.com/photo-1508784411316-02b8cd4d3a3a?auto=format&fit=crop&w=400&q=80" },
+    { id: "sympathy", name: "Sympathy", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "sorry", name: "I am sorry", image: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const currentTrending = fc.trendingCategories?.length ? fc.trendingCategories : defaultTrending;
+  const currentByType = fc.byTypeCategories?.length ? fc.byTypeCategories : defaultByType;
+  const currentByColor = fc.byColorCategories?.length ? fc.byColorCategories : defaultByColor;
+  const currentByCollection = fc.byCollectionCategories?.length ? fc.byCollectionCategories : defaultByCollection;
+  const currentPairings = fc.luxuryPairings?.length ? fc.luxuryPairings : defaultLuxuryPairings;
+  const currentByOccasion = fc.byOccasionCategories?.length ? fc.byOccasionCategories : defaultByOccasion;
+
+  const renderCategoryListEditor = (
+    title: string,
+    list: StoreConfigItem[],
+    onUpdateList: (newList: StoreConfigItem[]) => void
+  ) => {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black uppercase text-slate-800">{title} ({list.length} Items)</h4>
+          <button
+            type="button"
+            onClick={() => {
+              const newItem: StoreConfigItem = {
+                id: `item_${Date.now()}`,
+                name: "New Item",
+                image: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80",
+              };
+              onUpdateList([...list, newItem]);
+            }}
+            className="px-3 py-1.5 bg-rose-50 text-rose-700 font-extrabold text-[10px] rounded-xl hover:bg-rose-100 uppercase"
+          >
+            + Add New
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {list.map((item, idx) => (
+            <div key={item.id + idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 relative">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                <div className="flex items-center gap-2">
+                  <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-slate-200" />
+                  <span className="font-extrabold text-xs text-slate-800">{item.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = list.filter((_, i) => i !== idx);
+                    onUpdateList(next);
+                  }}
+                  className="text-red-500 hover:text-red-700 p-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-0.5">Title Name</label>
+                <input
+                  type="text"
+                  value={item.name}
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], name: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-0.5">Target Filter / Category ID</label>
+                <input
+                  type="text"
+                  value={item.id}
+                  placeholder="e.g. roses, orchids, birthday, plants, bouquet..."
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], id: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-0.5">Image URL</label>
+                <input
+                  type="text"
+                  value={item.image}
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], image: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-[10px] font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold text-rose-700 uppercase block mb-0.5">Or Upload from Device</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleFileUpload(file, `list_${idx}`, (b64) => {
+                        const next = [...list];
+                        next[idx] = { ...next[idx], image: b64 };
+                        onUpdateList(next);
+                      });
+                    }
+                  }}
+                  className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-rose-50 file:text-rose-700"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto text-left mb-8">
+      {/* Header */}
+      <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-lg">
+        <span className="text-[10px] bg-rose-600 text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest inline-block mb-2">
+          FLOWERS LANDING CURATION
+        </span>
+        <h2 className="text-xl sm:text-2xl font-black text-white">
+          Manage Flowers Page Layout & Images
+        </h2>
+        <p className="text-xs text-slate-300 font-medium mt-1">
+          Edit Hero Banner, Trending Categories, By Type, By Color, By Collection, Luxury Pairings, Occasions, and Promo Banners.
+        </p>
+      </div>
+
+      {/* Sub-Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        {[
+          { id: "hero", label: "Hero Banner" },
+          { id: "trending", label: "Trending Categories" },
+          { id: "type", label: "By Type" },
+          { id: "color", label: "By Color" },
+          { id: "collection", label: "By Collection" },
+          { id: "pairings", label: "Luxury Pairings" },
+          { id: "occasion", label: "By Occasion" },
+          { id: "banners", label: "Promo Banners" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveSubTab(tab.id as any)}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl uppercase transition-all ${
+              activeSubTab === tab.id
+                ? "bg-rose-600 text-white shadow-md"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* SUB-TAB CONTENTS */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+        {activeSubTab === "hero" && (
+          <div className="space-y-4 max-w-2xl">
+            <h3 className="text-xs font-black uppercase text-slate-800">Main Hero Banner</h3>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Title</label>
+              <input
+                type="text"
+                value={fc.heroBannerTitle || "Experience The Rare"}
+                onChange={(e) => updateFC({ heroBannerTitle: e.target.value })}
+                className="w-full text-xs font-bold p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Subtitle</label>
+              <input
+                type="text"
+                value={fc.heroBannerSubtitle || "Exotic Blooms, Unmatched Elegance"}
+                onChange={(e) => updateFC({ heroBannerSubtitle: e.target.value })}
+                className="w-full text-xs font-bold p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Image URL</label>
+              <input
+                type="text"
+                value={fc.heroBannerImage || "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=1200&q=80"}
+                onChange={(e) => updateFC({ heroBannerImage: e.target.value })}
+                className="w-full text-xs font-mono p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[9.5px] font-bold text-rose-700 uppercase block mb-1">Or Upload Hero Image from Device</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file, "hero", (b64) => updateFC({ heroBannerImage: b64 }));
+                }}
+                className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-rose-50 file:text-rose-700"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "trending" && renderCategoryListEditor("Trending Categories", currentTrending, (list) => updateFC({ trendingCategories: list }))}
+
+        {activeSubTab === "type" && renderCategoryListEditor("By Type Categories", currentByType, (list) => updateFC({ byTypeCategories: list }))}
+
+        {activeSubTab === "color" && renderCategoryListEditor("By Color Categories", currentByColor, (list) => updateFC({ byColorCategories: list }))}
+
+        {activeSubTab === "collection" && renderCategoryListEditor("By Collection Categories", currentByCollection, (list) => updateFC({ byCollectionCategories: list }))}
+
+        {activeSubTab === "pairings" && renderCategoryListEditor("Luxury Pairings", currentPairings, (list) => updateFC({ luxuryPairings: list }))}
+
+        {activeSubTab === "occasion" && renderCategoryListEditor("By Occasion Categories", currentByOccasion, (list) => updateFC({ byOccasionCategories: list }))}
+
+        {activeSubTab === "banners" && (
+          <div className="space-y-6 max-w-2xl">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">1. Luxury Blooms Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={fc.luxuryBloomsBannerTitle || "Luxury Blooms - Exquisite by Nature, Perfected by Hand"}
+                  onChange={(e) => updateFC({ luxuryBloomsBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={fc.luxuryBloomsBannerImage || "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updateFC({ luxuryBloomsBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "luxury_banner", (b64) => updateFC({ luxuryBloomsBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-rose-50 file:text-rose-700"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">2. Plants Promo Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={fc.plantsPromoBannerTitle || "Plants that grow love"}
+                  onChange={(e) => updateFC({ plantsPromoBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={fc.plantsPromoBannerImage || "https://images.unsplash.com/photo-1466692476877-3dfa6406e409?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updateFC({ plantsPromoBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "plants_banner", (b64) => updateFC({ plantsPromoBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-rose-50 file:text-rose-700"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Bar */}
+        <div className="border-t border-slate-200 pt-4 flex items-center justify-between">
+          <p className="text-xs text-slate-500 font-medium">Save all changes to Flowers Curation.</p>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            Save Flowers Curation
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CurationProductMapper({
+  curationType,
+  products = [],
+  onUpdateProduct,
+}: {
+  curationType: "birthday" | "plants";
+  products?: Product[];
+  onUpdateProduct?: (product: Product) => void;
+}) {
+  const isBirthday = curationType === "birthday";
+
+  const subCategories = isBirthday
+    ? [
+        { id: "birthday", label: "🎁 All Birthday Products", mainTag: "birthday" },
+        { id: "for_him", label: "👨 Gifts For Him", mainTag: "for_him" },
+        { id: "for_her", label: "👩 Gifts For Her", mainTag: "for_her" },
+        { id: "premium_flowers", label: "🌸 Premium Flowers", mainTag: "premium_flowers" },
+        { id: "premium_cakes", label: "🎂 Premium Cakes", mainTag: "premium_cakes" },
+        { id: "kids", label: "🧒 Cakes For Kids / 1st Birthday", mainTag: "kids" },
+        { id: "digital", label: "💻 Digital Gifts", mainTag: "digital" },
+        { id: "hampers", label: "🧺 Hampers & Baskets", mainTag: "hampers" },
+        { id: "roses", label: "🌹 Roses", mainTag: "roses" },
+        { id: "carnations", label: "💐 Carnations", mainTag: "carnations" },
+        { id: "orchids", label: "🌺 Orchids", mainTag: "orchids" },
+        { id: "lilies", label: "🪷 Lilies", mainTag: "lilies" },
+        { id: "gerberas", label: "🌼 Gerberas", mainTag: "gerberas" },
+        { id: "exotic", label: "🌴 Exotic Flowers", mainTag: "exotic" },
+        { id: "mixed", label: "💐 Mixed Flowers", mainTag: "mixed" },
+        { id: "handbag", label: "👜 Handbags", mainTag: "handbag" },
+        { id: "jewellery", label: "💎 Jewellery", mainTag: "jewellery" },
+        { id: "accessories", label: "⌚ Accessories", mainTag: "accessories" },
+        { id: "home_decor", label: "🏠 Home Decor", mainTag: "home_decor" },
+        { id: "cushion", label: "🛋️ Cushions", mainTag: "cushion" },
+        { id: "bestsellers", label: "⭐ Bestsellers", mainTag: "bestsellers" },
+      ]
+    : [
+        { id: "plants", label: "🪴 All Plants Products", mainTag: "plants" },
+        { id: "indoor", label: "🏠 Indoor Plants", mainTag: "indoor" },
+        { id: "lucky_bamboo", label: "🎋 Lucky Bamboo", mainTag: "lucky_bamboo" },
+        { id: "air_purifying", label: "🌬️ Air Purifying Plants", mainTag: "air_purifying" },
+        { id: "flowering", label: "🌸 Flowering Plants", mainTag: "flowering" },
+        { id: "money_plant", label: "💰 Money Plants", mainTag: "money_plant" },
+        { id: "bonsai", label: "🌳 Bonsai Trees", mainTag: "bonsai" },
+        { id: "succulents", label: "🌵 Succulents & Cacti", mainTag: "succulents" },
+        { id: "planters", label: "🏺 Ceramic Pots & Planters", mainTag: "planters" },
+        { id: "snake", label: "🐍 Snake Plant", mainTag: "snake" },
+        { id: "jade", label: "🍃 Jade Plant", mainTag: "jade" },
+        { id: "peace_lily", label: "🪷 Peace Lily", mainTag: "peace_lily" },
+        { id: "syngonium", label: "🌿 Syngonium", mainTag: "syngonium" },
+        { id: "aloe", label: "🩺 Aloe Vera", mainTag: "aloe" },
+        { id: "ferns", label: "🪴 Boston Fern", mainTag: "ferns" },
+        { id: "desk", label: "🏢 Desk & Office Plants", mainTag: "desk" },
+        { id: "balcony", label: "☀️ Balcony & Sun Plants", mainTag: "balcony" },
+        { id: "bedroom", label: "🛏️ Bedroom Sleep Plants", mainTag: "bedroom" },
+      ];
+
+  const [selectedCatId, setSelectedCatId] = useState<string>(subCategories[0].id);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [onlyTaggedFilter, setOnlyTaggedFilter] = useState<boolean>(false);
+
+  const activeSubCat = subCategories.find((c) => c.id === selectedCatId) || subCategories[0];
+
+  const isProductTagged = (p: Product, tag: string) => {
+    if (p.category === tag) return true;
+    if (p.categories && p.categories.includes(tag)) return true;
+    if (tag === "for_him" && (p.category === "him" || p.categories?.includes("him") || p.categories?.includes("men"))) return true;
+    if (tag === "for_her" && (p.category === "her" || p.categories?.includes("her") || p.categories?.includes("women"))) return true;
+    if (tag === "kids" && (p.category === "1st_birthday" || p.categories?.includes("1st_birthday") || p.categories?.includes("kids_cakes"))) return true;
+    if (tag === "digital" && (p.category === "digital_gifts" || p.categories?.includes("digital_gifts"))) return true;
+    return false;
+  };
+
+  const handleToggleTag = (prod: Product) => {
+    if (!onUpdateProduct) return;
+    const tag = activeSubCat.mainTag;
+    const baseTag = isBirthday ? "birthday" : "plants";
+    
+    let cats = prod.categories ? [...prod.categories] : [];
+    const currentlyTagged = isProductTagged(prod, tag);
+
+    if (currentlyTagged) {
+      cats = cats.filter(
+        (c) =>
+          c !== tag &&
+          c !== activeSubCat.id &&
+          !(tag === "for_him" && (c === "him" || c === "men")) &&
+          !(tag === "for_her" && (c === "her" || c === "women")) &&
+          !(tag === "kids" && (c === "1st_birthday" || c === "kids_cakes")) &&
+          !(tag === "digital" && c === "digital_gifts")
+      );
+    } else {
+      if (!cats.includes(tag)) cats.push(tag);
+      if (!cats.includes(baseTag)) cats.push(baseTag);
+    }
+
+    onUpdateProduct({ ...prod, categories: cats });
+  };
+
+  const filteredProducts = products.filter((p) => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      if (!p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) {
+        return false;
+      }
+    }
+
+    if (onlyTaggedFilter) {
+      return isProductTagged(p, activeSubCat.mainTag);
+    }
+
+    return true;
+  });
+
+  return (
+    <div className="space-y-6 text-left">
+      {/* Target Category Selector Bar */}
+      <div className={`p-4.5 rounded-2xl border ${isBirthday ? 'bg-amber-50/80 border-amber-200' : 'bg-emerald-50/80 border-emerald-200'} space-y-3`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${isBirthday ? 'bg-amber-500 text-slate-950' : 'bg-emerald-600 text-white'}`}>
+              Sub-Category Mapper
+            </span>
+            <h3 className="text-sm font-black text-slate-900 mt-1">
+              Select Specific Section / Sub-Category to Tag Products
+            </h3>
+            <p className="text-xs text-slate-600 font-medium">
+              Pick a category below, then click <strong>"+ Tag"</strong> or <strong>"✓ Tagged"</strong> to explicitly assign products to that category!
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-2">
+            <span className="text-xs font-extrabold text-slate-700 bg-white/80 px-3 py-1 rounded-xl border border-slate-200">
+              Tagged: <strong>{products.filter((p) => isProductTagged(p, activeSubCat.mainTag)).length}</strong> / {products.length} Products
+            </span>
+          </div>
+        </div>
+
+        {/* Sub-Category Pills */}
+        <div className="flex flex-wrap gap-1.5 pt-1 max-h-48 overflow-y-auto scrollbar-thin p-0.5">
+          {subCategories.map((sc) => {
+            const count = products.filter((p) => isProductTagged(p, sc.mainTag)).length;
+            const isSelected = selectedCatId === sc.id;
+            return (
+              <button
+                key={sc.id}
+                type="button"
+                onClick={() => setSelectedCatId(sc.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isSelected
+                    ? isBirthday
+                      ? "bg-amber-500 text-slate-950 border-amber-600 shadow-xs"
+                      : "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <span>{sc.label}</span>
+                <span className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-mono ${isSelected ? 'bg-black/20 text-current font-black' : 'bg-slate-100 text-slate-600'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Controls Bar: Search & Filter Toggle */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200">
+        <div className="w-full sm:w-80 relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={`Search products for "${activeSubCat.label}"...`}
+            className="w-full text-xs p-2.5 pl-8 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button
+            type="button"
+            onClick={() => setOnlyTaggedFilter(!onlyTaggedFilter)}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
+              onlyTaggedFilter
+                ? isBirthday
+                  ? "bg-amber-100 text-amber-900 border-amber-300"
+                  : "bg-emerald-100 text-emerald-900 border-emerald-300"
+                : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+            }`}
+          >
+            {onlyTaggedFilter ? "Showing Only Tagged" : "Show All Products"}
+          </button>
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[480px] overflow-y-auto p-1 scrollbar-thin">
+        {filteredProducts.length === 0 ? (
+          <div className="col-span-full py-12 text-center text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            No products found matching filters.
+          </div>
+        ) : (
+          filteredProducts.map((prod) => {
+            const isTagged = isProductTagged(prod, activeSubCat.mainTag);
+            return (
+              <div
+                key={prod.id}
+                className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                  isTagged
+                    ? isBirthday
+                      ? "bg-amber-50/90 border-amber-300 shadow-2xs"
+                      : "bg-emerald-50/90 border-emerald-300 shadow-2xs"
+                    : "bg-slate-50/80 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <img
+                    src={prod.image}
+                    alt={prod.name}
+                    className="w-11 h-11 object-cover rounded-xl shrink-0 border border-slate-200"
+                  />
+                  <div className="truncate">
+                    <span className="text-xs font-black text-slate-900 truncate block">
+                      {prod.name}
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] font-black text-slate-700">₹{prod.price}</span>
+                      <span className="text-[9px] text-slate-400">• {prod.category}</span>
+                    </div>
+                    {/* Tags preview */}
+                    {prod.categories && prod.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1 max-w-[170px] overflow-hidden">
+                        {prod.categories.slice(0, 3).map((tag, idx) => (
+                          <span
+                            key={tag + idx}
+                            className="text-[8px] font-extrabold px-1.5 py-0.2 rounded bg-slate-200/80 text-slate-700 uppercase"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {prod.categories.length > 3 && (
+                          <span className="text-[8px] text-slate-400 font-bold">+{prod.categories.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleTag(prod)}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl border transition-all shrink-0 ml-2 cursor-pointer ${
+                    isTagged
+                      ? isBirthday
+                        ? "bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-600 shadow-xs"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  {isTagged ? `✓ Tagged` : `+ Tag`}
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BirthdayCurationTab({
+  localConfig,
+  setLocalConfig,
+  onUpdateStoreConfig,
+  products,
+  onUpdateProduct,
+}: {
+  localConfig: StoreConfig | null;
+  setLocalConfig: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  products?: Product[];
+  onUpdateProduct?: (product: Product) => void;
+}) {
+  const bc = localConfig?.birthdayCuration || {};
+  const [activeSubTab, setActiveSubTab] = useState<
+    "hero" | "quick" | "her_him" | "premium" | "flowers_type" | "kids_digital" | "explore" | "products"
+  >("hero");
+
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+
+  const updateBC = (updated: Partial<BirthdayCurationConfig>) => {
+    if (!localConfig) return;
+    const newBC = { ...localConfig.birthdayCuration, ...updated };
+    setLocalConfig({ ...localConfig, birthdayCuration: newBC });
+  };
+
+  const handleSave = () => {
+    if (!localConfig) return;
+    if (onUpdateStoreConfig) onUpdateStoreConfig(localConfig);
+    alert("Birthday Curation saved successfully!");
+  };
+
+  const handleFileUpload = async (
+    file: File,
+    key: string,
+    onSuccess: (base64: string) => void
+  ) => {
+    try {
+      setUploadingKey(key);
+      const base64 = await compressImageFile(file, 800, 0.6);
+      onSuccess(base64);
+    } catch (err) {
+      alert("Image upload failed.");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const defaultQuickCategories: StoreConfigItem[] = [
+    { id: "cakes", name: "Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
+    { id: "flowers", name: "Flowers", image: "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=400&q=80" },
+    { id: "personalized", name: "Personalized...", image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=400&q=80" },
+    { id: "1st_birthday", name: "1st Birthday ...", image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=400&q=80" },
+    { id: "hampers", name: "Hampers", image: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=400&q=80" },
+    { id: "gift_basket", name: "Gift Basket", image: "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=400&q=80" },
+    { id: "plants", name: "Plants", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80" },
+    { id: "bestsellers", name: "Bestsellers", image: "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultPremium: StoreConfigItem[] = [
+    { id: "premium_flowers", name: "Premium Flowers", image: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80" },
+    { id: "premium_cakes", name: "Premium Cakes", image: "https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultFlowersByType: StoreConfigItem[] = [
+    { id: "roses", name: "Roses", image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80" },
+    { id: "carnations", name: "Carnations", image: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80" },
+    { id: "exotic", name: "Exotic Flowers", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
+    { id: "mixed", name: "Mixed Flowers", image: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=400&q=80" },
+    { id: "orchids", name: "Orchids", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
+    { id: "gerberas", name: "Gerberas", image: "https://images.unsplash.com/photo-1508784411316-02b8cd4d3a3a?auto=format&fit=crop&w=400&q=80" },
+    { id: "lilies", name: "Lilies", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "bestsellers_flowers", name: "Bestsellers", image: "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const defaultExploreGifts: StoreConfigItem[] = [
+    { id: "gift_basket", name: "Gift Basket", image: "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=400&q=80" },
+    { id: "handbag", name: "Handbag", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=400&q=80" },
+    { id: "accessories", name: "Accessories", image: "https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=400&q=80" },
+    { id: "jewellery", name: "Jewellery", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=400&q=80" },
+    { id: "home_decor", name: "Home Decor", image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=400&q=80" },
+    { id: "cushion", name: "Cushion", image: "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const currentQuick = bc.quickCategories?.length ? bc.quickCategories : defaultQuickCategories;
+  const currentPremium = bc.premiumCategories?.length ? bc.premiumCategories : defaultPremium;
+  const currentFlowersByType = bc.flowersByTypeCategories?.length ? bc.flowersByTypeCategories : defaultFlowersByType;
+  const currentExplore = bc.exploreGiftsCategories?.length ? bc.exploreGiftsCategories : defaultExploreGifts;
+
+  const renderCategoryListEditor = (
+    title: string,
+    list: StoreConfigItem[],
+    onUpdateList: (newList: StoreConfigItem[]) => void
+  ) => {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black uppercase text-slate-800">{title} ({list.length} Items)</h4>
+          <button
+            type="button"
+            onClick={() => {
+              const newItem: StoreConfigItem = {
+                id: `item_${Date.now()}`,
+                name: "New Item",
+                image: "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=400&q=80",
+              };
+              onUpdateList([...list, newItem]);
+            }}
+            className="px-3 py-1.5 bg-amber-50 text-amber-800 font-extrabold text-[10px] rounded-xl hover:bg-amber-100 uppercase"
+          >
+            + Add New
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {list.map((item, idx) => (
+            <div key={item.id + idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 relative">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                <div className="flex items-center gap-2">
+                  <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-slate-200" />
+                  <span className="font-extrabold text-xs text-slate-800">{item.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = list.filter((_, i) => i !== idx);
+                    onUpdateList(next);
+                  }}
+                  className="text-red-500 hover:text-red-700 p-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-0.5">Title Name</label>
+                <input
+                  type="text"
+                  value={item.name}
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], name: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-0.5">Target Filter / Category ID</label>
+                <input
+                  type="text"
+                  value={item.id}
+                  placeholder="e.g. cakes, flowers, hampers, her, him..."
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], id: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-0.5">Image URL</label>
+                <input
+                  type="text"
+                  value={item.image}
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], image: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-[10px] font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold text-amber-800 uppercase block mb-0.5">Or Upload from Device</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleFileUpload(file, `bc_list_${idx}`, (b64) => {
+                        const next = [...list];
+                        next[idx] = { ...next[idx], image: b64 };
+                        onUpdateList(next);
+                      });
+                    }
+                  }}
+                  className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-amber-50 file:text-amber-800"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto text-left mb-8">
+      {/* Header */}
+      <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-lg">
+        <span className="text-[10px] bg-amber-500 text-slate-950 font-black px-2.5 py-1 rounded-full uppercase tracking-widest inline-block mb-2">
+          BIRTHDAY LANDING CURATION
+        </span>
+        <h2 className="text-xl sm:text-2xl font-black text-white">
+          Manage Birthday Page Layout & Images
+        </h2>
+        <p className="text-xs text-slate-300 font-medium mt-1">
+          Edit Hero Banner, Quick Categories, Gifts For Her/Him, Premium Categories, Flowers By Type, Kids & Digital Gifts, and Explore More Gifts.
+        </p>
+      </div>
+
+      {/* Sub-Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        {[
+          { id: "hero", label: "Hero Banner" },
+          { id: "quick", label: "Quick Categories" },
+          { id: "her_him", label: "Gifts For Her & Him" },
+          { id: "premium", label: "Premium Categories" },
+          { id: "flowers_type", label: "Flowers By Type" },
+          { id: "kids_digital", label: "Kids & Digital Gifts" },
+          { id: "explore", label: "Explore More Gifts" },
+          { id: "products", label: "Product Mapping" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveSubTab(tab.id as any)}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl uppercase transition-all ${
+              activeSubTab === tab.id
+                ? "bg-amber-500 text-slate-950 shadow-md"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* SUB-TAB CONTENTS */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+        {activeSubTab === "hero" && (
+          <div className="space-y-4 max-w-2xl">
+            <h3 className="text-xs font-black uppercase text-slate-800">Main Birthday Hero Banner</h3>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Title</label>
+              <input
+                type="text"
+                value={bc.heroBannerTitle || "Birthday Gifts"}
+                onChange={(e) => updateBC({ heroBannerTitle: e.target.value })}
+                className="w-full text-xs font-bold p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Subtitle</label>
+              <input
+                type="text"
+                value={bc.heroBannerSubtitle || "For Your Loved Ones"}
+                onChange={(e) => updateBC({ heroBannerSubtitle: e.target.value })}
+                className="w-full text-xs font-bold p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Image URL</label>
+              <input
+                type="text"
+                value={bc.heroBannerImage || "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=80"}
+                onChange={(e) => updateBC({ heroBannerImage: e.target.value })}
+                className="w-full text-xs font-mono p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[9.5px] font-bold text-amber-800 uppercase block mb-1">Or Upload Hero Image from Device</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file, "hero_birthday", (b64) => updateBC({ heroBannerImage: b64 }));
+                }}
+                className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-amber-50 file:text-amber-800"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "quick" && renderCategoryListEditor("Quick Categories Grid", currentQuick, (list) => updateBC({ quickCategories: list }))}
+
+        {activeSubTab === "her_him" && (
+          <div className="space-y-6 max-w-2xl">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">1. Gifts For Her Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={bc.giftsForHerBannerTitle || "Gifts For Her"}
+                  onChange={(e) => updateBC({ giftsForHerBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={bc.giftsForHerBannerImage || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updateBC({ giftsForHerBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "her_banner", (b64) => updateBC({ giftsForHerBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">2. Gifts For Him Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={bc.giftsForHimBannerTitle || "Gifts For Him"}
+                  onChange={(e) => updateBC({ giftsForHimBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={bc.giftsForHimBannerImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updateBC({ giftsForHimBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "him_banner", (b64) => updateBC({ giftsForHimBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "premium" && renderCategoryListEditor("Premium Categories Grid", currentPremium, (list) => updateBC({ premiumCategories: list }))}
+
+        {activeSubTab === "flowers_type" && renderCategoryListEditor("Flowers By Type Grid", currentFlowersByType, (list) => updateBC({ flowersByTypeCategories: list }))}
+
+        {activeSubTab === "kids_digital" && (
+          <div className="space-y-6 max-w-2xl">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">1. Cakes For Kids Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={bc.kidsCakesBannerTitle || "Cakes For Kids"}
+                  onChange={(e) => updateBC({ kidsCakesBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={bc.kidsCakesBannerImage || "https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updateBC({ kidsCakesBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "kids_banner", (b64) => updateBC({ kidsCakesBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">2. Digital Gifts Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={bc.digitalGiftsBannerTitle || "Digital Gifts"}
+                  onChange={(e) => updateBC({ digitalGiftsBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={bc.digitalGiftsBannerImage || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updateBC({ digitalGiftsBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "digital_banner", (b64) => updateBC({ digitalGiftsBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "explore" && renderCategoryListEditor("Explore More Gifts Grid", currentExplore, (list) => updateBC({ exploreGiftsCategories: list }))}
+
+        {activeSubTab === "products" && (
+          <CurationProductMapper
+            curationType="birthday"
+            products={products}
+            onUpdateProduct={onUpdateProduct}
+          />
+        )}
+
+        {/* Save Bar */}
+        <div className="border-t border-slate-200 pt-4 flex items-center justify-between">
+          <p className="text-xs text-slate-500 font-medium">Save all changes to Birthday Curation.</p>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            Save Birthday Curation
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlantCurationTab({
+  localConfig,
+  setLocalConfig,
+  onUpdateStoreConfig,
+  products,
+  onUpdateProduct,
+}: {
+  localConfig: StoreConfig;
+  setLocalConfig: React.Dispatch<React.SetStateAction<StoreConfig>>;
+  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  products?: Product[];
+  onUpdateProduct?: (product: Product) => void;
+}) {
+  const [activeSubTab, setActiveSubTab] = useState<
+    "hero" | "quick" | "feature_banners" | "plant_types" | "locations" | "planters" | "products"
+  >("hero");
+
+  const pc = localConfig.plantCuration || {};
+
+  const updatePC = (patch: Partial<PlantCurationConfig>) => {
+    setLocalConfig((prev) => ({
+      ...prev,
+      plantCuration: {
+        ...prev.plantCuration,
+        ...patch,
+      },
+    }));
+  };
+
+  const handleSave = () => {
+    if (onUpdateStoreConfig) {
+      onUpdateStoreConfig(localConfig);
+      alert("Plant Curation config saved successfully!");
+    }
+  };
+
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+
+  const handleFileUpload = async (
+    file: File,
+    key: string,
+    onSuccess: (b64: string) => void
+  ) => {
+    try {
+      setUploadingKey(key);
+      const compressed = await compressImageFile(file, 1200, 0.8);
+      onSuccess(compressed);
+    } catch (err) {
+      console.error("Image upload failed", err);
+      alert("Failed to process image. Please try another image.");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const defaultQuick: StoreConfigItem[] = [
+    { id: "indoor", name: "Indoor Plants", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80" },
+    { id: "lucky_bamboo", name: "Lucky Bamboo", image: "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=400&q=80" },
+    { id: "air_purifying", name: "Air Purifying", image: "https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=400&q=80" },
+    { id: "flowering", name: "Flowering Plants", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "money_plant", name: "Money Plants", image: "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?auto=format&fit=crop&w=400&q=80" },
+    { id: "bonsai", name: "Bonsai Trees", image: "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=400&q=80" },
+    { id: "succulents", name: "Succulents & Cacti", image: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=400&q=80" },
+    { id: "planters", name: "Ceramic Planters", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const currentQuick = pc.quickCategories && pc.quickCategories.length > 0 ? pc.quickCategories : defaultQuick;
+
+  const defaultTypes: StoreConfigItem[] = [
+    { id: "snake", name: "Snake Plant", image: "https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=400&q=80" },
+    { id: "jade", name: "Jade Plant", image: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=400&q=80" },
+    { id: "peace_lily", name: "Peace Lily", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "money", name: "Money Plant", image: "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?auto=format&fit=crop&w=400&q=80" },
+    { id: "syngonium", name: "Syngonium", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80" },
+    { id: "aloe", name: "Aloe Vera", image: "https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80" },
+    { id: "ferns", name: "Boston Fern", image: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=400&q=80" },
+    { id: "bamboo", name: "Lucky Bamboo", image: "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const currentTypes = pc.plantsByTypeCategories && pc.plantsByTypeCategories.length > 0 ? pc.plantsByTypeCategories : defaultTypes;
+
+  const defaultLocations: StoreConfigItem[] = [
+    { id: "indoor_loc", name: "Indoor Living", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80" },
+    { id: "desk", name: "Desk & Office", image: "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?auto=format&fit=crop&w=400&q=80" },
+    { id: "balcony", name: "Balcony & Sun", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "bedroom", name: "Bedroom Sleep", image: "https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const currentLocations = pc.plantsByLocationCategories && pc.plantsByLocationCategories.length > 0 ? pc.plantsByLocationCategories : defaultLocations;
+
+  const defaultPlanters: StoreConfigItem[] = [
+    { id: "ceramic", name: "Ceramic Pots", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80" },
+    { id: "metal", name: "Metal Stands", image: "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?auto=format&fit=crop&w=400&q=80" },
+    { id: "self_watering", name: "Self-Watering", image: "https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=400&q=80" },
+    { id: "hanging", name: "Hanging Pots", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+    { id: "fertilizer", name: "Plant Care", image: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=400&q=80" },
+    { id: "plant_hampers", name: "Plant Combos", image: "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=400&q=80" },
+  ];
+
+  const currentPlanters = pc.explorePlantersCategories && pc.explorePlantersCategories.length > 0 ? pc.explorePlantersCategories : defaultPlanters;
+
+  const renderCategoryListEditor = (
+    title: string,
+    list: StoreConfigItem[],
+    onUpdateList: (newList: StoreConfigItem[]) => void
+  ) => {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+          <h3 className="text-xs font-black uppercase text-slate-800">{title}</h3>
+          <button
+            type="button"
+            onClick={() => {
+              const newItem: StoreConfigItem = {
+                id: `plant_item_${Date.now()}`,
+                name: "New Category",
+                image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80",
+              };
+              onUpdateList([...list, newItem]);
+            }}
+            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase rounded-lg shadow-xs"
+          >
+            + Add Item
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {list.map((item, idx) => (
+            <div key={item.id || idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 relative">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = list.filter((_, i) => i !== idx);
+                  onUpdateList(next);
+                }}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700 font-black text-xs p-1"
+                title="Delete Item"
+              >
+                ✕
+              </button>
+
+              <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 mx-auto bg-white">
+                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-slate-400 block">Name</label>
+                <input
+                  type="text"
+                  value={item.name}
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], name: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-slate-400 block">Image URL</label>
+                <input
+                  type="text"
+                  value={item.image}
+                  onChange={(e) => {
+                    const next = [...list];
+                    next[idx] = { ...next[idx], image: e.target.value };
+                    onUpdateList(next);
+                  }}
+                  className="w-full text-[10px] font-mono p-1.5 bg-white border border-slate-200 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleFileUpload(file, `plant_list_${idx}`, (b64) => {
+                        const next = [...list];
+                        next[idx] = { ...next[idx], image: b64 };
+                        onUpdateList(next);
+                      });
+                    }
+                  }}
+                  className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-emerald-50 file:text-emerald-800"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto text-left mb-8">
+      {/* Header */}
+      <div className="bg-emerald-950 text-white rounded-3xl p-6 shadow-lg">
+        <span className="text-[10px] bg-emerald-500 text-emerald-950 font-black px-2.5 py-1 rounded-full uppercase tracking-widest inline-block mb-2">
+          PLANTS LANDING CURATION
+        </span>
+        <h2 className="text-xl sm:text-2xl font-black text-white">
+          Manage Plants Page Layout & Banner Images
+        </h2>
+        <p className="text-xs text-emerald-200 font-medium mt-1">
+          Edit Hero Banner, Quick Categories, Air Purifying & Lucky Banners, Plant Varieties, Location Categories, Planters, and Catalog Mapping.
+        </p>
+      </div>
+
+      {/* Sub-Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        {[
+          { id: "hero", label: "Hero Banner" },
+          { id: "quick", label: "Quick Categories" },
+          { id: "feature_banners", label: "Promo Banners" },
+          { id: "plant_types", label: "Plant Varieties" },
+          { id: "locations", label: "By Location" },
+          { id: "planters", label: "Pots & Care" },
+          { id: "products", label: "Product Mapping" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveSubTab(tab.id as any)}
+            className={`px-3.5 py-2 text-xs font-black rounded-xl uppercase transition-all ${
+              activeSubTab === tab.id
+                ? "bg-emerald-600 text-white shadow-md"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* SUB-TAB CONTENTS */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+        {activeSubTab === "hero" && (
+          <div className="space-y-4 max-w-2xl">
+            <h3 className="text-xs font-black uppercase text-slate-800">Main Plants Hero Banner</h3>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Title</label>
+              <input
+                type="text"
+                value={pc.heroBannerTitle || "Green Plants & Planters"}
+                onChange={(e) => updatePC({ heroBannerTitle: e.target.value })}
+                className="w-full text-xs font-bold p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Subtitle</label>
+              <input
+                type="text"
+                value={pc.heroBannerSubtitle || "Breathe Fresh & Gift Good Luck"}
+                onChange={(e) => updatePC({ heroBannerSubtitle: e.target.value })}
+                className="w-full text-xs font-bold p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Banner Image URL</label>
+              <input
+                type="text"
+                value={pc.heroBannerImage || "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=1200&q=80"}
+                onChange={(e) => updatePC({ heroBannerImage: e.target.value })}
+                className="w-full text-xs font-mono p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[9.5px] font-bold text-emerald-800 uppercase block mb-1">Or Upload Hero Image from Device</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file, "hero_plants", (b64) => updatePC({ heroBannerImage: b64 }));
+                }}
+                className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-emerald-50 file:text-emerald-800"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "quick" && renderCategoryListEditor("Quick Categories Grid", currentQuick, (list) => updatePC({ quickCategories: list }))}
+
+        {activeSubTab === "feature_banners" && (
+          <div className="space-y-6 max-w-2xl">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">1. Air Purifying Plants Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={pc.airPurifyingBannerTitle || "Air Purifying Plants"}
+                  onChange={(e) => updatePC({ airPurifyingBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={pc.airPurifyingBannerImage || "https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updatePC({ airPurifyingBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "air_purifying_banner", (b64) => updatePC({ airPurifyingBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-emerald-50 file:text-emerald-800"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">2. Good Luck & Feng Shui Banner</h4>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Title</label>
+                <input
+                  type="text"
+                  value={pc.luckyPlantsBannerTitle || "Good Luck & Feng Shui"}
+                  onChange={(e) => updatePC({ luckyPlantsBannerTitle: e.target.value })}
+                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={pc.luckyPlantsBannerImage || "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=1200&q=80"}
+                  onChange={(e) => updatePC({ luckyPlantsBannerImage: e.target.value })}
+                  className="w-full text-xs font-mono p-2 bg-white border border-slate-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "lucky_banner", (b64) => updatePC({ luckyPlantsBannerImage: b64 }));
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-emerald-50 file:text-emerald-800"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "plant_types" && renderCategoryListEditor("Popular Plant Varieties", currentTypes, (list) => updatePC({ plantsByTypeCategories: list }))}
+
+        {activeSubTab === "locations" && renderCategoryListEditor("Plants By Ideal Location", currentLocations, (list) => updatePC({ plantsByLocationCategories: list }))}
+
+        {activeSubTab === "planters" && renderCategoryListEditor("Pots, Planters & Care", currentPlanters, (list) => updatePC({ explorePlantersCategories: list }))}
+
+        {activeSubTab === "products" && (
+          <CurationProductMapper
+            curationType="plants"
+            products={products}
+            onUpdateProduct={onUpdateProduct}
+          />
+        )}
+
+        {/* Save Bar */}
+        <div className="border-t border-slate-200 pt-4 flex items-center justify-between">
+          <p className="text-xs text-slate-500 font-medium">Save all changes to Plants Curation.</p>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            Save Plants Curation
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminPanel({
@@ -980,6 +3011,26 @@ export default function AdminPanel({
                 }`}
               >
                 <span>🌸 Flowers Curation</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("birthday_curation")}
+                className={`py-3.5 px-4 flex items-center gap-1.5 border-b-2 shrink-0 transition-all cursor-pointer ${
+                  activeTab === "birthday_curation"
+                    ? "border-amber-600 text-amber-600"
+                    : "border-transparent text-slate-500"
+                }`}
+              >
+                <span>🎉 Birthday Curation</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("plants_curation")}
+                className={`py-3.5 px-4 flex items-center gap-1.5 border-b-2 shrink-0 transition-all cursor-pointer ${
+                  activeTab === "plants_curation"
+                    ? "border-emerald-600 text-emerald-600"
+                    : "border-transparent text-slate-500"
+                }`}
+              >
+                <span>🪴 Plants Curation</span>
               </button>
               <button
                 onClick={() => setActiveTab("purchases")}
@@ -2027,9 +4078,15 @@ export default function AdminPanel({
 
               {activeTab === "flowers_curation" && (
                 <div className="space-y-6">
+                  <FlowersCurationTab
+                    localConfig={localConfig}
+                    setLocalConfig={setLocalConfig}
+                    onUpdateStoreConfig={onUpdateStoreConfig}
+                  />
+
                   <div className="bg-white rounded-3xl p-5 border border-pink-100 shadow-sm text-left">
                     <h3 className="text-sm sm:text-base font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-tight mb-4">
-                      <span>🌸</span> Flowers Curation
+                      <span>🌸</span> Flowers Product Categories Curation
                     </h3>
                     <p className="text-xs text-slate-500 mb-6 font-semibold">Select products to feature under Flowers with Cakes and Flowers with Chocolates sections.</p>
 
@@ -2109,6 +4166,31 @@ export default function AdminPanel({
                   </div>
                 </div>
               )}
+
+              {activeTab === "birthday_curation" && (
+                <div className="space-y-6">
+                  <BirthdayCurationTab
+                    localConfig={localConfig}
+                    setLocalConfig={setLocalConfig}
+                    onUpdateStoreConfig={onUpdateStoreConfig}
+                    products={products}
+                    onUpdateProduct={onUpdateProduct}
+                  />
+                </div>
+              )}
+
+              {activeTab === "plants_curation" && (
+                <div className="space-y-6">
+                  <PlantCurationTab
+                    localConfig={localConfig}
+                    setLocalConfig={setLocalConfig}
+                    onUpdateStoreConfig={onUpdateStoreConfig}
+                    products={products}
+                    onUpdateProduct={onUpdateProduct}
+                  />
+                </div>
+              )}
+
               {/* TAB 2: CATALOG STOCK MANAGER */}
               {activeTab === "catalog" && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -4366,6 +6448,25 @@ export default function AdminPanel({
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* TAB: TASTE PICK CURATION */}
+              {activeTab === "taste_pick_curation" && (
+                <TastePickCurationTab
+                  localConfig={localConfig}
+                  setLocalConfig={setLocalConfig}
+                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  products={products}
+                />
+              )}
+
+              {/* TAB: CAKES CURATION */}
+              {activeTab === "cakes_curation" && (
+                <CakesCurationTab
+                  localConfig={localConfig}
+                  setLocalConfig={setLocalConfig}
+                  onUpdateStoreConfig={onUpdateStoreConfig}
+                />
               )}
 
               {/* TAB: DELIVERY ENGINE */}

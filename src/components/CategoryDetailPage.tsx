@@ -1,5 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
+import CakeCategoryLanding from "./CakeCategoryLanding";
+import FlowerCategoryLanding from "./FlowerCategoryLanding";
+import BirthdayCategoryLanding from "./BirthdayCategoryLanding";
+import PlantCategoryLanding from "./PlantCategoryLanding";
 import {
   Star,
   Zap,
@@ -164,6 +168,48 @@ export default function CategoryDetailPage({
       if (categoryId === "two_hours_delivery") {
         return !!prod.isTwoHourDelivery;
       }
+      if (categoryId === "birthday") {
+        return (
+          prod.category === "birthday" ||
+          (prod.categories && prod.categories.includes("birthday")) ||
+          prod.name.toLowerCase().includes("birthday") ||
+          prod.description.toLowerCase().includes("birthday")
+        );
+      }
+
+      // Check if storeConfig has explicitly assigned product IDs for this taste pick category
+      const tasteCat = storeConfig?.tastePickCategories?.find((t) => t.id === categoryId);
+      if (tasteCat && tasteCat.productIds && tasteCat.productIds.length > 0) {
+        if (tasteCat.productIds.includes(prod.id)) return true;
+      }
+
+      // Check keyword matching for taste / flavor categories
+      if (categoryId.startsWith("taste_")) {
+        const flavorKey = categoryId.replace("taste_", "").toLowerCase();
+        const flavorKeywords: Record<string, string[]> = {
+          redvelvet: ["red velvet", "velvet"],
+          whiteforest: ["white forest"],
+          strawberry: ["strawberry"],
+          blueberry: ["blueberry"],
+          rasmalai: ["rasmalai"],
+          fruit: ["fruit"],
+          mango: ["mango"],
+          butterscotch: ["butterscotch"],
+          kitkat: ["kitkat", "gems"],
+          chocolate: ["chocolate", "chocolates", "truffle", "fudge"],
+          vanilla: ["vanilla"],
+          pineapple: ["pineapple"],
+          blackforest: ["black forest"],
+          truffle: ["truffle"],
+        };
+        const words = flavorKeywords[flavorKey] || [flavorKey];
+        const pName = prod.name.toLowerCase();
+        const pDesc = prod.description.toLowerCase();
+        if (words.some((w) => pName.includes(w) || pDesc.includes(w))) {
+          return true;
+        }
+      }
+
       const directMatch = prod.category === categoryId;
       const secMatch = prod.categories && prod.categories.includes(categoryId);
       return directMatch || secMatch;
@@ -359,6 +405,50 @@ export default function CategoryDetailPage({
         { id: "taste_pineapple", name: "Pineapple", tag: "Tropical", image: "https://images.unsplash.com/photo-1517593674696-6e3e1572c4ce?auto=format&fit=crop&w=400&q=80" },
         { id: "taste_fruit", name: "Fruit Cake", tag: "Fresh & Healthy", image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80" }
       ];
+
+  if (categoryId === "cakes" && isRichLayout) {
+    return (
+      <CakeCategoryLanding
+        products={products}
+        onSelectProduct={onSelectProduct}
+        onSelectCategory={onSelectCategory}
+        storeConfig={storeConfig}
+      />
+    );
+  }
+
+  if (categoryId === "flowers" && isRichLayout) {
+    return (
+      <FlowerCategoryLanding
+        products={products}
+        onSelectProduct={onSelectProduct}
+        onSelectCategory={onSelectCategory}
+        storeConfig={storeConfig}
+      />
+    );
+  }
+
+  if (categoryId === "birthday" && isRichLayout) {
+    return (
+      <BirthdayCategoryLanding
+        products={products}
+        onSelectProduct={onSelectProduct}
+        onSelectCategory={onSelectCategory}
+        storeConfig={storeConfig}
+      />
+    );
+  }
+
+  if (categoryId === "plants" && isRichLayout) {
+    return (
+      <PlantCategoryLanding
+        products={products}
+        onSelectProduct={onSelectProduct}
+        onSelectCategory={onSelectCategory}
+        storeConfig={storeConfig}
+      />
+    );
+  }
 
   return (
     <div className="w-full bg-slate-50 min-h-screen flex flex-col">

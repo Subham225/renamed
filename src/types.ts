@@ -245,7 +245,14 @@ export interface StoreConfigItem {
   id: string;
   name: string;
   image: string;
-  tag: string;
+  tag?: string;
+}
+
+export interface TastePickItem {
+  id: string;
+  name: string;
+  image: string;
+  productIds?: string[];
 }
 
 export interface DeliveryZone {
@@ -263,13 +270,66 @@ export interface DeliveryTimeSlot {
   type: "standard" | "fixed" | "midnight" | "express";
 }
 
+export interface FlowerCurationConfig {
+  heroBannerImage?: string;
+  heroBannerTitle?: string;
+  heroBannerSubtitle?: string;
+  trendingCategories?: StoreConfigItem[];
+  byTypeCategories?: StoreConfigItem[];
+  byColorCategories?: StoreConfigItem[];
+  byCollectionCategories?: StoreConfigItem[];
+  luxuryPairings?: StoreConfigItem[];
+  byOccasionCategories?: StoreConfigItem[];
+  luxuryBloomsBannerImage?: string;
+  luxuryBloomsBannerTitle?: string;
+  plantsPromoBannerImage?: string;
+  plantsPromoBannerTitle?: string;
+}
+
+export interface BirthdayCurationConfig {
+  heroBannerImage?: string;
+  heroBannerTitle?: string;
+  heroBannerSubtitle?: string;
+  quickCategories?: StoreConfigItem[];
+  giftsForHerBannerImage?: string;
+  giftsForHerBannerTitle?: string;
+  giftsForHimBannerImage?: string;
+  giftsForHimBannerTitle?: string;
+  premiumCategories?: StoreConfigItem[];
+  flowersByTypeCategories?: StoreConfigItem[];
+  kidsCakesBannerImage?: string;
+  kidsCakesBannerTitle?: string;
+  digitalGiftsBannerImage?: string;
+  digitalGiftsBannerTitle?: string;
+  exploreGiftsCategories?: StoreConfigItem[];
+}
+
+export interface PlantCurationConfig {
+  heroBannerImage?: string;
+  heroBannerTitle?: string;
+  heroBannerSubtitle?: string;
+  quickCategories?: StoreConfigItem[];
+  airPurifyingBannerImage?: string;
+  airPurifyingBannerTitle?: string;
+  luckyPlantsBannerImage?: string;
+  luckyPlantsBannerTitle?: string;
+  plantsByTypeCategories?: StoreConfigItem[];
+  plantsByLocationCategories?: StoreConfigItem[];
+  explorePlantersCategories?: StoreConfigItem[];
+}
+
 export interface StoreConfig {
   deliveryZones?: DeliveryZone[];
   deliveryTimeSlots?: DeliveryTimeSlot[];
   aboutPoints: string[];
   aboutBgImage: string;
   cakeSubcategories: StoreConfigItem[];
+  quickCakeCategories?: StoreConfigItem[];
+  tastePickCategories?: TastePickItem[];
   tastePickSubcategories?: StoreConfigItem[];
+  flowerCuration?: FlowerCurationConfig;
+  birthdayCuration?: BirthdayCurationConfig;
+  plantCuration?: PlantCurationConfig;
   flowerSubcategories?: StoreConfigItem[];
   plantSubcategories?: StoreConfigItem[];
   chocolateSubcategories?: StoreConfigItem[];
