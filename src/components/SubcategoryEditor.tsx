@@ -1,5 +1,5 @@
 import React from "react";
-import { StoreConfig, StoreConfigItem } from "../types";
+import { Product, StoreConfig, StoreConfigItem } from "../types";
 
 interface SubcategoryEditorProps {
   title: string;
@@ -13,6 +13,7 @@ interface SubcategoryEditorProps {
   localConfig: StoreConfig;
   setLocalConfig: (config: StoreConfig) => void;
   accentColor?: "pink" | "teal" | "indigo" | "blue" | "emerald" | "rose";
+  products?: Product[];
 }
 
 export default function SubcategoryEditor({
@@ -27,6 +28,7 @@ export default function SubcategoryEditor({
   localConfig,
   setLocalConfig,
   accentColor = "pink",
+  products = [],
 }: SubcategoryEditorProps) {
   const list = [...((localConfig[configKey] as StoreConfigItem[]) || [])];
 
@@ -228,6 +230,74 @@ export default function SubcategoryEditor({
                   </div>
                 </div>
               </div>
+
+              {/* Product Selector for specific products under this subcategory */}
+              {products.length > 0 && (
+                <div className="pt-2 border-t border-slate-200/80">
+                  <label className="text-[9.5px] font-bold text-slate-600 uppercase block mb-1">
+                    Selected Products ({item.productIds?.length || 0})
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 mb-2 max-h-20 overflow-y-auto pr-1">
+                    {(item.productIds || []).map((pId) => {
+                      const pObj = products.find((p) => p.id === pId);
+                      return (
+                        <span
+                          key={pId}
+                          className="inline-flex items-center gap-1 text-[10px] bg-pink-100 text-pink-800 font-bold px-2 py-0.5 rounded-lg border border-pink-200"
+                        >
+                          {pObj ? pObj.name : pId}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentPids = item.productIds || [];
+                              updateItem(index, {
+                                productIds: currentPids.filter((id) => id !== pId),
+                              });
+                            }}
+                            className="hover:text-red-700 font-extrabold ml-0.5"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  <details className="group border border-slate-200 rounded-xl bg-white p-2">
+                    <summary className="text-[10px] font-black uppercase text-pink-700 cursor-pointer select-none">
+                      + Select Specific Products for "{item.name}"
+                    </summary>
+                    <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 text-xs">
+                      {products.map((p) => {
+                        const isChecked = (item.productIds || []).includes(p.id);
+                        return (
+                          <label
+                            key={p.id}
+                            className="flex items-center justify-between p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer border border-transparent hover:border-slate-100"
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <img src={p.image} className="w-6 h-6 object-cover rounded-md" alt="" />
+                              <span className="font-bold text-[11px] text-slate-800 truncate">{p.name}</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                const currentPids = item.productIds || [];
+                                const nextPids = isChecked
+                                  ? currentPids.filter((id) => id !== p.id)
+                                  : [...currentPids, p.id];
+                                updateItem(index, { productIds: nextPids });
+                              }}
+                              className="rounded text-pink-600 focus:ring-pink-500 w-4 h-4 cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </details>
+                </div>
+              )}
             </div>
           );
         })}

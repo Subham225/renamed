@@ -408,11 +408,15 @@ function CakesCurationTab({
   localConfig,
   setLocalConfig,
   onUpdateStoreConfig,
+  products = [],
 }: {
   localConfig: StoreConfig | null;
   setLocalConfig: (config: StoreConfig) => void;
   onUpdateStoreConfig?: (config: StoreConfig) => void;
+  products?: Product[];
 }) {
+  const [activeSubTab, setActiveSubTab] = useState<"quick_circles" | "iconic_bake">("quick_circles");
+
   const defaultQuickCategories: StoreConfigItem[] = [
     { id: "cakes", name: "All Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80", tag: "cakes" },
     { id: "birthday", name: "Birthday Cakes", image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=400&q=80", tag: "birthday" },
@@ -422,9 +426,22 @@ function CakesCurationTab({
     { id: "kids_cake", name: "Kids Cakes", image: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80", tag: "kids_cake" },
   ];
 
+  const defaultIconicFlavors: StoreConfigItem[] = [
+    { id: "taste_chocolate", name: "Chocolate Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_butterscotch", name: "Butterscotch Cakes", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_blackforest", name: "Black Forest Cakes", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_vanilla", name: "Vanilla Cakes", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_truffle", name: "Truffle Cakes", image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_pineapple", name: "Pineapple Cakes", image: "https://images.unsplash.com/photo-1562440499-64c9a111f713?auto=format&fit=crop&w=400&q=80" },
+  ];
+
   const currentQuickCats = (localConfig?.quickCakeCategories && localConfig.quickCakeCategories.length > 0)
     ? localConfig.quickCakeCategories
     : defaultQuickCategories;
+
+  const currentIconicFlavors = (localConfig?.iconicFlavors && localConfig.iconicFlavors.length > 0)
+    ? localConfig.iconicFlavors
+    : defaultIconicFlavors;
 
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
 
@@ -433,6 +450,13 @@ function CakesCurationTab({
     const list = [...currentQuickCats];
     list[index] = { ...list[index], ...updated };
     setLocalConfig({ ...localConfig, quickCakeCategories: list });
+  };
+
+  const updateIconicFlavor = (index: number, updated: Partial<StoreConfigItem>) => {
+    if (!localConfig) return;
+    const list = [...currentIconicFlavors];
+    list[index] = { ...list[index], ...updated };
+    setLocalConfig({ ...localConfig, iconicFlavors: list });
   };
 
   const addQuickCat = () => {
@@ -449,10 +473,29 @@ function CakesCurationTab({
     });
   };
 
+  const addIconicFlavor = () => {
+    if (!localConfig) return;
+    const newFlavor: StoreConfigItem = {
+      id: `taste_${Date.now()}`,
+      name: "New Bake Flavor",
+      image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
+    };
+    setLocalConfig({
+      ...localConfig,
+      iconicFlavors: [...currentIconicFlavors, newFlavor],
+    });
+  };
+
   const deleteQuickCat = (index: number) => {
     if (!localConfig) return;
     const list = currentQuickCats.filter((_, i) => i !== index);
     setLocalConfig({ ...localConfig, quickCakeCategories: list });
+  };
+
+  const deleteIconicFlavor = (index: number) => {
+    if (!localConfig) return;
+    const list = currentIconicFlavors.filter((_, i) => i !== index);
+    setLocalConfig({ ...localConfig, iconicFlavors: list });
   };
 
   const handleSave = () => {
@@ -460,9 +503,10 @@ function CakesCurationTab({
     const newConfig = {
       ...localConfig,
       quickCakeCategories: currentQuickCats,
+      iconicFlavors: currentIconicFlavors,
     };
     if (onUpdateStoreConfig) onUpdateStoreConfig(newConfig);
-    alert("Cake Landing top circle categories updated successfully!");
+    alert("Cake Landing Curation updated successfully!");
   };
 
   return (
@@ -471,142 +515,378 @@ function CakesCurationTab({
       <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-lg relative overflow-hidden">
         <div className="relative z-10 space-y-2">
           <span className="text-[10px] bg-pink-600 text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest inline-block">
-            CAKE LANDING TOP CIRCLE CATEGORIES
+            CAKE LANDING CURATION
           </span>
           <h2 className="text-xl sm:text-2xl font-black text-white">
-            Manage Top Circle Tabs & Images
+            Manage Top Circle Tabs & Iconic Bake Flavors
           </h2>
           <p className="text-xs text-slate-300 max-w-2xl font-medium">
-            Edit the circular category icons shown at the top of the Cake Landing Page (All Cakes, Birthday Cakes, Anniversary Cakes, Photo Cakes, Heart Shape Cakes, Kids Cakes). Change titles, replace photos via URL or local device file upload, add new circle tabs, or reorder them.
+            Edit the circular category icons and "Experience Our Iconic Bake" cards. Replace photos via URL or device upload, update titles, or add new items.
           </p>
         </div>
       </div>
 
-      {/* Grid of Circular Top Categories */}
-      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div>
-            <h3 className="text-sm font-black text-slate-900 uppercase">
-              Top Circle Category Tabs ({currentQuickCats.length})
-            </h3>
-            <p className="text-[10px] text-slate-400 font-semibold">
-              These round icons appear directly below the top announcement banner on the cake landing page.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={addQuickCat}
-            className="px-3.5 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 font-black text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-pink-200"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add Circle Category
-          </button>
-        </div>
+      {/* Sub-Tabs Selector */}
+      <div className="flex gap-2 border-b border-slate-200 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("quick_circles")}
+          className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+            activeSubTab === "quick_circles"
+              ? "bg-pink-600 text-white shadow-sm"
+              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          ⭕ Top Circle Tabs ({currentQuickCats.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("iconic_bake")}
+          className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+            activeSubTab === "iconic_bake"
+              ? "bg-pink-600 text-white shadow-sm"
+              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          🍰 Experience Our Iconic Bake ({currentIconicFlavors.length})
+        </button>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {currentQuickCats.map((cat, idx) => (
-            <div
-              key={cat.id || idx}
-              className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 space-y-3 relative group"
+      {activeSubTab === "quick_circles" && (
+        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase">
+                Top Circle Category Tabs ({currentQuickCats.length})
+              </h3>
+              <p className="text-[10px] text-slate-400 font-semibold">
+                These round icons appear directly below the top announcement banner on the cake landing page.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addQuickCat}
+              className="px-3.5 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 font-black text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-pink-200"
             >
-              {/* Header preview inside card */}
-              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-pink-500 shrink-0 bg-white shadow-2xs">
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      className="w-full h-full object-cover"
-                    />
+              <Plus className="w-3.5 h-3.5" /> Add Circle Category
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentQuickCats.map((cat, idx) => (
+              <div
+                key={cat.id || idx}
+                className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 space-y-3 relative group"
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-pink-500 shrink-0 bg-white shadow-2xs">
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-slate-900 truncate">{cat.name}</h4>
+                      <span className="text-[9px] font-mono text-slate-400 block truncate">ID: {cat.id}</span>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-black text-slate-900 truncate">{cat.name}</h4>
-                    <span className="text-[9px] font-mono text-slate-400 block truncate">ID: {cat.id}</span>
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteQuickCat(idx)}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer shrink-0"
+                    title="Remove category"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => deleteQuickCat(idx)}
-                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer shrink-0"
-                  title="Remove category"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Input: Name */}
-              <div>
-                <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
-                  Category Display Title
-                </label>
-                <input
-                  type="text"
-                  value={cat.name}
-                  onChange={(e) => updateQuickCat(idx, { name: e.target.value })}
-                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
-                />
-              </div>
-
-              {/* Input: Target Category ID */}
-              <div>
-                <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
-                  Target Category Filter Key
-                </label>
-                <input
-                  type="text"
-                  value={cat.id}
-                  onChange={(e) => updateQuickCat(idx, { id: e.target.value })}
-                  placeholder="cakes / birthday / anniversary / photo_cake..."
-                  className="w-full text-[10.5px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
-                />
-              </div>
-
-              {/* Input: Image URL + Device Upload */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-0.5">
-                  Circle Photo Image URL
-                </label>
-                <input
-                  type="text"
-                  value={cat.image}
-                  onChange={(e) => updateQuickCat(idx, { image: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full text-[10px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
-                />
 
                 <div>
-                  <label className="text-[9px] text-pink-700 font-extrabold uppercase block mb-1">
-                    Or Upload Image File from Local Device
+                  <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                    Category Display Title
                   </label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    onChange={async (e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        try {
-                          setUploadingIdx(idx);
-                          const base64 = await compressImageFile(e.target.files[0], 600, 0.6);
-                          updateQuickCat(idx, { image: base64 });
-                        } catch (err) {
-                          alert("Image compression failed.");
-                        } finally {
-                          setUploadingIdx(null);
-                        }
-                      }
-                    }}
-                    className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
+                    type="text"
+                    value={cat.name}
+                    onChange={(e) => updateQuickCat(idx, { name: e.target.value })}
+                    className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
                   />
-                  {uploadingIdx === idx && (
-                    <span className="text-[9px] text-pink-600 animate-pulse block mt-1">
-                      Compressing & uploading photo...
-                    </span>
-                  )}
                 </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                    Target Category Filter Key
+                  </label>
+                  <input
+                    type="text"
+                    value={cat.id}
+                    onChange={(e) => updateQuickCat(idx, { id: e.target.value })}
+                    placeholder="cakes / birthday / anniversary / photo_cake..."
+                    className="w-full text-[10.5px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-0.5">
+                    Circle Photo Image URL
+                  </label>
+                  <input
+                    type="text"
+                    value={cat.image}
+                    onChange={(e) => updateQuickCat(idx, { image: e.target.value })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full text-[10px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  />
+
+                  <div>
+                    <label className="text-[9px] text-pink-700 font-extrabold uppercase block mb-1">
+                      Or Upload Image File from Local Device
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          try {
+                            setUploadingIdx(idx);
+                            const base64 = await compressImageFile(e.target.files[0], 600, 0.6);
+                            updateQuickCat(idx, { image: base64 });
+                          } catch (err) {
+                            alert("Image compression failed.");
+                          } finally {
+                            setUploadingIdx(null);
+                          }
+                        }
+                      }}
+                      className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {products.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <label className="text-[9.5px] font-bold text-slate-600 uppercase block mb-1">
+                      Selected Products ({cat.productIds?.length || 0})
+                    </label>
+                    <div className="flex flex-wrap gap-1 mb-2 max-h-20 overflow-y-auto">
+                      {(cat.productIds || []).map((pId) => {
+                        const pObj = products.find((p) => p.id === pId);
+                        return (
+                          <span key={pId} className="inline-flex items-center gap-1 text-[9.5px] bg-pink-100 text-pink-800 font-bold px-1.5 py-0.5 rounded-md">
+                            {pObj ? pObj.name : pId}
+                            <button
+                              type="button"
+                              onClick={() => updateQuickCat(idx, { productIds: (cat.productIds || []).filter((id) => id !== pId) })}
+                              className="text-pink-900 hover:text-red-700 font-extrabold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <details className="group border border-slate-200 rounded-xl bg-white p-2">
+                      <summary className="text-[10px] font-black uppercase text-pink-700 cursor-pointer select-none">
+                        + Select Products for "{cat.name}"
+                      </summary>
+                      <div className="mt-2 space-y-1 max-h-36 overflow-y-auto text-xs">
+                        {products.map((p) => {
+                          const isChecked = (cat.productIds || []).includes(p.id);
+                          return (
+                            <label key={p.id} className="flex items-center justify-between p-1 hover:bg-slate-50 rounded cursor-pointer">
+                              <span className="font-bold text-[10.5px] text-slate-800 truncate">{p.name}</span>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  const currentPids = cat.productIds || [];
+                                  const nextPids = isChecked ? currentPids.filter((id) => id !== p.id) : [...currentPids, p.id];
+                                  updateQuickCat(idx, { productIds: nextPids });
+                                }}
+                                className="rounded text-pink-600 focus:ring-pink-500 w-3.5 h-3.5"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeSubTab === "iconic_bake" && (
+        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase">
+                Experience Our Iconic Bake ({currentIconicFlavors.length})
+              </h3>
+              <p className="text-[10px] text-slate-400 font-semibold">
+                Manage Chocolate, Butterscotch, Black Forest, Vanilla, Truffle, Pineapple, etc. images.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addIconicFlavor}
+              className="px-3.5 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 font-black text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-pink-200"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Flavor
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentIconicFlavors.map((flavor, idx) => (
+              <div
+                key={flavor.id || idx}
+                className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 space-y-3 relative group"
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-pink-500 shrink-0 bg-white shadow-2xs">
+                      <img
+                        src={flavor.image}
+                        alt={flavor.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-slate-900 truncate">{flavor.name}</h4>
+                      <span className="text-[9px] font-mono text-slate-400 block truncate">ID: {flavor.id}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteIconicFlavor(idx)}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer shrink-0"
+                    title="Remove flavor"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                    Flavor Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={flavor.name}
+                    onChange={(e) => updateIconicFlavor(idx, { name: e.target.value })}
+                    className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-1">
+                    Target Filter ID
+                  </label>
+                  <input
+                    type="text"
+                    value={flavor.id}
+                    onChange={(e) => updateIconicFlavor(idx, { id: e.target.value })}
+                    placeholder="taste_chocolate / taste_butterscotch..."
+                    className="w-full text-[10.5px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-slate-500 font-extrabold uppercase block mb-0.5">
+                    Flavor Image URL
+                  </label>
+                  <input
+                    type="text"
+                    value={flavor.image}
+                    onChange={(e) => updateIconicFlavor(idx, { image: e.target.value })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full text-[10px] font-mono p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  />
+
+                  <div>
+                    <label className="text-[9px] text-pink-700 font-extrabold uppercase block mb-1">
+                      Or Upload Image File from Local Device
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          try {
+                            setUploadingIdx(idx);
+                            const base64 = await compressImageFile(e.target.files[0], 600, 0.6);
+                            updateIconicFlavor(idx, { image: base64 });
+                          } catch (err) {
+                            alert("Image compression failed.");
+                          } finally {
+                            setUploadingIdx(null);
+                          }
+                        }
+                      }}
+                      className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {products.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <label className="text-[9.5px] font-bold text-slate-600 uppercase block mb-1">
+                      Selected Products ({flavor.productIds?.length || 0})
+                    </label>
+                    <div className="flex flex-wrap gap-1 mb-2 max-h-20 overflow-y-auto">
+                      {(flavor.productIds || []).map((pId) => {
+                        const pObj = products.find((p) => p.id === pId);
+                        return (
+                          <span key={pId} className="inline-flex items-center gap-1 text-[9.5px] bg-pink-100 text-pink-800 font-bold px-1.5 py-0.5 rounded-md">
+                            {pObj ? pObj.name : pId}
+                            <button
+                              type="button"
+                              onClick={() => updateIconicFlavor(idx, { productIds: (flavor.productIds || []).filter((id) => id !== pId) })}
+                              className="text-pink-900 hover:text-red-700 font-extrabold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <details className="group border border-slate-200 rounded-xl bg-white p-2">
+                      <summary className="text-[10px] font-black uppercase text-pink-700 cursor-pointer select-none">
+                        + Select Products for "{flavor.name}"
+                      </summary>
+                      <div className="mt-2 space-y-1 max-h-36 overflow-y-auto text-xs">
+                        {products.map((p) => {
+                          const isChecked = (flavor.productIds || []).includes(p.id);
+                          return (
+                            <label key={p.id} className="flex items-center justify-between p-1 hover:bg-slate-50 rounded cursor-pointer">
+                              <span className="font-bold text-[10.5px] text-slate-800 truncate">{p.name}</span>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  const currentPids = flavor.productIds || [];
+                                  const nextPids = isChecked ? currentPids.filter((id) => id !== p.id) : [...currentPids, p.id];
+                                  updateIconicFlavor(idx, { productIds: nextPids });
+                                }}
+                                className="rounded text-pink-600 focus:ring-pink-500 w-3.5 h-3.5"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Save Button */}
       <div className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between shadow-sm">
@@ -629,14 +909,16 @@ function FlowersCurationTab({
   localConfig,
   setLocalConfig,
   onUpdateStoreConfig,
+  products = [],
 }: {
   localConfig: StoreConfig | null;
   setLocalConfig: (config: StoreConfig) => void;
   onUpdateStoreConfig?: (config: StoreConfig) => void;
+  products?: Product[];
 }) {
   const fc = localConfig?.flowerCuration || {};
   const [activeSubTab, setActiveSubTab] = useState<
-    "hero" | "trending" | "type" | "color" | "collection" | "pairings" | "occasion" | "banners"
+    "hero" | "trending" | "type" | "color" | "collection" | "pairings" | "occasion" | "premium" | "banners"
   >("hero");
 
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
@@ -720,12 +1002,19 @@ function FlowersCurationTab({
     { id: "sorry", name: "I am sorry", image: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80" },
   ];
 
+  const defaultPremiumFlowers: StoreConfigItem[] = [
+    { id: "premium_roses", name: "Luxury Red Roses", image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80" },
+    { id: "exotic_orchids", name: "Exotic Purple Orchids", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
+    { id: "grand_lilies", name: "Grand White Lilies", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+  ];
+
   const currentTrending = fc.trendingCategories?.length ? fc.trendingCategories : defaultTrending;
   const currentByType = fc.byTypeCategories?.length ? fc.byTypeCategories : defaultByType;
   const currentByColor = fc.byColorCategories?.length ? fc.byColorCategories : defaultByColor;
   const currentByCollection = fc.byCollectionCategories?.length ? fc.byCollectionCategories : defaultByCollection;
   const currentPairings = fc.luxuryPairings?.length ? fc.luxuryPairings : defaultLuxuryPairings;
   const currentByOccasion = fc.byOccasionCategories?.length ? fc.byOccasionCategories : defaultByOccasion;
+  const currentPremiumFlowers = fc.premiumFlowersCategories?.length ? fc.premiumFlowersCategories : defaultPremiumFlowers;
 
   const renderCategoryListEditor = (
     title: string,
@@ -833,6 +1122,76 @@ function FlowersCurationTab({
                   className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-rose-50 file:text-rose-700"
                 />
               </div>
+
+              {/* Product Selector for specific products under this category */}
+              {products.length > 0 && (
+                <div className="pt-2 border-t border-slate-200/80">
+                  <label className="text-[9.5px] font-bold text-slate-600 uppercase block mb-1">
+                    Selected Products ({item.productIds?.length || 0})
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 mb-2 max-h-20 overflow-y-auto pr-1">
+                    {(item.productIds || []).map((pId) => {
+                      const pObj = products.find((p) => p.id === pId);
+                      return (
+                        <span
+                          key={pId}
+                          className="inline-flex items-center gap-1 text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-lg border border-rose-200"
+                        >
+                          {pObj ? pObj.name : pId}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextPids = (item.productIds || []).filter((id) => id !== pId);
+                              const next = [...list];
+                              next[idx] = { ...next[idx], productIds: nextPids };
+                              onUpdateList(next);
+                            }}
+                            className="hover:text-red-700 font-extrabold ml-0.5"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  <details className="group border border-slate-200 rounded-xl bg-white p-2">
+                    <summary className="text-[10px] font-black uppercase text-rose-700 cursor-pointer select-none">
+                      + Select Specific Products for "{item.name}"
+                    </summary>
+                    <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 text-xs">
+                      {products.map((p) => {
+                        const isChecked = (item.productIds || []).includes(p.id);
+                        return (
+                          <label
+                            key={p.id}
+                            className="flex items-center justify-between p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer border border-transparent hover:border-slate-100"
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <img src={p.image} className="w-6 h-6 object-cover rounded-md" alt="" />
+                              <span className="font-bold text-[11px] text-slate-800 truncate">{p.name}</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                const current = item.productIds || [];
+                                const nextPids = isChecked
+                                  ? current.filter((id) => id !== p.id)
+                                  : [...current, p.id];
+                                const next = [...list];
+                                next[idx] = { ...next[idx], productIds: nextPids };
+                                onUpdateList(next);
+                              }}
+                              className="rounded text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </details>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -851,7 +1210,7 @@ function FlowersCurationTab({
           Manage Flowers Page Layout & Images
         </h2>
         <p className="text-xs text-slate-300 font-medium mt-1">
-          Edit Hero Banner, Trending Categories, By Type, By Color, By Collection, Luxury Pairings, Occasions, and Promo Banners.
+          Edit Hero Banner, Trending Categories, By Type, By Color, By Collection, Luxury Pairings, Premium Flowers, Occasions, and Promo Banners.
         </p>
       </div>
 
@@ -863,6 +1222,7 @@ function FlowersCurationTab({
           { id: "type", label: "By Type" },
           { id: "color", label: "By Color" },
           { id: "collection", label: "By Collection" },
+          { id: "premium", label: "Premium Flowers" },
           { id: "pairings", label: "Luxury Pairings" },
           { id: "occasion", label: "By Occasion" },
           { id: "banners", label: "Promo Banners" },
@@ -936,6 +1296,8 @@ function FlowersCurationTab({
         {activeSubTab === "color" && renderCategoryListEditor("By Color Categories", currentByColor, (list) => updateFC({ byColorCategories: list }))}
 
         {activeSubTab === "collection" && renderCategoryListEditor("By Collection Categories", currentByCollection, (list) => updateFC({ byCollectionCategories: list }))}
+
+        {activeSubTab === "premium" && renderCategoryListEditor("Premium Flowers Categories", currentPremiumFlowers, (list) => updateFC({ premiumFlowersCategories: list }))}
 
         {activeSubTab === "pairings" && renderCategoryListEditor("Luxury Pairings", currentPairings, (list) => updateFC({ luxuryPairings: list }))}
 
@@ -6460,6 +6822,38 @@ export default function AdminPanel({
                 />
               )}
 
+              {/* TAB: FLOWERS CURATION */}
+              {(activeTab === "flowers_curation" || activeTab === "flower_curation") && (
+                <FlowersCurationTab
+                  localConfig={localConfig}
+                  setLocalConfig={setLocalConfig}
+                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  products={products}
+                />
+              )}
+
+              {/* TAB: BIRTHDAY CURATION */}
+              {activeTab === "birthday_curation" && (
+                <BirthdayCurationTab
+                  localConfig={localConfig}
+                  setLocalConfig={setLocalConfig}
+                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  products={products}
+                  onUpdateProduct={onUpdateProduct}
+                />
+              )}
+
+              {/* TAB: PLANTS CURATION */}
+              {activeTab === "plants_curation" && (
+                <PlantCurationTab
+                  localConfig={localConfig}
+                  setLocalConfig={setLocalConfig}
+                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  products={products}
+                  onUpdateProduct={onUpdateProduct}
+                />
+              )}
+
               {/* TAB: CAKES CURATION */}
               {activeTab === "cakes_curation" && (
                 <CakesCurationTab
@@ -7107,6 +7501,7 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      products={products}
                     />
 
                     {/* THIRD PANEL: GIFTS & COMBOS CATEGORY CARDS */}
@@ -7127,6 +7522,7 @@ export default function AdminPanel({
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
                       accentColor="pink"
+                      products={products}
                     />
 
                     {/* FOURTH PANEL: DIWALI CARDS */}
@@ -7147,6 +7543,7 @@ export default function AdminPanel({
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
                       accentColor="rose"
+                      products={products}
                     />
 
                     {/* FIFTH PANEL: RAKHI CARDS */}
@@ -7167,6 +7564,7 @@ export default function AdminPanel({
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
                       accentColor="teal"
+                      products={products}
                     />
 
                     {/* SIXTH PANEL: PHOTO TO ART CARDS */}
@@ -7187,6 +7585,7 @@ export default function AdminPanel({
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
                       accentColor="indigo"
+                      products={products}
                     />
 
                     {/* SEVENTH PANEL: HAND CRAFT CARDS */}
@@ -7207,6 +7606,7 @@ export default function AdminPanel({
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
                       accentColor="blue"
+                      products={products}
                     />
 
                     {/* EIGHTH PANEL: NEW YEAR CARDS */}
@@ -7227,6 +7627,7 @@ export default function AdminPanel({
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
                       accentColor="indigo"
+                      products={products}
                     />
                   </div>
 

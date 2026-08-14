@@ -299,7 +299,10 @@ export default function CartDrawer({
         "";
       const savedPhone = localStorage.getItem("rocx_user_phone") || "";
       const isTwoHour = cartItems.some(
-        (item) => item.product.isTwoHourDelivery,
+        (item) =>
+          item.product.isTwoHourDelivery ||
+          item.product.category === "two_hours_delivery" ||
+          item.product.categories?.includes("two_hours_delivery"),
       );
       setFormData((prev) => ({
         ...prev,
@@ -307,9 +310,15 @@ export default function CartDrawer({
         customerPhone: prev.customerPhone || savedPhone,
         pincode: prev.pincode || deliveryPincode || "",
         city: prev.city || deliveryCity || "Kharagpur",
-        deliveryTimeSlot: isTwoHour
+        deliveryTimeSlot: prev.deliveryTimeSlot
+          ? (prev.deliveryTimeSlot === "2 Hours Express Delivery" && !isTwoHour
+              ? prev.deliveryTimeSlot
+              : isTwoHour
+              ? "2 Hours Express Delivery"
+              : prev.deliveryTimeSlot)
+          : isTwoHour
           ? "2 Hours Express Delivery"
-          : prev.deliveryTimeSlot,
+          : "Any Time On Specified Date",
       }));
     }
   }, [isOpen, deliveryCity, deliveryPincode, cartItems]);

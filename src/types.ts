@@ -246,6 +246,7 @@ export interface StoreConfigItem {
   name: string;
   image: string;
   tag?: string;
+  productIds?: string[];
 }
 
 export interface TastePickItem {
@@ -278,6 +279,7 @@ export interface FlowerCurationConfig {
   byTypeCategories?: StoreConfigItem[];
   byColorCategories?: StoreConfigItem[];
   byCollectionCategories?: StoreConfigItem[];
+  premiumFlowersCategories?: StoreConfigItem[];
   luxuryPairings?: StoreConfigItem[];
   byOccasionCategories?: StoreConfigItem[];
   luxuryBloomsBannerImage?: string;
@@ -325,6 +327,8 @@ export interface StoreConfig {
   aboutBgImage: string;
   cakeSubcategories: StoreConfigItem[];
   quickCakeCategories?: StoreConfigItem[];
+  iconicFlavors?: StoreConfigItem[];
+  photoCakesBannerItems?: StoreConfigItem[];
   tastePickCategories?: TastePickItem[];
   tastePickSubcategories?: StoreConfigItem[];
   flowerCuration?: FlowerCurationConfig;

@@ -121,6 +121,17 @@ export default function BirthdayCategoryLanding({
     }
 
     if (selectedFilter !== "all") {
+      const allCurationItems = [
+        ...quickCategories,
+        ...premiumCategories,
+        ...flowersByTypeCategories,
+        ...exploreGiftsCategories,
+      ];
+      const activeItem = allCurationItems.find((i) => i.id === selectedFilter);
+      if (activeItem && activeItem.productIds && activeItem.productIds.length > 0) {
+        return activeItem.productIds.includes(p.id);
+      }
+
       const filterKey = selectedFilter.toLowerCase();
       return (
         p.name.toLowerCase().includes(filterKey) ||

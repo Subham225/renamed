@@ -82,6 +82,14 @@ export default function FlowerCategoryLanding({
         { id: "exotic", name: "Exotic Flowers", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
       ];
 
+  const premiumFlowersCategories: StoreConfigItem[] = (fc?.premiumFlowersCategories && fc.premiumFlowersCategories.length > 0)
+    ? fc.premiumFlowersCategories
+    : [
+        { id: "premium_roses", name: "Luxury Red Roses", image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80" },
+        { id: "exotic_orchids", name: "Exotic Purple Orchids", image: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=400&q=80" },
+        { id: "grand_lilies", name: "Grand White Lilies", image: "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=400&q=80" },
+      ];
+
   const luxuryPairings: StoreConfigItem[] = (fc?.luxuryPairings && fc.luxuryPairings.length > 0)
     ? fc.luxuryPairings
     : [
@@ -136,6 +144,20 @@ export default function FlowerCategoryLanding({
     }
 
     if (selectedFilter !== "all") {
+      const allCurationItems = [
+        ...trendingCategories,
+        ...byTypeCategories,
+        ...byColorCategories,
+        ...byCollectionCategories,
+        ...premiumFlowersCategories,
+        ...luxuryPairings,
+        ...byOccasionCategories,
+      ];
+      const activeItem = allCurationItems.find((i) => i.id === selectedFilter);
+      if (activeItem && activeItem.productIds && activeItem.productIds.length > 0) {
+        return activeItem.productIds.includes(p.id);
+      }
+
       const filterKey = selectedFilter.toLowerCase();
       return (
         p.name.toLowerCase().includes(filterKey) ||
@@ -148,6 +170,10 @@ export default function FlowerCategoryLanding({
   });
 
   const handleCategoryClick = (catId: string) => {
+    if (onSelectCategory) {
+      onSelectCategory(catId as CategoryID);
+      return;
+    }
     setSelectedFilter(catId);
     const el = document.getElementById("best-picks-flowers");
     if (el) {
@@ -328,6 +354,47 @@ export default function FlowerCategoryLanding({
           ))}
         </div>
       </div>
+
+      {/* PREMIUM FLOWERS SECTION */}
+      {premiumFlowersCategories.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 py-6 bg-gradient-to-r from-rose-50/60 via-pink-50/40 to-rose-50/60 rounded-3xl border border-rose-100 my-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <span className="text-[10px] font-black uppercase text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded-full">
+                LUXURY SELECTION
+              </span>
+              <h2 className="text-xl font-black text-slate-900 mt-1">
+                Premium Flowers
+              </h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {premiumFlowersCategories.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => handleCategoryClick(item.id)}
+                className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group flex items-center gap-3"
+              >
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-rose-50 shrink-0 border border-slate-100">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <h4 className="text-xs font-black text-slate-800 group-hover:text-rose-600 transition-colors truncate">
+                    {item.name}
+                  </h4>
+                  <span className="text-[10px] text-rose-500 font-extrabold flex items-center gap-1 mt-0.5">
+                    Explore Collection →
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 8. LUXURY PAIRINGS (2x2 Grid with Pink Pill Tags matching Screenshot 3) */}
       <div className="max-w-7xl mx-auto px-4 py-6">

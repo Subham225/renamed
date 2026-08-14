@@ -177,10 +177,90 @@ export default function CategoryDetailPage({
         );
       }
 
-      // Check if storeConfig has explicitly assigned product IDs for this taste pick category
-      const tasteCat = storeConfig?.tastePickCategories?.find((t) => t.id === categoryId);
-      if (tasteCat && tasteCat.productIds && tasteCat.productIds.length > 0) {
-        if (tasteCat.productIds.includes(prod.id)) return true;
+      // Check if storeConfig has explicitly assigned product IDs for this category across all curation / subcategory configs
+      const findAssignedProductIds = (catId: string): string[] | undefined => {
+        if (!storeConfig) return undefined;
+
+        // 1. Taste pick categories
+        const tasteMatch = storeConfig.tastePickCategories?.find((t) => t.id === catId);
+        if (tasteMatch?.productIds && tasteMatch.productIds.length > 0) return tasteMatch.productIds;
+
+        // 2. Quick cakes & iconic flavors
+        const quickCakeMatch = storeConfig.quickCakeCategories?.find((t) => t.id === catId);
+        if (quickCakeMatch?.productIds && quickCakeMatch.productIds.length > 0) return quickCakeMatch.productIds;
+
+        const iconicMatch = storeConfig.iconicFlavors?.find((t) => t.id === catId);
+        if (iconicMatch?.productIds && iconicMatch.productIds.length > 0) return iconicMatch.productIds;
+
+        // 3. Flower Curation
+        if (storeConfig.flowerCuration) {
+          const fc = storeConfig.flowerCuration;
+          const flowerCats = [
+            ...(fc.trendingCategories || []),
+            ...(fc.byTypeCategories || []),
+            ...(fc.byColorCategories || []),
+            ...(fc.byCollectionCategories || []),
+            ...(fc.premiumFlowersCategories || []),
+            ...(fc.luxuryPairings || []),
+            ...(fc.byOccasionCategories || []),
+          ];
+          const match = flowerCats.find((t) => t.id === catId);
+          if (match?.productIds && match.productIds.length > 0) return match.productIds;
+        }
+
+        // 4. Birthday Curation
+        if (storeConfig.birthdayCuration) {
+          const bc = storeConfig.birthdayCuration;
+          const birthdayCats = [
+            ...(bc.quickCategories || []),
+            ...(bc.premiumCategories || []),
+            ...(bc.flowersByTypeCategories || []),
+            ...(bc.exploreGiftsCategories || []),
+          ];
+          const match = birthdayCats.find((t) => t.id === catId);
+          if (match?.productIds && match.productIds.length > 0) return match.productIds;
+        }
+
+        // 5. Plant Curation
+        if (storeConfig.plantCuration) {
+          const pc = storeConfig.plantCuration;
+          const plantCats = [
+            ...(pc.quickCategories || []),
+            ...(pc.plantsByTypeCategories || []),
+            ...(pc.plantsByLocationCategories || []),
+            ...(pc.explorePlantersCategories || []),
+          ];
+          const match = plantCats.find((t) => t.id === catId);
+          if (match?.productIds && match.productIds.length > 0) return match.productIds;
+        }
+
+        // 6. Subcategories lists
+        const subLists = [
+          storeConfig.cakeSubcategories,
+          storeConfig.flowerSubcategories,
+          storeConfig.plantSubcategories,
+          storeConfig.chocolateSubcategories,
+          storeConfig.anniversarySubcategories,
+          storeConfig.personalizedSubcategories,
+          storeConfig.giftSubcategories,
+          storeConfig.dewaliSubcategories,
+          storeConfig.rakhiSubcategories,
+          storeConfig.photoToArtSubcategories,
+          storeConfig.handCraftSubcategories,
+          storeConfig.newYearSubcategories,
+          storeConfig.tastePickSubcategories,
+        ];
+        for (const sub of subLists) {
+          const match = sub?.find((t) => t.id === catId);
+          if (match?.productIds && match.productIds.length > 0) return match.productIds;
+        }
+
+        return undefined;
+      };
+
+      const assignedProductIds = findAssignedProductIds(categoryId);
+      if (assignedProductIds) {
+        return assignedProductIds.includes(prod.id);
       }
 
       // Check keyword matching for taste / flavor categories

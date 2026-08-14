@@ -39,7 +39,7 @@ export default function CakeCategoryLanding({
   const birthdayCakes = cakeProducts.filter((p) => p.name.toLowerCase().includes("birthday") || p.category === "birthday" || (p.categories && p.categories.includes("birthday"))).concat(cakeProducts.slice(0, 6)).slice(0, 8);
   const anniversaryCakes = cakeProducts.filter((p) => p.name.toLowerCase().includes("anniversary") || p.name.toLowerCase().includes("heart") || p.name.toLowerCase().includes("rose")).concat(cakeProducts.slice(2, 8)).slice(0, 8);
 
-  const photoCakes = cakeProducts.filter((p) => p.name.toLowerCase().includes("photo") || (p.categories && p.categories.includes("photo_cake"))).concat(cakeProducts.slice(1, 6)).slice(0, 8);
+  const photoCakes = cakeProducts.filter((p) => p.name.toLowerCase().includes("photo") || (p.categories && p.categories.includes("photo_cake")));
   const designerCakes = cakeProducts.filter((p) => p.name.toLowerCase().includes("designer") || p.name.toLowerCase().includes("pinata") || p.name.toLowerCase().includes("bento")).concat(cakeProducts.slice(3, 9)).slice(0, 8);
 
   // Quick Circular Categories
@@ -57,7 +57,7 @@ export default function CakeCategoryLanding({
     : defaultQuickCategories;
 
   // Iconic Bake Flavors - Card format with text over photo
-  const iconicFlavors = [
+  const defaultIconicFlavors = [
     { id: "taste_chocolate", name: "Chocolate Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
     { id: "taste_butterscotch", name: "Butterscotch Cakes", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80" },
     { id: "taste_blackforest", name: "Black Forest Cakes", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80" },
@@ -65,6 +65,10 @@ export default function CakeCategoryLanding({
     { id: "taste_truffle", name: "Truffle Cakes", image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80" },
     { id: "taste_pineapple", name: "Pineapple Cakes", image: "https://images.unsplash.com/photo-1562440499-64c9a111f713?auto=format&fit=crop&w=400&q=80" },
   ];
+
+  const iconicFlavors = (storeConfig?.iconicFlavors && storeConfig.iconicFlavors.length > 0)
+    ? storeConfig.iconicFlavors
+    : defaultIconicFlavors;
 
   // Your Taste Your Pick Grid - Dynamic or default 9 Working Unsplash URLs
   const defaultTastePickItems = [
@@ -182,7 +186,16 @@ export default function CakeCategoryLanding({
           {quickCategories.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => onSelectCategory && onSelectCategory(cat.id as CategoryID)}
+              onClick={() => {
+                if (cat.id === "cakes" || cat.id === "all_cakes" || cat.id === "all") {
+                  const el = document.getElementById("all-cakes-collection-anchor");
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth" });
+                    return;
+                  }
+                }
+                if (onSelectCategory) onSelectCategory(cat.id as CategoryID);
+              }}
               className="flex flex-col items-center group cursor-pointer"
             >
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-pink-200 group-hover:border-pink-600 shadow-sm transition-all p-0.5 bg-white">
@@ -263,7 +276,7 @@ export default function CakeCategoryLanding({
       </div>
 
       {/* 5. EXPLORE OUR CAKE COLLECTION (Tabs: Best Sellers vs Signature) */}
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div id="all-cakes-collection-anchor" className="max-w-7xl mx-auto px-4 py-4 scroll-mt-20">
         <h2 className="text-lg font-black text-slate-900 mb-3">
           Explore Our <span className="text-pink-600">Cake Collection</span>
         </h2>
