@@ -1,5 +1,5 @@
 import React from "react";
-import { Product, StoreConfig, StoreConfigItem } from "../types";
+import { Product, StoreConfig, StoreConfigItem, compressImageFile } from "../types";
 
 interface SubcategoryEditorProps {
   title: string;
@@ -209,12 +209,8 @@ export default function SubcategoryEditor({
                           ) {
                             const file = e.target.files[0];
                             try {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                const base64 = event.target?.result as string;
-                                updateItem(index, { image: base64 });
-                              };
-                              reader.readAsDataURL(file);
+                              const base64 = await compressImageFile(file, 800, 0.6);
+                              updateItem(index, { image: base64 });
                             } catch (err) {
                               console.error(
                                 "Subcategory image compression failed:",

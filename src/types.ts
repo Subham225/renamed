@@ -1,3 +1,5 @@
+import heic2any from "heic2any";
+
 export interface Product {
   id: string;
   name: string;
@@ -175,21 +177,64 @@ export interface GalleryItem {
 
 export function compressImageFile(
   file: File,
-  maxWidth: number = 500,
+  maxWidth: number = 800,
   quality: number = 0.6,
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // Check file size to avoid memory overflow on very large images (e.g. over 20MB)
-    if (file.size > 20 * 1024 * 1024) {
-      reject(new Error("File is too large"));
-      return;
-    }
+  return new Promise(async (resolve, reject) => {
+    try {
+      let activeFile: Blob = file;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
+      // Handle HEIC/HEIF files from iOS devices using heic2any
+      const fileNameLower = (file.name || "").toLowerCase();
+      const fileTypeLower = (file.type || "").toLowerCase();
+      if (
+        fileNameLower.endsWith(".heic") ||
+        fileNameLower.endsWith(".heif") ||
+        fileTypeLower.includes("heic") ||
+        fileTypeLower.includes("heif")
+      ) {
+        try {
+          const converted = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8,
+          });
+          activeFile = Array.isArray(converted) ? converted[0] : converted;
+        } catch (heicErr) {
+          console.warn("heic2any conversion failed:", heicErr);
+        }
+      }
+
+      // Check file size boundary (30MB max)
+      if (activeFile.size > 30 * 1024 * 1024) {
+        reject(new Error("File size exceeds 30MB limit"));
+        return;
+      }
+
+      const fallbackToFileReader = () => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const res = e.target?.result as string;
+          if (res) resolve(res);
+          else reject(new Error("Empty FileReader output"));
+        };
+        reader.onerror = () => reject(new Error("FileReader failed"));
+        reader.readAsDataURL(file);
+      };
+
+      // Try ObjectURL canvas compression first for high speed & low memory footprint
+      let objectUrl: string | null = null;
+      try {
+        objectUrl = URL.createObjectURL(activeFile);
+      } catch (err) {
+        fallbackToFileReader();
+        return;
+      }
+
       const img = new Image();
       img.onload = () => {
         try {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
           const canvas = document.createElement("canvas");
           let scale = 1;
 
@@ -197,40 +242,55 @@ export function compressImageFile(
             scale = maxWidth / img.width;
           }
 
-          // Max height boundary to prevent huge memory spikes
           if (img.height * scale > maxWidth * 2) {
             scale = (maxWidth * 2) / img.height;
           }
 
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
+          const targetWidth = Math.max(1, Math.floor(img.width * scale));
+          const targetHeight = Math.max(1, Math.floor(img.height * scale));
+
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
           const ctx = canvas.getContext("2d");
 
           if (!ctx) {
-            reject(new Error("Could not get canvas context"));
+            fallbackToFileReader();
             return;
           }
 
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Fill white background for transparent PNGs converted to JPEG
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, targetWidth, targetHeight);
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
           const dataUrl = canvas.toDataURL("image/jpeg", quality);
-          resolve(dataUrl);
+          if (dataUrl && dataUrl.startsWith("data:image/")) {
+            resolve(dataUrl);
+          } else {
+            fallbackToFileReader();
+          }
         } catch (err) {
-          reject(err);
+          console.warn("Canvas compression error, falling back to FileReader:", err);
+          fallbackToFileReader();
         }
       };
+
       img.onerror = () => {
-        reject(
-          new Error(
-            "Failed to load image into element (possibly unsupported format like HEIC without translation). Please use JPEG or PNG.",
-          ),
-        );
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        fallbackToFileReader();
       };
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => {
-      reject(new Error("Failed to read file"));
-    };
-    reader.readAsDataURL(file);
+
+      img.src = objectUrl;
+    } catch (err) {
+      console.warn("compressImageFile top-level error:", err);
+      // Ultimate fallback
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resolve((e.target?.result as string) || "");
+      };
+      reader.onerror = () => reject(err);
+      reader.readAsDataURL(file);
+    }
   });
 }
 
