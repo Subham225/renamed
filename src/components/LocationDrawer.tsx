@@ -47,7 +47,7 @@ export default function LocationDrawer({
         />
 
         <div className="absolute inset-y-0 left-0 max-w-full flex pr-10">
-          <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between">
+          <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between pt-[env(safe-area-inset-top,0px)] pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
             {/* Header */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 text-left">

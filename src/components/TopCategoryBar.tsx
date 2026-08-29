@@ -49,7 +49,7 @@ export default function TopCategoryBar({
 
   return (
     <div className="bg-pink-50/40 border-b border-pink-100/30 py-2 overflow-x-auto scrollbar-none select-none">
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-6 sm:gap-10 min-w-max">
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-start sm:justify-center gap-6 sm:gap-10 min-w-max">
         {topItems.map((item) => {
           const isSelected = item.id === null ? selectedCategory === null : selectedCategory === item.id;
           return (
@@ -57,7 +57,7 @@ export default function TopCategoryBar({
               id={`top-category-item-${item.id || 'all'}`}
               key={item.id || 'all'}
               onClick={() => onSelectCategory(item.id)}
-              className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer transition-all active:scale-95 group"
+              className="flex flex-col items-center gap-1 focus:outline-none cursor-pointer transition-all active:scale-95 group shrink-0"
             >
               <div
                 className={`p-2 rounded-full transition-all duration-200 ${

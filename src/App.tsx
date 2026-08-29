@@ -1698,7 +1698,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans pb-24 selection:bg-pink-100 selection:text-pink-800">
+    <div className="min-h-screen min-h-[100dvh] bg-slate-50 text-slate-800 flex flex-col font-sans pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] selection:bg-pink-100 selection:text-pink-800">
       <Helmet>
         <title>
           {selectedProduct ? `${selectedProduct.name} | Rocx Cakes & Gifts` : (selectedCategoryName && selectedCategoryName !== "⚡ Premium Best Sellers" ? `${selectedCategoryName} | Rocx Cakes & Gifts` : "Rocx Cakes & Gifts | Premium Customized Cakes and Gifts in Kharagpur & Midnapore")}
@@ -2151,7 +2151,7 @@ export default function App() {
         <button
           id="scroll-to-top-float-btn"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-20 right-4 z-30 bg-slate-900 border border-slate-800 hover:bg-pink-600 hover:border-pink-500 text-white p-3 rounded-full shadow-lg transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 bg-slate-900 border border-slate-800 hover:bg-pink-600 hover:border-pink-500 text-white p-3 rounded-full shadow-lg transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
           aria-label="Scroll back to top"
         >
           <ArrowUp className="w-5 h-5" />

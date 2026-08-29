@@ -18,7 +18,7 @@ export default function WishlistDrawer({ isOpen, onClose, products, wishlistIds,
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-sm animate-fade-in font-sans">
-      <div className="w-full sm:w-[400px] h-full bg-white shadow-2xl flex flex-col animate-slide-in-right">
+      <div className="w-full sm:w-[400px] h-full bg-white shadow-2xl flex flex-col animate-slide-in-right pt-[env(safe-area-inset-top,0px)] pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
         {/* Header */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10 shadow-sm">
           <div className="flex items-center gap-2">

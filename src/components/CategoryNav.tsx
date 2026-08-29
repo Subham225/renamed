@@ -51,7 +51,7 @@ export default function CategoryNav({
         <button
           id="category-tab-all"
           onClick={() => onSelectCategory(null)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
             selectedCategory === null
               ? 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-100'
               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -64,7 +64,7 @@ export default function CategoryNav({
         <button
           id="category-tab-two-hours"
           onClick={() => onSelectCategory('two_hours_delivery')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
             selectedCategory === 'two_hours_delivery'
               ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100'
               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -80,7 +80,7 @@ export default function CategoryNav({
               id={`category-tab-${cat.id}`}
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
                 isSelected
                   ? 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-100'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'

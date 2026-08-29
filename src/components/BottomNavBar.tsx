@@ -18,7 +18,7 @@ export default function BottomNavBar({
   // Tabs and icon mappings from the provided screenshot:
   // 1. Home (active), 2. Categories, 3. City, 4. Profile, 5. Track Order, 6. Customer care
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] px-2 py-2">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
       <div className="max-w-7xl mx-auto flex justify-between items-center text-center">
         
         {/* Home */}
