@@ -11,7 +11,7 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Product, Coupon, Slide, GalleryItem, StoreConfig, StoreConfigItem } from '../types';
+import { Product, Coupon, Slide, GalleryItem, StoreConfig, StoreConfigItem, compressStoreConfigImages, compressBase64String } from '../types';
 import { PRODUCTS } from '../data';
 
 enum OperationType {
@@ -224,7 +224,9 @@ export async function ensureDefaultCoupons(): Promise<void> {
 export async function addProductToFirestore(product: Product): Promise<void> {
   const path = `products/${product.id}`;
   try {
-    await setDoc(doc(db, 'products', product.id), cleanUndefined(product));
+    const cleaned = cleanUndefined(product);
+    const compressed = await compressStoreConfigImages(cleaned, 600, 0.6);
+    await setDoc(doc(db, 'products', product.id), compressed);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -251,7 +253,9 @@ export async function updateProductPriceInFirestore(productId: string, newPrice:
 export async function updateProductInFirestore(product: Product): Promise<void> {
   const path = `products/${product.id}`;
   try {
-    await setDoc(doc(db, 'products', product.id), cleanUndefined(product));
+    const cleaned = cleanUndefined(product);
+    const compressed = await compressStoreConfigImages(cleaned, 600, 0.6);
+    await setDoc(doc(db, 'products', product.id), compressed);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -708,55 +712,43 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
       tag: 'Everyday Joy'
     }
   ],
+  tastePickCategories: [
+    { id: "taste_redvelvet", name: "Red Velvet", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_whiteforest", name: "White Forest", image: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_strawberry", name: "Strawberry", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_blueberry", name: "Blueberry", image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_rasmalai", name: "Rasmalai", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_fruit", name: "Fresh Fruit", image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_mango", name: "Mango Delight", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_butterscotch", name: "Butterscotch Crunch", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80", productIds: [] },
+    { id: "taste_kitkat", name: "Kitkat & Gems", image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80", productIds: [] },
+  ],
+  quickCakeCategories: [
+    { id: "cakes", name: "All Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80", tag: "cakes" },
+    { id: "birthday", name: "Birthday Cakes", image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=400&q=80", tag: "birthday" },
+    { id: "anniversary", name: "Anniversary Cakes", image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=400&q=80", tag: "anniversary" },
+    { id: "photo_cake", name: "Photo Cakes", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80", tag: "photo_cake" },
+    { id: "heart_shape", name: "Heart Shape Cakes", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80", tag: "heart_shape" },
+    { id: "kids_cake", name: "Kids Cakes", image: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80", tag: "kids_cake" },
+  ],
+  iconicFlavors: [
+    { id: "taste_chocolate", name: "Chocolate Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_butterscotch", name: "Butterscotch Cakes", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_blackforest", name: "Black Forest Cakes", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_vanilla", name: "Vanilla Cakes", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_truffle", name: "Truffle Cakes", image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_pineapple", name: "Pineapple Cakes", image: "https://images.unsplash.com/photo-1562440499-64c9a111f713?auto=format&fit=crop&w=400&q=80" },
+  ],
   tastePickSubcategories: [
-    {
-      id: "taste_chocolate",
-      name: "Chocolate",
-      tag: "Rich & Dark",
-      image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "taste_vanilla",
-      name: "Vanilla",
-      tag: "Classic Delight",
-      image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "taste_strawberry",
-      name: "Strawberry",
-      tag: "Berry Love",
-      image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "taste_butterscotch",
-      name: "Butterscotch",
-      tag: "Crunchy & Sweet",
-      image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "taste_blackforest",
-      name: "Black Forest",
-      tag: "Cherry & Cream",
-      image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "taste_redvelvet",
-      name: "Red Velvet",
-      tag: "Lush & Soft",
-      image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "taste_pineapple",
-      name: "Pineapple",
-      tag: "Tropical",
-      image: "https://images.unsplash.com/photo-1517593674696-6e3e1572c4ce?auto=format&fit=crop&w=400&q=80",
-    },
-    {
-      id: "taste_fruit",
-      name: "Fruit Cake",
-      tag: "Fresh & Healthy",
-      image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80",
-    },
+    { id: "taste_redvelvet", name: "Red Velvet", tag: "Lush & Soft", image: "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_whiteforest", name: "White Forest", tag: "Vanilla & Cream", image: "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_strawberry", name: "Strawberry", tag: "Berry Love", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_blueberry", name: "Blueberry", tag: "Fresh Berry", image: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_rasmalai", name: "Rasmalai", tag: "Indian Fusion", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_fruit", name: "Fresh Fruit", tag: "Healthy Delight", image: "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_mango", name: "Mango Delight", tag: "King of Fruits", image: "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_butterscotch", name: "Butterscotch Crunch", tag: "Crunchy & Sweet", image: "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80" },
+    { id: "taste_kitkat", name: "Kitkat & Gems", tag: "Chocolate Crunch", image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80" },
   ],
   cakeSubcategories: [
     {
@@ -830,23 +822,25 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
 };
 
 export function subscribeToStoreConfigFromFirestore(onUpdate: (config: StoreConfig) => void): () => void {
-  const path = 'store_config/settings';
   const docRef = doc(db, 'store_config', 'settings');
-  const unsubscribe = onSnapshot(docRef, async (docSnap) => {
+  const unsubscribe = onSnapshot(docRef, (docSnap) => {
     if (docSnap.exists()) {
       const currentData = docSnap.data() as StoreConfig;
-      let needsUpdate = false;
-      if (!currentData.flowerSubcategories) { currentData.flowerSubcategories = DEFAULT_STORE_CONFIG.flowerSubcategories; needsUpdate = true; }
-      if (!currentData.anniversarySubcategories) { currentData.anniversarySubcategories = DEFAULT_STORE_CONFIG.anniversarySubcategories; needsUpdate = true; }
-      if (!currentData.chocolateSubcategories) { currentData.chocolateSubcategories = DEFAULT_STORE_CONFIG.chocolateSubcategories; needsUpdate = true; }
-      if (!currentData.plantSubcategories) { currentData.plantSubcategories = DEFAULT_STORE_CONFIG.plantSubcategories; needsUpdate = true; }
-      if (!currentData.personalizedSubcategories) { currentData.personalizedSubcategories = DEFAULT_STORE_CONFIG.personalizedSubcategories; needsUpdate = true; }
-      
-      if (needsUpdate) {
-         await setDoc(docRef, currentData, { merge: true });
-         console.log("Updated existing store config with new subcategories.");
-      }
-      onUpdate(currentData);
+      const mergedConfig: StoreConfig = {
+        ...DEFAULT_STORE_CONFIG,
+        ...currentData,
+        flowerSubcategories: currentData.flowerSubcategories ?? DEFAULT_STORE_CONFIG.flowerSubcategories,
+        anniversarySubcategories: currentData.anniversarySubcategories ?? DEFAULT_STORE_CONFIG.anniversarySubcategories,
+        chocolateSubcategories: currentData.chocolateSubcategories ?? DEFAULT_STORE_CONFIG.chocolateSubcategories,
+        plantSubcategories: currentData.plantSubcategories ?? DEFAULT_STORE_CONFIG.plantSubcategories,
+        personalizedSubcategories: currentData.personalizedSubcategories ?? DEFAULT_STORE_CONFIG.personalizedSubcategories,
+        quickCakeCategories: currentData.quickCakeCategories ?? DEFAULT_STORE_CONFIG.quickCakeCategories,
+        iconicFlavors: currentData.iconicFlavors ?? DEFAULT_STORE_CONFIG.iconicFlavors,
+        tastePickCategories: currentData.tastePickCategories ?? DEFAULT_STORE_CONFIG.tastePickCategories,
+        tastePickSubcategories: currentData.tastePickSubcategories ?? DEFAULT_STORE_CONFIG.tastePickSubcategories,
+        cakeSubcategories: currentData.cakeSubcategories ?? DEFAULT_STORE_CONFIG.cakeSubcategories,
+      };
+      onUpdate(mergedConfig);
     } else {
       console.log("No store configs found in Firestore. Seeding default settings...");
       setDoc(docRef, DEFAULT_STORE_CONFIG);
@@ -859,11 +853,53 @@ export function subscribeToStoreConfigFromFirestore(onUpdate: (config: StoreConf
   return unsubscribe;
 }
 
+function trimOversizedBase64(obj: any, maxLen = 80000): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    if (obj.startsWith('data:image/') && obj.length > maxLen) {
+      console.warn(`Trimming oversized base64 string of length ${obj.length}`);
+      return "";
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => trimOversizedBase64(item, maxLen));
+  }
+  if (typeof obj === 'object') {
+    const res: any = {};
+    for (const key of Object.keys(obj)) {
+      res[key] = trimOversizedBase64(obj[key], maxLen);
+    }
+    return res;
+  }
+  return obj;
+}
+
 export async function updateStoreConfigInFirestore(config: StoreConfig): Promise<void> {
   const path = 'store_config/settings';
   const docRef = doc(db, 'store_config', 'settings');
   try {
-    await setDoc(docRef, config);
+    const cleanedConfig = cleanUndefined(config);
+    let finalConfig = await compressStoreConfigImages(cleanedConfig, 350, 0.45);
+    
+    let jsonString = JSON.stringify(finalConfig);
+    let sizeInBytes = new Blob([jsonString]).size;
+    console.log(`Store config document size: ${sizeInBytes} bytes`);
+
+    if (sizeInBytes > 850000) {
+      console.warn(`Store config document size (${sizeInBytes} bytes) is high. Applying aggressive compression...`);
+      finalConfig = await compressStoreConfigImages(finalConfig, 220, 0.3);
+      jsonString = JSON.stringify(finalConfig);
+      sizeInBytes = new Blob([jsonString]).size;
+      console.log(`Store config size after aggressive compression: ${sizeInBytes} bytes`);
+    }
+
+    if (sizeInBytes > 950000) {
+      console.warn(`Store config document size (${sizeInBytes} bytes) still close to 1MB limit. Trimming oversized base64 strings...`);
+      finalConfig = trimOversizedBase64(finalConfig, 80000);
+    }
+
+    await setDoc(docRef, finalConfig);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }

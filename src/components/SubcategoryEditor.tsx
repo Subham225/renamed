@@ -1,5 +1,5 @@
 import React from "react";
-import { Product, StoreConfig, StoreConfigItem, compressImageFile } from "../types";
+import { Product, StoreConfig, StoreConfigItem, compressImageFile, cleanImageUrl } from "../types";
 
 interface SubcategoryEditorProps {
   title: string;
@@ -110,8 +110,25 @@ export default function SubcategoryEditor({
       };
     }
     
-    nextList[index] = { ...nextList[index], ...updates };
-    setLocalConfig({ ...localConfig, [configKey]: nextList });
+    const cleanedUpdates = { ...updates };
+    if (cleanedUpdates.image !== undefined) {
+      cleanedUpdates.image = cleanImageUrl(cleanedUpdates.image);
+    }
+
+    nextList[index] = { ...nextList[index], ...cleanedUpdates };
+    const newConfig: StoreConfig = { ...localConfig, [configKey]: nextList };
+    if (configKey === "tastePickSubcategories") {
+      newConfig.tastePickCategories = nextList.map((item) => {
+        const existingCat = localConfig.tastePickCategories?.find((c) => c.id === item.id);
+        return {
+          id: item.id,
+          name: item.name,
+          image: cleanImageUrl(item.image),
+          productIds: existingCat?.productIds || [],
+        };
+      });
+    }
+    setLocalConfig(newConfig);
   };
 
   return (
@@ -209,7 +226,7 @@ export default function SubcategoryEditor({
                           ) {
                             const file = e.target.files[0];
                             try {
-                              const base64 = await compressImageFile(file, 800, 0.6);
+                              const base64 = await compressImageFile(file, 350, 0.4);
                               updateItem(index, { image: base64 });
                             } catch (err) {
                               console.error(

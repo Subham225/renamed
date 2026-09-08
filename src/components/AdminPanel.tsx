@@ -28,6 +28,7 @@ import {
   Category,
   Slide,
   compressImageFile,
+  cleanImageUrl,
   GalleryItem,
   StoreConfig,
   StoreConfigItem,
@@ -153,16 +154,45 @@ function TastePickCurationTab({
 
   const updateCategory = (id: string, updatedFields: Partial<TastePickItem>) => {
     if (!localConfig) return;
+    const cleanedFields = { ...updatedFields };
+    if (cleanedFields.image !== undefined) {
+      cleanedFields.image = cleanImageUrl(cleanedFields.image);
+    }
     const updated = currentCategories.map((cat) =>
-      cat.id === id ? { ...cat, ...updatedFields } : cat
+      cat.id === id ? { ...cat, ...cleanedFields } : cat
     );
-    const newConfig = { ...localConfig, tastePickCategories: updated };
+    const updatedSubcategories: StoreConfigItem[] = updated.map((c) => ({
+      id: c.id,
+      name: c.name,
+      image: cleanImageUrl(c.image),
+      tag: c.name,
+    }));
+    const newConfig = {
+      ...localConfig,
+      tastePickCategories: updated,
+      tastePickSubcategories: updatedSubcategories,
+    };
     setLocalConfig(newConfig);
   };
 
   const handleSave = () => {
     if (!localConfig) return;
-    const newConfig = { ...localConfig, tastePickCategories: currentCategories };
+    const cleanCats = currentCategories.map((c) => ({
+      ...c,
+      image: cleanImageUrl(c.image),
+    }));
+    const updatedSubcategories: StoreConfigItem[] = cleanCats.map((c) => ({
+      id: c.id,
+      name: c.name,
+      image: c.image,
+      tag: c.name,
+    }));
+    const newConfig = {
+      ...localConfig,
+      tastePickCategories: cleanCats,
+      tastePickSubcategories: updatedSubcategories,
+    };
+    setLocalConfig(newConfig);
     if (onUpdateStoreConfig) onUpdateStoreConfig(newConfig);
     alert("Taste Pick categories updated successfully!");
   };
@@ -286,7 +316,7 @@ function TastePickCurationTab({
                     onChange={async (e) => {
                       if (e.target.files && e.target.files[0]) {
                         try {
-                          const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                          const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
                           updateCategory(activeCategory.id, { image: base64 });
                         } catch (err) {
                           alert("Image upload failed.");
@@ -448,14 +478,22 @@ function CakesCurationTab({
   const updateQuickCat = (index: number, updated: Partial<StoreConfigItem>) => {
     if (!localConfig) return;
     const list = [...currentQuickCats];
-    list[index] = { ...list[index], ...updated };
+    const cleaned = { ...updated };
+    if (cleaned.image !== undefined) {
+      cleaned.image = cleanImageUrl(cleaned.image);
+    }
+    list[index] = { ...list[index], ...cleaned };
     setLocalConfig({ ...localConfig, quickCakeCategories: list });
   };
 
   const updateIconicFlavor = (index: number, updated: Partial<StoreConfigItem>) => {
     if (!localConfig) return;
     const list = [...currentIconicFlavors];
-    list[index] = { ...list[index], ...updated };
+    const cleaned = { ...updated };
+    if (cleaned.image !== undefined) {
+      cleaned.image = cleanImageUrl(cleaned.image);
+    }
+    list[index] = { ...list[index], ...cleaned };
     setLocalConfig({ ...localConfig, iconicFlavors: list });
   };
 
@@ -500,11 +538,20 @@ function CakesCurationTab({
 
   const handleSave = () => {
     if (!localConfig) return;
+    const cleanQuick = currentQuickCats.map((c) => ({
+      ...c,
+      image: cleanImageUrl(c.image),
+    }));
+    const cleanIconic = currentIconicFlavors.map((f) => ({
+      ...f,
+      image: cleanImageUrl(f.image),
+    }));
     const newConfig = {
       ...localConfig,
-      quickCakeCategories: currentQuickCats,
-      iconicFlavors: currentIconicFlavors,
+      quickCakeCategories: cleanQuick,
+      iconicFlavors: cleanIconic,
     };
+    setLocalConfig(newConfig);
     if (onUpdateStoreConfig) onUpdateStoreConfig(newConfig);
     alert("Cake Landing Curation updated successfully!");
   };
@@ -651,7 +698,7 @@ function CakesCurationTab({
                         if (e.target.files && e.target.files[0]) {
                           try {
                             setUploadingIdx(idx);
-                            const base64 = await compressImageFile(e.target.files[0], 600, 0.6);
+                            const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
                             updateQuickCat(idx, { image: base64 });
                           } catch (err) {
                             alert("Image compression failed.");
@@ -819,7 +866,7 @@ function CakesCurationTab({
                         if (e.target.files && e.target.files[0]) {
                           try {
                             setUploadingIdx(idx);
-                            const base64 = await compressImageFile(e.target.files[0], 600, 0.6);
+                            const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
                             updateIconicFlavor(idx, { image: base64 });
                           } catch (err) {
                             alert("Image compression failed.");
@@ -4974,7 +5021,7 @@ export default function AdminPanel({
                                 ? ""
                                 : newProdImgUrl || ""
                             }
-                            onChange={(e) => setNewProdImgUrl(e.target.value)}
+                            onChange={(e) => setNewProdImgUrl(cleanImageUrl(e.target.value))}
                             className="w-full text-[10px] p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                         </div>
@@ -6286,7 +6333,7 @@ export default function AdminPanel({
                           <input
                             type="text"
                             value={newSlideImage}
-                            onChange={(e) => setNewSlideImage(e.target.value)}
+                            onChange={(e) => setNewSlideImage(cleanImageUrl(e.target.value))}
                             className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-700"
                             placeholder="https://images.unsplash.com..."
                           />
@@ -6665,7 +6712,7 @@ export default function AdminPanel({
                           <input
                             type="text"
                             value={newGalleryImage}
-                            onChange={(e) => setNewGalleryImage(e.target.value)}
+                            onChange={(e) => setNewGalleryImage(cleanImageUrl(e.target.value))}
                             className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-700"
                             placeholder="https://images.unsplash.com..."
                           />
@@ -7419,7 +7466,7 @@ export default function AdminPanel({
                                         const nextList = [...list];
                                         nextList[index] = {
                                           ...item,
-                                          image: e.target.value,
+                                          image: cleanImageUrl(e.target.value),
                                         };
                                         if (localConfig) {
                                           setLocalConfig({
@@ -7444,8 +7491,8 @@ export default function AdminPanel({
                                               const base64 =
                                                 await compressImageFile(
                                                   file,
-                                                  800,
-                                                  0.6,
+                                                  400,
+                                                  0.5,
                                                 );
                                               const nextList = [...list];
                                               nextList[index] = {
@@ -7484,20 +7531,21 @@ export default function AdminPanel({
                     <SubcategoryEditor
                       title="Your Taste Pick Flavors"
                       icon="😋"
-                      description="Customize flavors for the 'Your Taste Pick' section in Cakes (Chocolate, Vanilla, etc.)"
+                      description="Customize flavors for the 'Your Taste Pick' section in Cakes (Red Velvet, White Forest, etc.)"
                       configKey="tastePickSubcategories"
-                      defaultIds={["taste_chocolate", "taste_vanilla", "taste_strawberry", "taste_butterscotch", "taste_blackforest", "taste_redvelvet", "taste_pineapple", "taste_fruit"]}
-                      defaultNames={["Chocolate", "Vanilla", "Strawberry", "Butterscotch", "Black Forest", "Red Velvet", "Pineapple", "Fruit Cake"]}
-                      defaultTags={["Rich & Dark", "Classic Delight", "Berry Love", "Crunchy & Sweet", "Cherry & Cream", "Lush & Soft", "Tropical", "Fresh & Healthy"]}
+                      defaultIds={["taste_redvelvet", "taste_whiteforest", "taste_strawberry", "taste_blueberry", "taste_rasmalai", "taste_fruit", "taste_mango", "taste_butterscotch", "taste_kitkat"]}
+                      defaultNames={["Red Velvet", "White Forest", "Strawberry", "Blueberry", "Rasmalai", "Fresh Fruit", "Mango Delight", "Butterscotch Crunch", "Kitkat & Gems"]}
+                      defaultTags={["Lush & Soft", "Vanilla & Cream", "Berry Love", "Fresh Berry", "Indian Fusion", "Healthy Delight", "King of Fruits", "Crunchy & Sweet", "Chocolate Crunch"]}
                       defaultImages={[
-                        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
-                        "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80",
                         "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
+                        "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80",
                         "https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80",
                         "https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=400&q=80",
-                        "https://images.unsplash.com/photo-1586788224331-947f68671caf?auto=format&fit=crop&w=400&q=80",
-                        "https://images.unsplash.com/photo-1517593674696-6e3e1572c4ce?auto=format&fit=crop&w=400&q=80",
-                        "https://images.unsplash.com/photo-1599818815187-578500249870?auto=format&fit=crop&w=400&q=80"
+                        "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80"
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
@@ -8910,7 +8958,7 @@ export default function AdminPanel({
                     onChange={(e) =>
                       setEditingProduct({
                         ...editingProduct,
-                        image: e.target.value,
+                        image: cleanImageUrl(e.target.value),
                       })
                     }
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"

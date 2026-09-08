@@ -175,6 +175,119 @@ export interface GalleryItem {
   image: string;
 }
 
+export function cleanImageUrl(inputUrl: string): string {
+  if (!inputUrl) return "";
+  let trimmed = inputUrl.trim();
+
+  // Handle Google Image search URLs or Google redirect links (extract direct imgurl or url parameter)
+  if (trimmed.includes("google.") && (trimmed.includes("imgurl=") || trimmed.includes("url="))) {
+    try {
+      const urlObj = new URL(trimmed);
+      const imgUrl = urlObj.searchParams.get("imgurl") || urlObj.searchParams.get("url");
+      if (imgUrl) {
+        trimmed = decodeURIComponent(imgUrl);
+      }
+    } catch (e) {
+      const match = trimmed.match(/(?:imgurl|url)=([^&]+)/i);
+      if (match && match[1]) {
+        trimmed = decodeURIComponent(match[1]);
+      }
+    }
+  }
+
+  // Handle Google Drive file view links -> direct image stream
+  if (trimmed.includes("drive.google.com/file/d/")) {
+    const fileIdMatch = trimmed.match(/\/file\/d\/([^\/]+)/);
+    if (fileIdMatch && fileIdMatch[1]) {
+      trimmed = `https://lh3.googleusercontent.com/u/0/d/${fileIdMatch[1]}`;
+    }
+  }
+
+  return trimmed;
+}
+
+export function compressBase64String(
+  dataUrl: string,
+  maxDim: number = 350,
+  quality: number = 0.45
+): Promise<string> {
+  if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
+    return Promise.resolve(dataUrl || "");
+  }
+  // If image base64 data URL is already short (< 15,000 characters ~ 15KB), no need to re-compress
+  if (dataUrl.length < 15000) {
+    return Promise.resolve(dataUrl);
+  }
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return Promise.resolve(dataUrl);
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        let scale = 1;
+        const maxSide = Math.max(img.width, img.height);
+        if (maxSide > maxDim) {
+          scale = maxDim / maxSide;
+        }
+        const targetWidth = Math.max(1, Math.floor(img.width * scale));
+        const targetHeight = Math.max(1, Math.floor(img.height * scale));
+
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, targetWidth, targetHeight);
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+          const compressed = canvas.toDataURL("image/jpeg", quality);
+          if (compressed && compressed.length < dataUrl.length) {
+            resolve(compressed);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("compressBase64String error:", err);
+      }
+      resolve(dataUrl);
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+export async function compressStoreConfigImages(
+  obj: any,
+  maxDim: number = 350,
+  quality: number = 0.45
+): Promise<any> {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (typeof obj === "string") {
+    if (obj.startsWith("data:image/")) {
+      return await compressBase64String(obj, maxDim, quality);
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return await Promise.all(
+      obj.map((item) => compressStoreConfigImages(item, maxDim, quality))
+    );
+  }
+  if (typeof obj === "object") {
+    const result: any = {};
+    for (const key of Object.keys(obj)) {
+      result[key] = await compressStoreConfigImages(obj[key], maxDim, quality);
+    }
+    return result;
+  }
+  return obj;
+}
+
 export function compressImageFile(
   file: File,
   maxWidth: number = 800,
@@ -215,11 +328,41 @@ export function compressImageFile(
         const reader = new FileReader();
         reader.onload = (e) => {
           const res = e.target?.result as string;
-          if (res) resolve(res);
-          else reject(new Error("Empty FileReader output"));
+          if (res) {
+            const img = new Image();
+            img.onload = () => {
+              try {
+                const canvas = document.createElement("canvas");
+                let scale = 1;
+                if (img.width > maxWidth) scale = maxWidth / img.width;
+                const targetWidth = Math.max(1, Math.floor(img.width * scale));
+                const targetHeight = Math.max(1, Math.floor(img.height * scale));
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                  ctx.fillStyle = "#FFFFFF";
+                  ctx.fillRect(0, 0, targetWidth, targetHeight);
+                  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                  const dataUrl = canvas.toDataURL("image/jpeg", quality);
+                  if (dataUrl && dataUrl.startsWith("data:image/")) {
+                    resolve(dataUrl);
+                    return;
+                  }
+                }
+              } catch (canvasErr) {
+                console.warn("Fallback canvas compression error:", canvasErr);
+              }
+              resolve(res);
+            };
+            img.onerror = () => resolve(res);
+            img.src = res;
+          } else {
+            reject(new Error("Empty FileReader output"));
+          }
         };
         reader.onerror = () => reject(new Error("FileReader failed"));
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(activeFile);
       };
 
       // Try ObjectURL canvas compression first for high speed & low memory footprint
