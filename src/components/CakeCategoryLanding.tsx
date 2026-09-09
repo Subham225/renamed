@@ -187,12 +187,16 @@ export default function CakeCategoryLanding({
             <button
               key={cat.id}
               onClick={() => {
-                if (cat.id === "cakes" || cat.id === "all_cakes" || cat.id === "all") {
-                  const el = document.getElementById("all-cakes-collection-anchor");
-                  if (el) {
-                    el.scrollIntoView({ behavior: "smooth" });
-                    return;
-                  }
+                if (
+                  cat.id === "cakes" ||
+                  cat.id === "all_cakes" ||
+                  cat.id === "cakes_all" ||
+                  cat.id === "all" ||
+                  cat.name.toLowerCase().includes("all cake") ||
+                  cat.name.toLowerCase() === "cakes"
+                ) {
+                  if (onSelectCategory) onSelectCategory("cakes_all");
+                  return;
                 }
                 if (onSelectCategory) onSelectCategory(cat.id as CategoryID);
               }}

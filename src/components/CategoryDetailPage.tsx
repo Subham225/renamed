@@ -168,6 +168,22 @@ export default function CategoryDetailPage({
       if (categoryId === "two_hours_delivery") {
         return !!prod.isTwoHourDelivery;
       }
+      if (categoryId === "cakes_all" || categoryId === "all_cakes") {
+        return (
+          prod.category === "cakes" ||
+          (prod.categories && prod.categories.includes("cakes")) ||
+          prod.name.toLowerCase().includes("cake")
+        );
+      }
+      if (categoryId === "birthday_cakes") {
+        return (
+          prod.category === "birthday" ||
+          (prod.categories && prod.categories.includes("birthday")) ||
+          prod.name.toLowerCase().includes("birthday") ||
+          prod.description?.toLowerCase().includes("birthday") ||
+          (prod.category === "cakes" && prod.name.toLowerCase().includes("birthday"))
+        );
+      }
       if (categoryId === "birthday") {
         return (
           prod.category === "birthday" ||
@@ -725,7 +741,7 @@ export default function CategoryDetailPage({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
             <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              All {categoryName}
+              {categoryName.toLowerCase().startsWith("all ") ? categoryName : `All ${categoryName}`}
               <span className="text-[10px] bg-slate-200 text-slate-700 font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
                 {processedProducts.length} Items
               </span>

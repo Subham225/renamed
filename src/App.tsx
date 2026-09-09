@@ -1848,6 +1848,9 @@ export default function App() {
             {
               two_hours_delivery: "2 Hours Express Delivery",
               birthday: "Birthday Special Gifts & Cakes",
+              birthday_cakes: "All Birthday Cakes",
+              cakes_all: "All Cakes",
+              all_cakes: "All Cakes",
               photo_cake: "Photo Cakes",
               bento_cake: "Bento Cakes",
               pinata_cake: "Pinata Cakes",

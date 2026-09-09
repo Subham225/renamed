@@ -144,8 +144,18 @@ export default function BirthdayCategoryLanding({
   });
 
   const handleCategoryClick = (catId: string) => {
-    // If clicking "cakes", "flowers", "plants" etc., check if we should navigate or filter
-    if (catId === "cakes" || catId === "flowers" || catId === "plants") {
+    // If clicking "cakes", open the separate dedicated All Birthday Cakes catalog page
+    if (
+      catId === "cakes" ||
+      catId === "all_cakes" ||
+      catId === "cakes_all" ||
+      catId === "cake" ||
+      catId === "birthday_cakes"
+    ) {
+      onSelectCategory?.("birthday_cakes" as CategoryID);
+      return;
+    }
+    if (catId === "flowers" || catId === "plants") {
       onSelectCategory?.(catId as CategoryID);
       return;
     }
