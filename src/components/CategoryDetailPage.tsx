@@ -134,7 +134,40 @@ export default function CategoryDetailPage({
       case 'anniversary': return storeConfig?.anniversarySubcategories || [];
       case 'personalized_gifts': return storeConfig?.personalizedSubcategories || [];
       case 'gifts':
-      case 'combos': return storeConfig?.giftSubcategories || [];
+      case 'combos': {
+        const defaultSubs = [
+          {
+            id: "flower_combos",
+            name: "Flower Combos",
+            image: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=400&q=80",
+            tag: "Blooms & Chocolates",
+          },
+          {
+            id: "cake_combos",
+            name: "Cake Combos",
+            image: "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=400&q=80",
+            tag: "Dessert & Toy Kits",
+          },
+          {
+            id: "chocolate_flower",
+            name: "Chocolate & Flower",
+            image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=400&q=80",
+            tag: "Sweetest Greetings",
+          },
+          {
+            id: "personalised_combos",
+            name: "Personalised Combos",
+            image: "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=400&q=80",
+            tag: "Custom Photo Gifts",
+          },
+        ];
+        const cfg = storeConfig?.giftSubcategories || [];
+        return defaultSubs.map((def, idx) => ({
+          ...def,
+          ...(cfg[idx] || cfg.find((c) => c.id === def.id)),
+          id: def.id,
+        }));
+      }
       case 'dewali': return storeConfig?.dewaliSubcategories || [];
       case 'rakhi': return storeConfig?.rakhiSubcategories || [];
       case 'photo_to_art': return storeConfig?.photoToArtSubcategories || [];
@@ -160,6 +193,91 @@ export default function CategoryDetailPage({
   const flowersWithCakes = useMemo(() => products.filter(p => p.categories?.includes("flowers_with_cakes") || p.category === "flowers_with_cakes"), [products]);
   const flowersWithChocolates = useMemo(() => products.filter(p => p.categories?.includes("flowers_with_chocolates") || p.category === "flowers_with_chocolates"), [products]);
 
+
+  // Check if storeConfig has explicitly assigned product IDs for this category across all curation / subcategory configs
+  const assignedProductIds = useMemo(() => {
+    if (!storeConfig) return undefined;
+
+    // Direct check for gift subcategories
+    const giftMatch = storeConfig.giftSubcategories?.find((t) => t.id === categoryId);
+    if (giftMatch?.productIds && giftMatch.productIds.length > 0) return giftMatch.productIds;
+
+    // 1. Taste pick categories
+    const tasteMatch = storeConfig.tastePickCategories?.find((t) => t.id === categoryId);
+    if (tasteMatch?.productIds && tasteMatch.productIds.length > 0) return tasteMatch.productIds;
+
+    // 2. Quick cakes & iconic flavors
+    const quickCakeMatch = storeConfig.quickCakeCategories?.find((t) => t.id === categoryId);
+    if (quickCakeMatch?.productIds && quickCakeMatch.productIds.length > 0) return quickCakeMatch.productIds;
+
+    const iconicMatch = storeConfig.iconicFlavors?.find((t) => t.id === categoryId);
+    if (iconicMatch?.productIds && iconicMatch.productIds.length > 0) return iconicMatch.productIds;
+
+    // 3. Flower Curation
+    if (storeConfig.flowerCuration) {
+      const fc = storeConfig.flowerCuration;
+      const flowerCats = [
+        ...(fc.trendingCategories || []),
+        ...(fc.byTypeCategories || []),
+        ...(fc.byColorCategories || []),
+        ...(fc.byCollectionCategories || []),
+        ...(fc.premiumFlowersCategories || []),
+        ...(fc.luxuryPairings || []),
+        ...(fc.byOccasionCategories || []),
+      ];
+      const match = flowerCats.find((t) => t.id === categoryId);
+      if (match?.productIds && match.productIds.length > 0) return match.productIds;
+    }
+
+    // 4. Birthday Curation
+    if (storeConfig.birthdayCuration) {
+      const bc = storeConfig.birthdayCuration;
+      const birthdayCats = [
+        ...(bc.quickCategories || []),
+        ...(bc.premiumCategories || []),
+        ...(bc.flowersByTypeCategories || []),
+        ...(bc.exploreGiftsCategories || []),
+      ];
+      const match = birthdayCats.find((t) => t.id === categoryId);
+      if (match?.productIds && match.productIds.length > 0) return match.productIds;
+    }
+
+    // 5. Plant Curation
+    if (storeConfig.plantCuration) {
+      const pc = storeConfig.plantCuration;
+      const plantCats = [
+        ...(pc.quickCategories || []),
+        ...(pc.plantsByTypeCategories || []),
+        ...(pc.plantsByLocationCategories || []),
+        ...(pc.explorePlantersCategories || []),
+      ];
+      const match = plantCats.find((t) => t.id === categoryId);
+      if (match?.productIds && match.productIds.length > 0) return match.productIds;
+    }
+
+    // 6. Subcategories lists
+    const subLists = [
+      storeConfig.cakeSubcategories,
+      storeConfig.flowerSubcategories,
+      storeConfig.plantSubcategories,
+      storeConfig.chocolateSubcategories,
+      storeConfig.anniversarySubcategories,
+      storeConfig.personalizedSubcategories,
+      storeConfig.giftSubcategories,
+      storeConfig.dewaliSubcategories,
+      storeConfig.rakhiSubcategories,
+      storeConfig.photoToArtSubcategories,
+      storeConfig.handCraftSubcategories,
+      storeConfig.newYearSubcategories,
+      storeConfig.tastePickSubcategories,
+    ];
+    for (const sub of subLists) {
+      const match = sub?.find((t) => t.id === categoryId);
+      if (match?.productIds && match.productIds.length > 0) return match.productIds;
+    }
+
+    return undefined;
+  }, [storeConfig, categoryId]);
 
   // Filtering products
   const processedProducts = useMemo(() => {
@@ -193,90 +311,45 @@ export default function CategoryDetailPage({
         );
       }
 
-      // Check if storeConfig has explicitly assigned product IDs for this category across all curation / subcategory configs
-      const findAssignedProductIds = (catId: string): string[] | undefined => {
-        if (!storeConfig) return undefined;
-
-        // 1. Taste pick categories
-        const tasteMatch = storeConfig.tastePickCategories?.find((t) => t.id === catId);
-        if (tasteMatch?.productIds && tasteMatch.productIds.length > 0) return tasteMatch.productIds;
-
-        // 2. Quick cakes & iconic flavors
-        const quickCakeMatch = storeConfig.quickCakeCategories?.find((t) => t.id === catId);
-        if (quickCakeMatch?.productIds && quickCakeMatch.productIds.length > 0) return quickCakeMatch.productIds;
-
-        const iconicMatch = storeConfig.iconicFlavors?.find((t) => t.id === catId);
-        if (iconicMatch?.productIds && iconicMatch.productIds.length > 0) return iconicMatch.productIds;
-
-        // 3. Flower Curation
-        if (storeConfig.flowerCuration) {
-          const fc = storeConfig.flowerCuration;
-          const flowerCats = [
-            ...(fc.trendingCategories || []),
-            ...(fc.byTypeCategories || []),
-            ...(fc.byColorCategories || []),
-            ...(fc.byCollectionCategories || []),
-            ...(fc.premiumFlowersCategories || []),
-            ...(fc.luxuryPairings || []),
-            ...(fc.byOccasionCategories || []),
-          ];
-          const match = flowerCats.find((t) => t.id === catId);
-          if (match?.productIds && match.productIds.length > 0) return match.productIds;
-        }
-
-        // 4. Birthday Curation
-        if (storeConfig.birthdayCuration) {
-          const bc = storeConfig.birthdayCuration;
-          const birthdayCats = [
-            ...(bc.quickCategories || []),
-            ...(bc.premiumCategories || []),
-            ...(bc.flowersByTypeCategories || []),
-            ...(bc.exploreGiftsCategories || []),
-          ];
-          const match = birthdayCats.find((t) => t.id === catId);
-          if (match?.productIds && match.productIds.length > 0) return match.productIds;
-        }
-
-        // 5. Plant Curation
-        if (storeConfig.plantCuration) {
-          const pc = storeConfig.plantCuration;
-          const plantCats = [
-            ...(pc.quickCategories || []),
-            ...(pc.plantsByTypeCategories || []),
-            ...(pc.plantsByLocationCategories || []),
-            ...(pc.explorePlantersCategories || []),
-          ];
-          const match = plantCats.find((t) => t.id === catId);
-          if (match?.productIds && match.productIds.length > 0) return match.productIds;
-        }
-
-        // 6. Subcategories lists
-        const subLists = [
-          storeConfig.cakeSubcategories,
-          storeConfig.flowerSubcategories,
-          storeConfig.plantSubcategories,
-          storeConfig.chocolateSubcategories,
-          storeConfig.anniversarySubcategories,
-          storeConfig.personalizedSubcategories,
-          storeConfig.giftSubcategories,
-          storeConfig.dewaliSubcategories,
-          storeConfig.rakhiSubcategories,
-          storeConfig.photoToArtSubcategories,
-          storeConfig.handCraftSubcategories,
-          storeConfig.newYearSubcategories,
-          storeConfig.tastePickSubcategories,
-        ];
-        for (const sub of subLists) {
-          const match = sub?.find((t) => t.id === catId);
-          if (match?.productIds && match.productIds.length > 0) return match.productIds;
-        }
-
-        return undefined;
-      };
-
-      const assignedProductIds = findAssignedProductIds(categoryId);
-      if (assignedProductIds) {
+      if (assignedProductIds && assignedProductIds.length > 0) {
         return assignedProductIds.includes(prod.id);
+      }
+
+      // Fallbacks for combo subcategories if no specific productIds were configured
+      if (categoryId === "flower_combos") {
+        return (
+          (prod.category === "combos" || prod.category === "flowers") &&
+          (prod.categories?.includes("flower_combos") ||
+            prod.name.toLowerCase().includes("flower") ||
+            prod.name.toLowerCase().includes("rose") ||
+            prod.id.toLowerCase().includes("rose"))
+        );
+      }
+      if (categoryId === "cake_combos") {
+        return (
+          (prod.category === "combos" || prod.category === "cakes") &&
+          (prod.categories?.includes("cake_combos") ||
+            prod.name.toLowerCase().includes("cake") ||
+            prod.id.toLowerCase().includes("cake"))
+        );
+      }
+      if (categoryId === "chocolate_flower") {
+        return (
+          prod.category === "chocolates" ||
+          prod.category === "flowers" ||
+          prod.category === "combos" ||
+          prod.categories?.includes("chocolate_flower") ||
+          prod.id.toLowerCase().includes("choc") ||
+          prod.id.toLowerCase().includes("flower")
+        );
+      }
+      if (categoryId === "personalised_combos") {
+        return (
+          prod.category === "personalized_gifts" ||
+          prod.category === "combos" ||
+          prod.categories?.includes("personalised_combos") ||
+          !!prod.options?.hasPhotoUpload
+        );
       }
 
       // Check keyword matching for taste / flavor categories
@@ -337,6 +410,15 @@ export default function CategoryDetailPage({
         return 0;
       });
 
+    } else if (assignedProductIds && assignedProductIds.length > 0) {
+      list.sort((a, b) => {
+        const idxA = assignedProductIds.indexOf(a.id);
+        const idxB = assignedProductIds.indexOf(b.id);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return 0;
+      });
     } else {
       list.sort((a, b) => {
         if (!randomOrderMap.has(a.id)) randomOrderMap.set(a.id, Math.random());
@@ -346,7 +428,7 @@ export default function CategoryDetailPage({
     }
 
     return list;
-  }, [products, categoryId, searchQuery, sortBy, randomOrderMap]);
+  }, [products, categoryId, searchQuery, sortBy, randomOrderMap, assignedProductIds]);
 
   const displayedProducts = processedProducts;
 

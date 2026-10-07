@@ -1272,12 +1272,45 @@ export default function App() {
         .filter((cat) => cat.isVisible === false || cat.hidden === true)
         .map((cat) => cat.id)
     );
+
+    // Collect all product IDs explicitly configured by admin across any subcategory / curation
+    const explicitlyAssignedProductIds = new Set<string>();
+    const checkSub = (items?: { productIds?: string[] }[]) => {
+      items?.forEach((item) =>
+        item.productIds?.forEach((id) => explicitlyAssignedProductIds.add(id)),
+      );
+    };
+    checkSub(storeConfig?.giftSubcategories);
+    checkSub(storeConfig?.cakeSubcategories);
+    checkSub(storeConfig?.flowerSubcategories);
+    checkSub(storeConfig?.plantSubcategories);
+    checkSub(storeConfig?.chocolateSubcategories);
+    checkSub(storeConfig?.anniversarySubcategories);
+    checkSub(storeConfig?.personalizedSubcategories);
+    checkSub(storeConfig?.dewaliSubcategories);
+    checkSub(storeConfig?.rakhiSubcategories);
+    checkSub(storeConfig?.photoToArtSubcategories);
+    checkSub(storeConfig?.handCraftSubcategories);
+    checkSub(storeConfig?.newYearSubcategories);
+    checkSub(storeConfig?.tastePickSubcategories);
+    checkSub(storeConfig?.tastePickCategories);
+    checkSub(storeConfig?.quickCakeCategories);
+    checkSub(storeConfig?.iconicFlavors);
+
     return productsCatalog.filter((prod) => {
-      if (hiddenCategoryIds.has(prod.category)) return false;
-      if (prod.categories && prod.categories.some(c => hiddenCategoryIds.has(c))) return false;
+      // If product was explicitly picked by admin, always keep it visible!
+      if (explicitlyAssignedProductIds.has(prod.id)) return true;
+
+      // If product's primary category is hidden, only hide it if it does not belong to any visible category
+      if (hiddenCategoryIds.has(prod.category)) {
+        const hasVisibleCat = prod.categories?.some(
+          (c) => !hiddenCategoryIds.has(c),
+        );
+        if (!hasVisibleCat) return false;
+      }
       return true;
     });
-  }, [productsCatalog, categoriesCatalog]);
+  }, [productsCatalog, categoriesCatalog, storeConfig]);
 
   // --- FILTERED PRODUCTS ---
   const filteredProducts = useMemo(() => {
@@ -1289,8 +1322,39 @@ export default function App() {
 
       // 1. Category Filter
       if (selectedCategory) {
+        // Check if storeConfig has explicitly assigned products for this category
+        const findAssignedProductIds = (
+          catId: string,
+        ): string[] | undefined => {
+          if (!storeConfig) return undefined;
+          const subLists = [
+            storeConfig.giftSubcategories,
+            storeConfig.cakeSubcategories,
+            storeConfig.flowerSubcategories,
+            storeConfig.plantSubcategories,
+            storeConfig.chocolateSubcategories,
+            storeConfig.anniversarySubcategories,
+            storeConfig.personalizedSubcategories,
+            storeConfig.dewaliSubcategories,
+            storeConfig.rakhiSubcategories,
+            storeConfig.photoToArtSubcategories,
+            storeConfig.handCraftSubcategories,
+            storeConfig.newYearSubcategories,
+            storeConfig.tastePickSubcategories,
+          ];
+          for (const sub of subLists) {
+            const match = sub?.find((t) => t.id === catId);
+            if (match?.productIds && match.productIds.length > 0)
+              return match.productIds;
+          }
+          return undefined;
+        };
+
+        const assignedIds = findAssignedProductIds(selectedCategory);
         let belongsToCat = false;
-        if (selectedCategory === "two_hours_delivery") {
+        if (assignedIds && assignedIds.length > 0) {
+          belongsToCat = assignedIds.includes(prod.id);
+        } else if (selectedCategory === "two_hours_delivery") {
           belongsToCat = !!prod.isTwoHourDelivery;
         } else if (
           prod.category === selectedCategory ||
@@ -1844,6 +1908,10 @@ export default function App() {
           categoryId={selectedCategory}
           isRichLayout={categorySource === 'top'}
           categoryName={
+            storeConfig?.giftSubcategories?.find((c) => c.id === selectedCategory)?.name ||
+            storeConfig?.cakeSubcategories?.find((c) => c.id === selectedCategory)?.name ||
+            storeConfig?.flowerSubcategories?.find((c) => c.id === selectedCategory)?.name ||
+            storeConfig?.plantSubcategories?.find((c) => c.id === selectedCategory)?.name ||
             categoriesCatalog.find((c) => c.id === selectedCategory)?.name ||
             {
               two_hours_delivery: "2 Hours Express Delivery",
@@ -1857,8 +1925,8 @@ export default function App() {
               kids_cake: "Kids Cakes",
               flower_combos: "Flower Combos",
               cake_combos: "Cake Combos",
-              chocolate_flower: "Chocolate & Florals",
-              personalised_combos: "Personalised Gift Combos",
+              chocolate_flower: "Chocolate & Flower",
+              personalised_combos: "Personalised Combos",
               special_chocolate: "Special Chocolate",
               sweets: "Sweets",
               dryfruits: "Dry Fruits",
@@ -1879,6 +1947,10 @@ export default function App() {
             "Premium Catalog Selection"
           }
           categoryImage={
+            storeConfig?.giftSubcategories?.find((c) => c.id === selectedCategory)?.image ||
+            storeConfig?.cakeSubcategories?.find((c) => c.id === selectedCategory)?.image ||
+            storeConfig?.flowerSubcategories?.find((c) => c.id === selectedCategory)?.image ||
+            storeConfig?.plantSubcategories?.find((c) => c.id === selectedCategory)?.image ||
             categoriesCatalog.find((c) => c.id === selectedCategory)?.image
           }
           products={visibleProductsCatalog}

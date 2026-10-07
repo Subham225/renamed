@@ -237,8 +237,13 @@ export default function ProductList({
 
   const displayedCakeSubcategories =
     storeConfig?.cakeSubcategories || CAKE_SUBCATEGORIES;
-  const displayedGiftSubcategories =
-    storeConfig?.giftSubcategories || GIFT_SUBCATEGORIES;
+  const displayedGiftSubcategories = (
+    storeConfig?.giftSubcategories || GIFT_SUBCATEGORIES
+  ).map((cat, idx) => ({
+    ...GIFT_SUBCATEGORIES[idx],
+    ...cat,
+    id: cat.id || GIFT_SUBCATEGORIES[idx]?.id,
+  }));
   const displayedDewaliSubcategories =
     storeConfig?.dewaliSubcategories || DEWALI_SUBCATEGORIES;
   const displayedRakhiSubcategories =

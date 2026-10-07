@@ -30,7 +30,17 @@ export default function SubcategoryEditor({
   accentColor = "pink",
   products = [],
 }: SubcategoryEditorProps) {
-  const list = [...((localConfig[configKey] as StoreConfigItem[]) || [])];
+  const rawList = (localConfig[configKey] as StoreConfigItem[]) || [];
+  const list = defaultIds.map((defId, idx) => {
+    const existing = rawList[idx] || rawList.find((item) => item?.id === defId);
+    return {
+      id: defId,
+      name: existing?.name || defaultNames[idx],
+      image: existing?.image || defaultImages[idx] || "",
+      tag: existing?.tag || defaultTags[idx],
+      productIds: existing?.productIds || [],
+    };
+  });
 
   const colorClasses = {
     pink: {
@@ -106,7 +116,8 @@ export default function SubcategoryEditor({
         id: defaultIds[index],
         name: defaultNames[index],
         image: defaultImages[index] || "",
-        tag: defaultTags[index]
+        tag: defaultTags[index],
+        productIds: [],
       };
     }
     
@@ -115,7 +126,11 @@ export default function SubcategoryEditor({
       cleanedUpdates.image = cleanImageUrl(cleanedUpdates.image);
     }
 
-    nextList[index] = { ...nextList[index], ...cleanedUpdates };
+    nextList[index] = {
+      ...nextList[index],
+      id: defaultIds[index],
+      ...cleanedUpdates,
+    };
     const newConfig: StoreConfig = { ...localConfig, [configKey]: nextList };
     if (configKey === "tastePickSubcategories") {
       newConfig.tastePickCategories = nextList.map((item) => {
@@ -151,6 +166,7 @@ export default function SubcategoryEditor({
             name: defaultNames[index],
             image: "",
             tag: defaultTags[index],
+            productIds: [],
           };
           return (
             <div
