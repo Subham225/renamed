@@ -381,6 +381,26 @@ export async function assignOrderRiderInFirestore(orderId: string, assignedRider
   }
 }
 
+export async function deleteOrderFromFirestore(orderId: string): Promise<void> {
+  const path = `orders/${orderId}`;
+  try {
+    await deleteDoc(doc(db, 'orders', orderId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export async function clearAllOrdersFromFirestore(): Promise<void> {
+  const path = 'orders';
+  try {
+    const snapshot = await getDocs(collection(db, path));
+    const deletePromises = snapshot.docs.map((d) => deleteDoc(d.ref));
+    await Promise.all(deletePromises);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 // 3. COUPONS DB METHODS
 export async function getCouponsFromFirestore(): Promise<Coupon[]> {
   const path = 'coupons';

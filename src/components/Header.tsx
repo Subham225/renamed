@@ -29,10 +29,10 @@ export default function Header({
 }: HeaderProps) {
   return (
     <>
-      <header className="sticky top-0 z-40 bg-pink-100/95 backdrop-blur-md border-b border-pink-200 shadow-sm px-4 pt-[calc(0.375rem+env(safe-area-inset-top,0px))] pb-2">
+      <header className="relative z-40 bg-pink-100/95 backdrop-blur-md border-b border-pink-200 shadow-sm px-4 py-2">
         <div className="max-w-7xl mx-auto flex flex-col gap-1.5">
           {/* Top brand line & Cart */}
-          <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center justify-between">
           <button onClick={onGoHome} className="flex items-center gap-1.5 text-left cursor-pointer transition-opacity hover:opacity-80">
             <img
               src="/logo.png"

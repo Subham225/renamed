@@ -94,6 +94,8 @@ interface AdminPanelProps {
     paymentStatus: "pending" | "completed",
   ) => void;
   onAssignRider?: (orderId: string, riderId: string, riderName: string) => void;
+  onDeleteOrder?: (orderId: string) => void;
+  onClearAllOrders?: () => void;
   riders?: DeliveryAgent[];
   products: Product[];
   onAddProduct: (product: Product) => void;
@@ -2562,6 +2564,8 @@ export default function AdminPanel({
   onUpdateOrderStatus,
   onUpdateOrderPaymentStatus,
   onAssignRider,
+  onDeleteOrder,
+  onClearAllOrders,
   riders = DELIVERY_AGENTS,
   products,
   onAddProduct,
@@ -3610,11 +3614,11 @@ export default function AdminPanel({
                     </div>
 
                     {/* Date picker filter */}
-                    <div className="flex items-center gap-2 w-full md:w-auto font-sans">
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto font-sans">
                       <span className="text-[10px] font-black uppercase text-slate-400 shrink-0 block text-left">
                         Filter by Date:
                       </span>
-                      <div className="relative flex items-center gap-1.5 w-full md:w-auto">
+                      <div className="relative flex items-center gap-1.5">
                         <input
                           type="date"
                           value={filterDate}
@@ -3632,6 +3636,27 @@ export default function AdminPanel({
                           </button>
                         )}
                       </div>
+
+                      {/* Clear All Orders button if orders exist */}
+                      {onClearAllOrders && orders.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Are you sure you want to clear all orders, total turnover, and sales registers? Products and store configurations will NOT be touched.",
+                              )
+                            ) {
+                              onClearAllOrders();
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="Clear all orders and reset turnover/sales records"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Clear All Orders & Sales
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -3746,6 +3771,25 @@ export default function AdminPanel({
                                   <span className="bg-slate-100 text-slate-500 text-[9px] font-black uppercase py-0.5 px-2.5 rounded-full border border-slate-200">
                                     No Rider Assigned
                                   </span>
+                                )}
+
+                                {onDeleteOrder && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (
+                                        window.confirm(
+                                          `Delete order ${order.id}? This will remove it from active orders, sales records and turnover.`,
+                                        )
+                                      ) {
+                                        onDeleteOrder(order.id);
+                                      }
+                                    }}
+                                    className="ml-auto p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                    title={`Delete order ${order.id}`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 )}
                               </div>
 

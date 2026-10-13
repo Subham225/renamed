@@ -307,8 +307,8 @@ export default function ProductDetailPage({
         <meta property="og:image" content={ogImageUrl} />
         <meta property="twitter:image" content={ogImageUrl} />
       </Helmet>
-      {/* Top sticky action navbar matching screenshot styling */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-3 shadow-xs">
+      {/* Top action navbar matching screenshot styling */}
+      <div className="relative z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-3 shadow-xs">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button
             onClick={onBack}

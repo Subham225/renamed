@@ -198,7 +198,7 @@ export default function FlowerCategoryLanding({
       </div>
 
       {/* 2. SEARCH BAR */}
-      <div className="max-w-7xl mx-auto px-4 py-3 bg-white border-b border-slate-100 sticky top-0 z-30 shadow-2xs">
+      <div className="max-w-7xl mx-auto px-4 py-3 bg-white border-b border-slate-100 shadow-2xs">
         <div className="relative max-w-xl mx-auto">
           <input
             type="text"

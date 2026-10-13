@@ -100,7 +100,7 @@ export default function SidebarMenuDrawer({ isOpen, onClose, onNavigate, onOpenP
       />
       
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 z-[100] w-[80%] max-w-sm bg-[#fcf6f6] shadow-2xl flex flex-col animate-slideInRight pt-[env(safe-area-inset-top,0px)] pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+      <div className="fixed inset-y-0 right-0 z-[100] w-[80%] max-w-sm bg-[#fcf6f6] shadow-2xl flex flex-col animate-slideInRight pb-4">
         {/* Header with Close Button only */}
         <div className="flex items-center justify-start p-4 border-b border-[#f5ecec]">
           <button 

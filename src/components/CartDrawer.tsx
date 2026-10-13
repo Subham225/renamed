@@ -870,7 +870,7 @@ export default function CartDrawer({
         />
 
         <div className="absolute inset-y-0 right-0 max-w-full flex pl-4 sm:pl-10">
-          <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between text-left overflow-hidden pt-[env(safe-area-inset-top,0px)] pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between text-left overflow-hidden pb-2">
             {/* Header section with contextual back buttons */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2">
