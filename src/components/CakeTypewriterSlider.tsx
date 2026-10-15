@@ -69,9 +69,42 @@ export default function CakeTypewriterSlider({ slides }: CakeTypewriterSliderPro
     return <span>{title}</span>;
   };
 
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null || touchStartY === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchStartX - touchEndX;
+    const diffY = touchStartY - touchEndY;
+
+    // Only swipe if horizontal drag is significantly greater than vertical drag
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+      if (diffX > 0) {
+        // Swiped left -> next slide
+        setCurrentIndex((prev) => (prev + 1) % activeSlides.length);
+      } else {
+        // Swiped right -> prev slide
+        setCurrentIndex((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
+      }
+    }
+    setTouchStartX(null);
+    setTouchStartY(null);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto sm:px-4 mt-1 sm:mt-3 mb-3">
-      <div className="relative h-[185px] xs:h-[220px] sm:h-[300px] md:h-[355px] lg:h-[400px] sm:rounded-3xl overflow-hidden shadow-md border-b sm:border border-slate-100 bg-slate-950 select-none">
+      <div 
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="relative h-[185px] xs:h-[220px] sm:h-[300px] md:h-[355px] lg:h-[400px] sm:rounded-3xl overflow-hidden shadow-md border-b sm:border border-slate-100 bg-slate-950 select-none touch-pan-y"
+      >
         {activeSlides.map((slide, index) => {
           const isActive = index === currentIndex;
           return (

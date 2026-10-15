@@ -4,7 +4,7 @@ import { safeSetStorage } from "./types";
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import {
   Gift,
@@ -817,6 +817,8 @@ export default function App() {
   };
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const lastScrollYRef = useRef(0);
 
   // Monitor manual scroll threshold (e.g., scrolled past 35px) to reveal products under the fold
   useEffect(() => {
@@ -1033,12 +1035,24 @@ export default function App() {
     }
   }, []);
 
-// Scroll to top indicator visibility
+  // Scroll to top indicator and smart top bar scroll visibility
   useEffect(() => {
     const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300);
+      const currentScrollY = window.scrollY;
+      setShowScrollTop(currentScrollY > 300);
+
+      if (currentScrollY <= 20) {
+        setIsHeaderVisible(true);
+      } else if (currentScrollY > lastScrollYRef.current + 8) {
+        // Scrolling down: hide header
+        setIsHeaderVisible(false);
+      } else if (currentScrollY < lastScrollYRef.current - 8) {
+        // Scrolling up / sliding down with finger: slide header down into view!
+        setIsHeaderVisible(true);
+      }
+      lastScrollYRef.current = currentScrollY;
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -1811,29 +1825,44 @@ export default function App() {
         near IIT Kharagpur.
       </h1>
 
-      {/* HEADER SECTION (Sticky Search, Location, Cart logo) */}
-      <Header
-        location={currentLocation}
-        onOpenLocation={() => setIsLocationOpen(true)}
-        cartCount={cartCount}
-        onOpenCart={() => setIsCartOpen(true)}
-        searchQuery={searchQuery}
-        onSearchChange={(q) => {
-          setSearchQuery(q);
-          if (q) {
-            // Scroll to catalog when user types in search
-            const el = document.getElementById("product-catalog-anchor");
-            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-        }}
-        wishlistCount={wishlistProductIds.length}
-        onOpenWishlist={() => setIsWishlistOpen(true)}
-        onGoHome={() => handleTabChange("home")}
-        onOpenMenu={() => setIsMenuOpen(true)}
-      />
+      {/* HEADER SECTION & TOP CATEGORY BAR (Smart scroll: hides on scroll down, slides down on scroll up / swiping down) */}
+      <div
+        className={`sticky top-0 z-40 transition-transform duration-300 ease-in-out ${
+          isHeaderVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <Header
+          location={currentLocation}
+          onOpenLocation={() => setIsLocationOpen(true)}
+          cartCount={cartCount}
+          onOpenCart={() => setIsCartOpen(true)}
+          searchQuery={searchQuery}
+          onSearchChange={(q) => {
+            setSearchQuery(q);
+            if (q) {
+              // Scroll to catalog when user types in search
+              const el = document.getElementById("product-catalog-anchor");
+              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }}
+          wishlistCount={wishlistProductIds.length}
+          onOpenWishlist={() => setIsWishlistOpen(true)}
+          onGoHome={() => handleTabChange("home")}
+          onOpenMenu={() => setIsMenuOpen(true)}
+        />
+
+        {/* TOP CATEGORY INSTANT SCROLL BAR MATCHING SCREENSHOT */}
+        {!activePolicy && (
+          <TopCategoryBar
+            categories={visibleCategories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={(id) => handleSelectCategoryFromGrid(id, 'top')}
+          />
+        )}
+      </div>
 
       {firebaseSyncError && !dismissSyncBanner && (
-        <div className="bg-rose-50 border-b border-rose-200 text-slate-800 px-4 py-3.5 sm:px-6 relative shadow-sm z-40 transition-all">
+        <div className="bg-rose-50 border-b border-rose-200 text-slate-800 px-4 py-3.5 sm:px-6 relative shadow-sm z-30 transition-all">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg shrink-0 mt-0.5">
@@ -1885,15 +1914,6 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* TOP CATEGORY INSTANT SCROLL BAR MATCHING SCREENSHOT */}
-      {!activePolicy && (
-        <TopCategoryBar
-          categories={visibleCategories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={(id) => handleSelectCategoryFromGrid(id, 'top')}
-        />
       )}
 
       {/* MAIN CONTENT BLOCK: CONDITIONAL RENDER PRODUCT DETAIL PAGE, SEPARATE CATEGORY DETAIL PAGE, OR HOME FEED */}

@@ -48,7 +48,7 @@ export default function TopCategoryBar({
   ];
 
   return (
-    <div className="bg-pink-50/40 border-b border-pink-100/30 py-2 overflow-x-auto scrollbar-none select-none w-full">
+    <div className="bg-pink-50/40 border-b border-pink-100/30 py-2 overflow-x-auto scrollbar-none w-full touch-pan-x">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-center gap-3.5 sm:gap-10 w-full min-w-max">
         {topItems.map((item) => {
           const isSelected = item.id === null ? selectedCategory === null : selectedCategory === item.id;
