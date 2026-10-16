@@ -517,18 +517,7 @@ Address: ${order.streetAddress}
 Delivery: ${order.deliveryDate || 'N/A'} (${order.deliveryTimeSlot || 'N/A'})
       `.trim();
 
-      let recipientList = 'rocxcakes@gmail.com';
-      if (GMAIL_USER && GMAIL_USER !== 'rocxcakes@gmail.com') {
-        recipientList += `, ${GMAIL_USER}`;
-      }
-      if (
-        order.customerEmail &&
-        order.customerEmail.includes('@') &&
-        !recipientList.includes(order.customerEmail) &&
-        !order.customerEmail.startsWith('subhamclient')
-      ) {
-        recipientList += `, ${order.customerEmail}`;
-      }
+      const recipientList = 'rocxcakes@gmail.com';
 
       const mailOptions = {
         from: `"Rocx Cakes & Gifts" <${GMAIL_USER}>`,
