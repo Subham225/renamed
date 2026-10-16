@@ -102,7 +102,7 @@ app.post('*/send-email', async (req, res) => {
     }
 
     const gmailUser = process.env.VITE_GMAIL_USER || process.env.GMAIL_USER || 'rocxcakes@gmail.com';
-    const gmailPass = process.env.VITE_GMAIL_APP_PASS || process.env.GMAIL_APP_PASS || 'xsguhtenwqkxknax';
+    const gmailPass = process.env.VITE_GMAIL_APP_PASS || process.env.GMAIL_APP_PASS || '';
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
