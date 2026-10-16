@@ -434,7 +434,16 @@ export default function CartDrawer({
 
     deliverySubtotal = basePrice + surcharge;
   }
-  if (cartItems.some(item => item.product.id === 'free_test_item')) {
+  if (
+    cartItems.some(
+      (item) =>
+        item.product.id === "free_test_item" ||
+        item.product.id === "custom_cake_1782716107529" ||
+        item.product.deliveryFee === 0 ||
+        item.product.price === 0 ||
+        item.product.name.toLowerCase().includes("yellow rose flower bouquet with ferrero rocher"),
+    )
+  ) {
     deliverySubtotal = 0;
   }
 
@@ -661,8 +670,8 @@ export default function CartDrawer({
       pincode: formData.pincode,
       city: formData.city,
       landmark: formData.landmark || "None",
-      paymentMode: formData.paymentMode,
-      paymentStatus: "pending",
+      paymentMode: finalTotalAmount === 0 ? "Free Test Order" : formData.paymentMode,
+      paymentStatus: finalTotalAmount === 0 ? "paid" : "pending",
       itemsSubtotal: itemsSubtotal,
       total: finalTotalAmount,
       deliveryFee: deliverySubtotal,
@@ -1558,9 +1567,13 @@ export default function CartDrawer({
                     </div>
                     
                     <div className="space-y-2">
-                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Secure Online Payment</h4>
+                      <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                        {finalTotalAmount === 0 ? "🎉 Free Promotional / Test Order" : "Secure Online Payment"}
+                      </h4>
                       <p className="text-[11px] text-slate-500 font-bold leading-relaxed px-2">
-                        {formData.paymentMode === "Online Payment" 
+                        {finalTotalAmount === 0
+                          ? "No payment required! Your order total is ₹0 with 100% Free Delivery. Click below to place and confirm your order immediately."
+                          : formData.paymentMode === "Online Payment" 
                           ? "You will be redirected to the secure PhonePe payment gateway to complete your transaction using UPI, Cards, or NetBanking."
                           : "You have selected Cash on Delivery. Please keep the exact amount ready."}
                       </p>
@@ -2072,7 +2085,7 @@ export default function CartDrawer({
                     onClick={validateAndProceedToPayment}
                     className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black py-4 rounded-xl transition duration-150 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer font-sans"
                   >
-                    Proceed To Pay ₹{finalTotalAmount}{" "}
+                    {finalTotalAmount === 0 ? "Proceed To Confirm (₹0)" : `Proceed To Pay ₹${finalTotalAmount}`}{" "}
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
@@ -2084,7 +2097,7 @@ export default function CartDrawer({
                     className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black py-4 rounded-xl transition duration-150 shadow-lg flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer font-sans"
                   >
                     <Sparkles className="w-4 h-4 fill-current animate-pulse" />{" "}
-                    Confirm Payment & Place Order
+                    {finalTotalAmount === 0 ? "Place Free Test Order Now (₹0)" : "Confirm Payment & Place Order"}
                   </button>
                   {paymentError && <div className="text-red-500 text-xs font-bold text-center mt-2 bg-red-50 p-2 rounded-lg border border-red-100">{paymentError}</div>}
 

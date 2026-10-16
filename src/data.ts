@@ -866,6 +866,24 @@ export const PRODUCTS: Product[] = [
   },
   // --- CHOCOLATES ---
   {
+    id: 'custom_cake_1782716107529',
+    name: 'Premium 10 Yellow Rose Flower Bouquet with Ferrero Rocher Chocolate | Luxury Gift Combo',
+    price: 0,
+    originalPrice: 999,
+    deliveryFee: 0,
+    category: 'chocolates',
+    categories: ['chocolates', 'combos', 'flowers', 'chocolate_flower', 'flower_combos'],
+    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=500&q=80',
+    description: 'The Ultimate Celebration of Joy & Golden Luxury: Premium 10 Yellow Roses Bouquet & Ferrero Rocher Chocolates. Special Free Test Order Item.',
+    rating: 5.0,
+    reviewsCount: 240,
+    features: ['10 Fresh Yellow Roses Bouquet', 'Ferrero Rocher Chocolates Box', '100% Free Test Item'],
+    adminNote: 'Free Test Item - ₹0',
+    options: {
+      hasMessageOption: true
+    }
+  },
+  {
     id: 'choc_teddy_rocher_combo',
     name: 'Royal Ferrero Rocher & Cuddles Teddy Hamper',
     price: 899,
