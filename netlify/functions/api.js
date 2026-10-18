@@ -146,8 +146,17 @@ app.post('*/send-email', async (req, res) => {
         else if (it.options.toLowerCase().includes('midnight')) deliveryType = 'midnight';
       }
 
+      let displayedProductImage = it.productImage || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
+
       return `
         <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: left;">
+          ${displayedProductImage ? `
+            <div style="text-align: center; margin-bottom: 24px;">
+              <div style="width: 280px; height: 280px; border-radius: 16px; overflow: hidden; border: 2px solid #374151; display: inline-block; position: relative; margin: 0 auto;">
+                <img src="${displayedProductImage}" width="280" height="280" style="width: 280px; height: 280px; object-fit: cover; display: block; margin: 0 auto;" alt="${it.name}" />
+              </div>
+            </div>
+          ` : ''}
           <div style="display: block; text-align: center; margin-bottom: 16px;">
             <h4 style="font-size: 20px; font-weight: 900; color: #ffffff; margin: 0 0 4px 0; text-transform: uppercase;">${it.name}</h4>
             <span style="font-size: 11px; font-weight: 850; text-transform: uppercase; color: #f472b6; letter-spacing: 0.05em;">Cakes / Products</span>
@@ -161,6 +170,12 @@ app.post('*/send-email', async (req, res) => {
             <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Custom message:</strong> <span style="color: #ffffff;">${customMsg}</span></div>
             <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Delivery time slot:</strong> <strong style="color: #f472b6;">${order.deliveryTimeSlot || 'Any Time On Specified Date'}</strong></div>
           </div>
+          ${it.photoUrl ? `
+            <div style="margin-top: 12px; background-color: #064e3b; border: 1px solid #047857; border-radius: 12px; padding: 12px;">
+              <span style="font-size: 9px; font-weight: 950; text-transform: uppercase; color: #10b981; display: block; margin-bottom: 6px; letter-spacing: 0.1em;">Uploaded Customer Photo</span>
+              <img src="${it.photoUrl}" style="max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; border: 1px solid #059669;" alt="Customer Attached Custom Visual" />
+            </div>
+          ` : ''}
         </div>
       `;
     }).join('');

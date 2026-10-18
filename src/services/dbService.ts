@@ -90,7 +90,14 @@ export async function getProductsFromFirestore(): Promise<Product[]> {
     const list: Product[] = [];
     
     snapshot.forEach((docSnap) => {
-      list.push(docSnap.data() as Product);
+      const p = docSnap.data() as Product;
+      if (p.id === 'custom_cake_1782716107529' && (p.price === 0 || p.adminNote?.includes('Free Test'))) {
+        p.price = 999;
+        p.originalPrice = 1199;
+        p.adminNote = 'Same Day Delivery';
+        delete p.deliveryFee;
+      }
+      list.push(p);
     });
 
     if (list.length === 0) {
@@ -112,7 +119,14 @@ export function subscribeToProductsFromFirestore(onUpdate: (products: Product[])
   const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
     const list: Product[] = [];
     snapshot.forEach((docSnap) => {
-      list.push(docSnap.data() as Product);
+      const p = docSnap.data() as Product;
+      if (p.id === 'custom_cake_1782716107529' && (p.price === 0 || p.adminNote?.includes('Free Test'))) {
+        p.price = 999;
+        p.originalPrice = 1199;
+        p.adminNote = 'Same Day Delivery';
+        delete p.deliveryFee;
+      }
+      list.push(p);
     });
     
     // Always call onUpdate so that additions, edits, and deletions (even to 0 items) are processed

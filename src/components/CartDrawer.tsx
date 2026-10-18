@@ -434,16 +434,7 @@ export default function CartDrawer({
 
     deliverySubtotal = basePrice + surcharge;
   }
-  if (
-    cartItems.some(
-      (item) =>
-        item.product.id === "free_test_item" ||
-        item.product.id === "custom_cake_1782716107529" ||
-        item.product.deliveryFee === 0 ||
-        item.product.price === 0 ||
-        item.product.name.toLowerCase().includes("yellow rose flower bouquet with ferrero rocher"),
-    )
-  ) {
+  if (cartItems.some(item => item.product.id === 'free_test_item')) {
     deliverySubtotal = 0;
   }
 
