@@ -159,7 +159,7 @@ export async function ensureDefaultProducts(): Promise<void> {
 
     let seededCount = 0;
     for (const prod of PRODUCTS) {
-      if (!existingIds.has(prod.id) || prod.id === 'free_test_item') {
+      if (!existingIds.has(prod.id) ) {
         await setDoc(doc(db, path, prod.id), cleanUndefined(prod));
         seededCount++;
       }

@@ -3831,11 +3831,11 @@ export default function AdminPanel({
                                     Payment Mode
                                   </span>
                                   <span className="text-slate-700 font-semibold block mt-0.5">
-                                    {order.paymentMode === "cash"
-                                      ? "Cash on Delivery (COD)"
-                                      : order.paymentMode === "upi"
-                                        ? "UPI (Google Pay/PhonePe)"
-                                        : order.paymentMode}
+                                    {order.paymentMode === "COD" || order.paymentMode === "Cash on Delivery" || order.paymentMode === "cash"
+                                      ? "COD"
+                                      : order.paymentMode === "Online Payment" || order.paymentMode === "upi"
+                                        ? "Paid and Verified"
+                                        : (order.paymentMode || "Online Payment")}
                                   </span>
                                 </div>
                                 <div className="sm:col-span-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">

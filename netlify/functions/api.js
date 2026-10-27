@@ -204,7 +204,7 @@ app.post('*/send-email', async (req, res) => {
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Pincode:</span> <span style="color: #ffffff;">${order.pincode || 'N/A'}</span></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">City:</span> <span style="color: #ffffff;">${order.city || 'N/A'}</span></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Recipient phone:</span> <span style="color: #ffffff;">${order.recipientPhone}</span></div>
-              <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Payment mode:</span> <span style="color: #ffffff;">${order.paymentMode}</span></div>
+              <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Payment mode:</span> <span style="color: #ffffff;">${(order.paymentMode === 'COD' || order.paymentMode === 'Cash on Delivery' || order.paymentMode === 'cash') ? 'COD' : 'Paid and Verified'}</span></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Customer name:</span> <span style="color: #ffffff;">${order.customerName || 'N/A'}</span></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Customer phone:</span> <span style="color: #ffffff;">${order.customerPhone || 'N/A'}</span></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Delivery Date:</span> <strong style="color: #ffffff;">${order.deliveryDate || 'N/A'}</strong></div>

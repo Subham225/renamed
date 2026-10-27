@@ -1,3 +1,80 @@
+export const PERSONALIZED_BEST_SELLERS_STATIC: Product[] = [];
+
+
+export const PLANTS_STATIC_CATALOG: Product[] = [
+  {
+    id: 'plant_boston_fern',
+    name: 'Boston Fern in Ceramic Pot',
+    price: 499,
+    originalPrice: 699,
+    category: 'plants',
+    image: 'https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=400&q=80',
+    description: 'Lush green Boston fern in an elegant white ceramic pot.',
+    rating: 4.8,
+    reviewsCount: 72
+  },
+  {
+    id: 'plant_money_goodluck',
+    name: 'Money Plant in Glass Vase',
+    price: 399,
+    originalPrice: 499,
+    category: 'plants',
+    image: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?auto=format&fit=crop&w=400&q=80',
+    description: 'Vibrant money plant known for bringing good luck and prosperity.',
+    rating: 4.9,
+    reviewsCount: 110
+  }
+];
+
+export const SEASONAL_PRODUCTS: Product[] = [
+  {
+    id: 'seasonal_xmas_1',
+    name: 'Special Christmas Plum Cake',
+    price: 799,
+    originalPrice: 999,
+    category: 'xmas',
+    image: 'https://images.unsplash.com/photo-1543589077-47d81606c1df?auto=format&fit=crop&w=400&q=80',
+    description: 'Rich fruit and nut plum cake baked for the festive holiday season.',
+    rating: 4.9,
+    reviewsCount: 85
+  }
+];
+export const ACCESSORY_ADDONS: Product[] = [
+  {
+    id: 'addon_candle_1',
+    name: 'Sparkle Number Birthday Candle',
+    price: 99,
+    originalPrice: 149,
+    category: 'gifts',
+    image: 'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?auto=format&fit=crop&w=300&q=80',
+    description: 'Gold glittering number candle for birthday cakes.',
+    rating: 4.8,
+    reviewsCount: 52
+  },
+  {
+    id: 'addon_card_1',
+    name: 'Handcrafted Greeting Card with Envelope',
+    price: 49,
+    originalPrice: 99,
+    category: 'gifts',
+    image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=300&q=80',
+    description: 'Beautiful handmade card for your special message.',
+    rating: 4.9,
+    reviewsCount: 88
+  },
+  {
+    id: 'addon_balloon_1',
+    name: 'Metallic Party Balloons (Pack of 10)',
+    price: 149,
+    originalPrice: 199,
+    category: 'gifts',
+    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=300&q=80',
+    description: 'Assorted premium metallic balloons.',
+    rating: 4.7,
+    reviewsCount: 64
+  }
+];
+
 import { Product, Category } from './types';
 
 // @ts-ignore
@@ -9,7 +86,6 @@ import flowerImage from './assets/images/flowers_category_img_1780500483282.png'
 // @ts-ignore
 import personalizedImage from './assets/images/personalized_gifts_img_1780500500855.png';
 
-// Let's reference our generated images and elegant public CDN fallback links
 export const GENERATED_IMAGES = {
   hero: heroImage,
   cake: cakeImage,
@@ -139,439 +215,7 @@ export const CATEGORIES: Category[] = [
   }
 ];
 
-export const PERSONALIZED_BEST_SELLERS_STATIC: Product[] = [
-  {
-    id: 'pers_best_1',
-    name: "Engraved Walnut Clock & Portrait Plaque",
-    price: 899,
-    originalPrice: 1199,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=400&q=80',
-    description: 'An elegant walnut wood desktop block engraved with a real working quartz clock on one side and your beautiful photo on the other.',
-    rating: 4.9,
-    reviewsCount: 142,
-    features: ['Solid Walnut Wood', 'Real Quartz Clock', 'Custom Laser Etching'],
-    options: { hasPhotoUpload: true, hasNameCustomization: true }
-  },
-  {
-    id: 'pers_best_2',
-    name: "Custom 3D Laserハート Crystal Cube",
-    price: 1299,
-    originalPrice: 1599,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=400&q=80',
-    description: 'Ultra-clear K9 crystal block laser engraved in stunning 3D depth with your photo. Features a glowing LED light base.',
-    rating: 5.0,
-    reviewsCount: 389,
-    features: ['Premium K9 Crystal', 'Advanced 3D Depth Printing', 'USB Wooden Light Base'],
-    options: { hasPhotoUpload: true, hasMessageOption: true }
-  },
-  {
-    id: 'pers_best_3',
-    name: "Classic Custom Initials Gold Plated Pendant",
-    price: 699,
-    originalPrice: 899,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=400&q=80',
-    description: 'A delicate 18K gold plated necklace customizable with custom initials in high-contrast cursive typography.',
-    rating: 4.8,
-    reviewsCount: 94,
-    features: ['18K Gold Plated Brass', 'Premium Anti-Tarnish Protection', 'Gift Box Packaging'],
-    options: { hasNameCustomization: true }
-  },
-  {
-    id: 'pers_best_4',
-    name: "Interactive Spotify Acrylic Song Plaque with Stand",
-    price: 399,
-    originalPrice: 499,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=400&q=80',
-    description: 'Display your favorite song on customized acrylic sheet. Scan the integrated Spotify code to play the tune instantly!',
-    rating: 4.7,
-    reviewsCount: 204,
-    features: ['Thick Acrylic Sheet', 'Scannable Spotify Code', 'Solid Oak Wood Stand'],
-    options: { hasPhotoUpload: true, hasNameCustomization: true, hasMessageOption: true }
-  },
-  {
-    id: 'pers_best_5',
-    name: "Customized Premium Velvet Photo Cushion",
-    price: 499,
-    originalPrice: 599,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=400&q=80',
-    description: 'Indulgently soft pastel velvet throw pillow custom printed in HD color with your heartwarming cozy memory.',
-    rating: 4.6,
-    reviewsCount: 167,
-    features: ['Ultra Soft Velvet Fabric', 'Washable Zipper Cover', 'Hypoallergenic Filler Included'],
-    options: { hasPhotoUpload: true }
-  },
-  {
-    id: 'pers_best_6',
-    name: "Vintage Rotating Wooden Polaroid Photo Stand",
-    price: 799,
-    originalPrice: 999,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1557925923-33b251d59293?auto=format&fit=crop&w=400&q=80',
-    description: 'Solid pine wood Ferris wheel inspired rotating carousel that showcases 4 of your absolute favorite polaroid memories.',
-    rating: 4.9,
-    reviewsCount: 104,
-    features: ['4 Polaroid Photo Slots', 'Premium Natural Pine Finish', '360 degree smooth spin'],
-    options: { hasPhotoUpload: true }
-  },
-  {
-    id: 'pers_best_7',
-    name: "Royal Custom Leather Wallet & Belt Gift Trio",
-    price: 999,
-    originalPrice: 1299,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=400&q=80',
-    description: 'Top-grain leather bi-fold wallet and matching reversible metal buckle belt, customized with sleek custom name engraving.',
-    rating: 4.8,
-    reviewsCount: 228,
-    features: ['100% Pure Grain Leather', 'Signature Metallic Name Tag', 'Two-in-One Strap Belt'],
-    options: { hasNameCustomization: true }
-  },
-  {
-    id: 'pers_best_8',
-    name: "Smart Name Engraved Stainless Steel Flask",
-    price: 549,
-    originalPrice: 699,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=400&q=80',
-    description: 'Double-walled vacuum insulated smart bottle with active LED touch temperature reading display, laser engraved with customized name.',
-    rating: 4.7,
-    reviewsCount: 153,
-    features: ['Active temperature reading', '24 Hours Hot/Cold insulation', 'Sleek matte design'],
-    options: { hasNameCustomization: true }
-  },
-  {
-    id: 'pers_best_9',
-    name: "Bespoke Soundwave Canvas Wall Art Panel",
-    price: 1199,
-    originalPrice: 1499,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1533782654613-826a072dd6f3?auto=format&fit=crop&w=400&q=80',
-    description: 'Turn a vocal message or sweet song clip into custom golden soundwave graphic artwork printed on heavy cotton gallery canvas.',
-    rating: 4.9,
-    reviewsCount: 118,
-    features: ['Heavy Gallery Canvas Grouping', 'Archival Fade-Free Colors', 'Includes sturdy wall mount brackets'],
-    options: { hasMessageOption: true }
-  },
-  {
-    id: 'pers_best_10',
-    name: "Hand-Painted Ceramic Couple Mug Set",
-    price: 449,
-    originalPrice: 599,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1562266649-147a622a61d5?auto=format&fit=crop&w=400&q=80',
-    description: 'Two premium stoneware mugs hand-painted with adorable custom cartoons and names of choice.',
-    rating: 4.7,
-    reviewsCount: 235,
-    features: ['100% Food Safe Glaze', 'Sturdy premium ceramic', 'Microwave and dishwasher safe'],
-    options: { hasNameCustomization: true, hasMessageOption: true }
-  },
-  {
-    id: 'pers_best_11',
-    name: "Luxury Engraved Oak Wood Keepsake Chest",
-    price: 649,
-    originalPrice: 799,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=400&q=80',
-    description: 'Store warm memories in this premium velvet-lined seasoned oak wood box custom laser etched with your names.',
-    rating: 4.9,
-    reviewsCount: 81,
-    features: ['Seasoned Oak Hardwood', 'Rich royal velvet lining', 'Sturdy copper latch hardware'],
-    options: { hasNameCustomization: true }
-  },
-  {
-    id: 'pers_best_12',
-    name: "Custom Suede Passport Cover & Luggage Tag Set",
-    price: 399,
-    originalPrice: 499,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?auto=format&fit=crop&w=400&q=80',
-    description: 'Travel in ultimate elegance. Cruelty-free suede passport holder and luggage hanging tag embossed with custom gold foil name lettering.',
-    rating: 4.8,
-    reviewsCount: 161,
-    features: ['Cruelty-free Suede Fabric', 'Elegant gold foil embossing', 'Sleek travel card slots inside'],
-    options: { hasNameCustomization: true }
-  },
-  {
-    id: 'pers_best_13',
-    name: "Heart Jigsaw Photo Collage Puzzle Board",
-    price: 349,
-    originalPrice: 449,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=400&q=80',
-    description: 'Assemble special milestones together! A beautiful 75-piece wood heart jigsaw puzzle tray custom printed with your chosen photo template.',
-    rating: 4.5,
-    reviewsCount: 110,
-    features: ['Heavy wood base support tray', 'Premium high-resolution printing', 'Anti-glare protective coating'],
-    options: { hasPhotoUpload: true }
-  },
-  {
-    id: 'pers_best_14',
-    name: "Custom Ceramic Table Planter on Golden Stand",
-    price: 499,
-    originalPrice: 599,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1518047601542-79f18c655718?auto=format&fit=crop&w=400&q=80',
-    description: 'Add real aesthetic desk greenery. Includes a high-gloss ceramic planter pot custom printed with your message, sitting on a gold-plated metal wire frame.',
-    rating: 4.6,
-    reviewsCount: 77,
-    features: ['Glazed table ceramic pot', 'Anti-rust plated golden wire stand', 'Includes drainage hole outline'],
-    options: { hasMessageOption: true }
-  },
-  {
-    id: 'pers_best_15',
-    name: "Premium Velvet Personalized Jewellery Organizer Box",
-    price: 849,
-    originalPrice: 1099,
-    category: 'personalized_gifts',
-    image: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=400&q=80',
-    description: 'Keep your earrings, rings, and chains secure on the go inside this velvet organizer. Personalized with luxury cursive gold font on the lid.',
-    rating: 4.9,
-    reviewsCount: 219,
-    features: ['Ultra smooth outer micro-velvet', 'Soft ring & chain compartments', 'Gold finished sturdy slider lock'],
-    options: { hasNameCustomization: true }
-  }
-];
-
-export const SEASONAL_PRODUCTS: Product[] = [
-  {
-    id: 'xmas_cake_1',
-    name: 'Merry Christmas Special Plum Cake',
-    price: 699,
-    originalPrice: 899,
-    category: 'xmas',
-    image: 'https://images.unsplash.com/photo-1543589077-47d81606c1df?auto=format&fit=crop&w=800&q=80',
-    description: 'Traditional rich plum cake baked with soaked dry fruits and premium spices.',
-    rating: 4.8,
-    reviewsCount: 156,
-    options: { hasEgglessOption: true, hasWeightOptions: true }
-  },
-  {
-    id: 'mothers_day_combo_1',
-    name: 'Super Mom Roses & Cake Combo',
-    price: 1299,
-    originalPrice: 1599,
-    category: 'mothers_day',
-    image: 'https://images.unsplash.com/photo-1555529771-835f59fc5efe?auto=format&fit=crop&w=800&q=80',
-    description: 'A beautiful combo of 12 fresh pink roses and a delicious half kg chocolate cake.',
-    rating: 4.9,
-    reviewsCount: 342,
-    options: { hasMessageOption: true }
-  },
-  {
-    id: 'fathers_day_gift_1',
-    name: 'Best Dad Ever Chocolate Truffle',
-    price: 799,
-    originalPrice: 1099,
-    category: 'fathers_day',
-    image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
-    description: 'Rich dark chocolate truffle cake with "Best Dad" topper.',
-    rating: 4.7,
-    reviewsCount: 228,
-    options: { hasEgglessOption: true, hasWeightOptions: true }
-  },
-  {
-    id: 'teachers_day_cake_1',
-    name: 'Thank You Teacher Fondant Cake',
-    price: 899,
-    originalPrice: 1199,
-    category: 'teachers_day',
-    image: 'https://images.unsplash.com/photo-1580894894513-541e068a3e2b?auto=format&fit=crop&w=800&q=80',
-    description: 'Show your appreciation with this elegantly crafted themed cake.',
-    rating: 4.9,
-    reviewsCount: 115,
-    options: { hasEgglessOption: true }
-  },
-  {
-    id: 'valentine_day_rose_1',
-    name: 'Romantic Valentines Red Roses',
-    price: 899,
-    originalPrice: 1299,
-    category: 'valentine_day',
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80',
-    description: 'A stunning bouquet of 20 premium long-stem red roses.',
-    rating: 4.9,
-    reviewsCount: 567,
-    options: { hasMessageOption: true }
-  }
-];
-
-export const PLANTS_STATIC_CATALOG: Product[] = [
-  {
-    id: 'plant_zebra_haworthia',
-    name: 'Zebra Succulent in Pastel Mint Ceramic Pot',
-    price: 299,
-    originalPrice: 349,
-    category: 'plants',
-    image: 'https://images.unsplash.com/photo-1545241047-6083a3684587?auto=format&fit=crop&w=500&q=80',
-    description: 'A structural low-maintenance Zebra Succulent (Haworthia) nestled snugly inside a high-quality glazed mint-green ceramic table planter.',
-    rating: 4.7,
-    reviewsCount: 56,
-    features: ['Extremely Hard to Kill', 'Air Purifying Natural Plant', 'Pre-mixed Premium Soil Duo'],
-    options: { hasPotOptions: true }
-  },
-  {
-    id: 'plant_peace_lily',
-    name: 'Spathiphyllum Air Purifying Peace Lily Plant',
-    price: 399,
-    originalPrice: 479,
-    category: 'plants',
-    image: 'https://images.unsplash.com/photo-1592150621744-aca64f48394a?auto=format&fit=crop&w=500&q=80',
-    description: 'Lush dark-green leaves featuring elegant sail-like white flower spathes. NASA-approved air purifier perfect for indoor bedside styling.',
-    rating: 4.5,
-    reviewsCount: 81,
-    features: ['Filters household toxins', 'Low to medium light friendly', 'Comes with premium plant guide'],
-    options: { hasPotOptions: true }
-  },
-  {
-    id: 'plant_boston_fern',
-    name: "Deluxe Lush Air-Purifying Boston Fern Pot",
-    price: 349,
-    originalPrice: 429,
-    category: 'plants',
-    image: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=500&q=80',
-    description: 'Graceful emerald-green arching fronds that clear airborne pollutants and boost ambient moisture. Arrives pre-bagged with self-watering setup.',
-    rating: 4.8,
-    reviewsCount: 65,
-    features: ['Lush Foliage Air Cleanser', 'High humidity loving specimen', 'Fibre self-watering interior hanger'],
-    options: { hasPotOptions: true }
-  },
-  {
-    id: 'plant_money_goodluck',
-    name: "Golden Money Plant in Ceramic Oval Tray",
-    price: 279,
-    originalPrice: 329,
-    category: 'plants',
-    image: 'https://images.unsplash.com/photo-1518047601542-79f18c655718?auto=format&fit=crop&w=500&q=80',
-    description: 'Classic auspicious indoor vine that brings fortune, prosperity, and peace. Easy to propagate in ceramic glass or standard clay.',
-    rating: 4.9,
-    reviewsCount: 114,
-    features: ['Auspicious Fengshui Charm', 'Adapts to low-light corners', 'Comes in white glossy ceramic tray'],
-    options: { hasPotOptions: true }
-  }
-];
-
-export const ACCESSORY_ADDONS: Product[] = [
-  {
-    id: 'addon_sparkle_candle',
-    name: 'Glittering Sparkle Birthday Candles (Pack of 5)',
-    price: 30,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=150&q=80',
-    description: 'Beautiful multi-colored sparkly flame birthday candles.',
-    rating: 4.8,
-    reviewsCount: 140
-  },
-  {
-    id: 'addon_party_popper',
-    name: 'Premium Confetti Popper Gold',
-    price: 50,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=150&q=80',
-    description: 'Safe air-compressed gold glitter party popper.',
-    rating: 4.9,
-    reviewsCount: 320
-  },
-  {
-    id: 'addon_snow_spray',
-    name: 'Frosty Foam Snow Spray Can',
-    price: 40,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=150&q=80',
-    description: 'Celebration snow foam spray for fun birthday vibes.',
-    rating: 4.6,
-    reviewsCount: 215
-  },
-  {
-    id: 'addon_birthday_cap',
-    name: 'Sparkly Cone Birthday Party Caps (Pack of 5)',
-    price: 30,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1557925923-33b251d59293?auto=format&fit=crop&w=150&q=80',
-    description: 'Glossy colorful hats for family and friends.',
-    rating: 4.5,
-    reviewsCount: 95
-  },
-  {
-    id: 'addon_musical_candle',
-    name: 'Rotating Lotus Blossom Musical Candle',
-    price: 99,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=150&q=80',
-    description: 'Spins and sings Happy Birthday tune upon lighting.',
-    rating: 4.9,
-    reviewsCount: 184
-  },
-  {
-    id: 'addon_metallic_balloons',
-    name: 'Rose Gold Metallic Balloons (Pack of 15)',
-    price: 60,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1533782654613-826a072dd6f3?auto=format&fit=crop&w=150&q=80',
-    description: 'Ultra shiny high-quality latex decorations.',
-    rating: 4.7,
-    reviewsCount: 247
-  },
-  {
-    id: 'addon_magic_candles',
-    name: 'Magic Trick Birthday Candles (Pack of 10)',
-    price: 40,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=150&q=80',
-    description: 'Funny relighting trick candles that refuse to go out.',
-    rating: 4.8,
-    reviewsCount: 130
-  },
-  {
-    id: 'addon_golden_tag',
-    name: 'Golden Acrylic Happy Birthday Cake Topper',
-    price: 50,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=150&q=80',
-    description: 'Elegant script shiny golden tag for top layout styling.',
-    rating: 4.9,
-    reviewsCount: 190
-  },
-  {
-    id: 'addon_red_rose',
-    name: 'Single Luxury Long-Stem Scarlet Rose',
-    price: 49,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1518047601542-79f18c655718?auto=format&fit=crop&w=500&q=80',
-    description: 'A gorgeous freshly cut scarlet rose with foliage.',
-    rating: 5.0,
-    reviewsCount: 500
-  },
-  {
-    id: 'addon_chocolate_dip',
-    name: 'Gourmet Chocolate Fudge Dip Mini Cup',
-    price: 50,
-    category: 'accessories',
-    image: 'https://images.unsplash.com/photo-1562266649-147a622a61d5?auto=format&fit=crop&w=150&q=80',
-    description: 'Thick warm dark chocolate dipping fudge pot.',
-    rating: 4.7,
-    reviewsCount: 110
-  }
-];
-
 export const PRODUCTS: Product[] = [
-  {
-    id: 'free_test_item',
-    name: 'Free Test Purchase Item',
-    price: 0,
-    originalPrice: 100,
-    category: 'anniversary',
-    image: GENERATED_IMAGES.cake,
-    description: 'This is a test product for testing payment flow.',
-    rating: 5.0,
-    reviewsCount: 1,
-    features: ['Test Purchase'],
-  },
-
   // --- CAKES ---
   {
     id: 'cake_signature_strawberry',

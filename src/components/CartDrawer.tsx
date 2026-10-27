@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Mail,
   Tag,
+  Banknote,
 } from "lucide-react";
 import {
   CartItem,
@@ -661,8 +662,8 @@ export default function CartDrawer({
       pincode: formData.pincode,
       city: formData.city,
       landmark: formData.landmark || "None",
-      paymentMode: finalTotalAmount === 0 ? "Free Test Order" : formData.paymentMode,
-      paymentStatus: finalTotalAmount === 0 ? "paid" : "pending",
+      paymentMode: finalTotalAmount === 0 ? "Free Test Order" : (formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery" ? "COD" : "Online Payment"),
+      paymentStatus: finalTotalAmount === 0 || formData.paymentMode === "Online Payment" ? "Paid and Verified" : "COD",
       itemsSubtotal: itemsSubtotal,
       total: finalTotalAmount,
       deliveryFee: deliverySubtotal,
@@ -1543,6 +1544,28 @@ export default function CartDrawer({
                           Selected slot will be baked & shipped according to
                           schedule!
                         </p>
+                      </div>
+
+                      <div className="space-y-1.5 pt-2">
+                        <label className="text-[11px] font-black text-slate-700 block uppercase">
+                          Select Payment Method *
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, paymentMode: "Online Payment" })}
+                            className={`p-3 rounded-xl border text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${formData.paymentMode === "Online Payment" ? "bg-pink-50 border-pink-500 text-pink-700 shadow-sm" : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"}`}
+                          >
+                            <CreditCard className="w-4 h-4" /> Online Payment
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, paymentMode: "COD" })}
+                            className={`p-3 rounded-xl border text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery" ? "bg-pink-50 border-pink-500 text-pink-700 shadow-sm" : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"}`}
+                          >
+                            <Banknote className="w-4 h-4" /> Cash on Delivery (COD)
+                          </button>
+                        </div>
                       </div>
                   </div>
                 </div>
