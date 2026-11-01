@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 // Safe default fallbacks so the app compiles and runs perfectly when self-hosted or compiled outside AI Studio
 const DEFAULT_API_KEY = "AIzaSyADDuI1SThr5DLOmGFsrcyt0OoK1W52JlI";
@@ -30,4 +30,5 @@ export const db = initializeFirestore(app, {
   ignoreUndefinedProperties: true
 }, firestoreDatabaseId || undefined);
 export const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(err => console.warn("Failed to set auth persistence:", err));
 

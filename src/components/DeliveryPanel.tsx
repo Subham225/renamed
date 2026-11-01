@@ -3,7 +3,7 @@ import {
   X, Lock, Compass, CheckCircle2, Phone, AlertCircle, Sparkles, Key, 
   MapPin, Clock, ArrowRight, UserCheck, Check, CornerDownRight 
 } from 'lucide-react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { 
   updateOrderStatusInFirestore, 
