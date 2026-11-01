@@ -170,7 +170,7 @@ export default function ProfileDrawer({
   if (!isOpen) return null;
 
   // Mobile SMS OTP - Fast2SMS SMS dispatcher API handler
-    const handleSendSMSOTP = async () => {
+      const handleSendSMSOTP = async () => {
     const formattedPhone = phoneInput.trim().replace(/\D/g, "");
     if (!formattedPhone || formattedPhone.length !== 10) {
       setAuthError("Please enter a valid 10-digit Indian mobile number.");
@@ -181,45 +181,43 @@ export default function ProfileDrawer({
     setOtpSuccessMsg("");
     try {
       const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-      localStorage.setItem("rocx_pending_otp", generatedCode);
-      localStorage.setItem("rocx_pending_phone", formattedPhone);
-      sendFast2SMSOTP(formattedPhone, generatedCode).catch(e => console.warn("SMS notice:", e));
-      setSentOtp(generatedCode);
-      setOtpStage("verify");
-      setOtpSuccessMsg("OTP generated successfully! [Verification Code: " + generatedCode + "]");
+      console.log(`[Fast2SMS OTP Dispatch] Sending code ${generatedCode} to +91 ${formattedPhone}`);
+
+      const res = await sendFast2SMSOTP(formattedPhone, generatedCode);
+      if (res.success) {
+        setSentOtp(generatedCode);
+        setOtpStage("verify");
+        setOtpSuccessMsg(`OTP sent successfully via Fast2SMS to +91 ${formattedPhone}! Please check your SMS inbox.`);
+      } else {
+        throw new Error(res.error || "Fast2SMS dispatch failed.");
+      }
     } catch (err) {
-      const fallbackCode = "123456";
-      setSentOtp(fallbackCode);
-      setOtpStage("verify");
-      setOtpSuccessMsg("Verification code ready. [Verification Code: " + fallbackCode + "]");
+      console.error("[Fast2SMS error]:", err);
+      setAuthError(err.message || "Error occurred sending SMS OTP.");
     } finally {
       setIsLoading(false);
     }
   };
 
   // Mobile SMS OTP - verification and local login register handler
-    const handleVerifyOTP = () => {
+      const handleVerifyOTP = () => {
     setAuthError("");
     const enteredCode = otpInput.trim().replace(/\s/g, "");
-    const activeSentOtp = sentOtp || localStorage.getItem("rocx_pending_otp") || "123456";
 
     if (enteredCode.length !== 6) {
       setAuthError("Please enter the complete 6-digit verification code.");
       return;
     }
-    if (enteredCode === activeSentOtp || enteredCode === "123456") {
-      const phoneNum = phoneInput.trim() || localStorage.getItem("rocx_pending_phone") || "9876543210";
-      const namePlaceholder = "User_" + phoneNum.slice(-4);
-      onLogin(phoneNum, "phone");
-      localStorage.setItem("rocx_user_phone", phoneNum);
+    if (enteredCode === sentOtp) {
+      const namePlaceholder = "User_" + phoneInput.slice(-4);
+      onLogin(phoneInput, "phone");
+      localStorage.setItem("rocx_user_phone", phoneInput);
       localStorage.setItem("rocx_user_name", namePlaceholder);
             
-      setEditedPhone(phoneNum);
-      localStorage.removeItem("rocx_pending_otp");
-      localStorage.removeItem("rocx_pending_phone");
+      setEditedPhone(phoneInput);
       onClose();
     } else {
-      setAuthError("Incorrect OTP Code. Please double-check and retry.");
+      setAuthError("Incorrect OTP Code. Please double-check your SMS inbox and retry.");
     }
   };
 
