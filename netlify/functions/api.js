@@ -263,6 +263,7 @@ app.post('*/send-otp', async (req, res) => {
 
     console.log(`[Fast2SMS Netlify Serverless] Dispatched OTP requested. Code: ${otp}, Phone: ${formattedPhone}`);
 
+    // Use route 'q' because route 'otp' requires website verification on Fast2SMS
     const apiResponse = await fetch('https://www.fast2sms.com/dev/bulkV2', {
       method: 'POST',
       headers: {
@@ -270,35 +271,18 @@ app.post('*/send-otp', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        variables_values: otp,
-        route: 'otp',
+        message: `Your ROCX Cakes verification code is ${otp}. Please do not share it with anyone.`,
+        language: 'english',
+        route: 'q',
         numbers: formattedPhone
       })
     });
     const result = await apiResponse.json();
-    console.log("[Fast2SMS Netlify Response]:", result);
+    console.log("[Fast2SMS Netlify Route Q Response]:", result);
 
     if (result && result.return === true) {
       return res.json({ success: true });
     } else {
-      const qResponse = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-        method: 'POST',
-        headers: {
-          'authorization': apiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: `Your ROCX OTP is ${otp}. Please do not share it with anyone.`,
-          language: 'english',
-          route: 'q',
-          numbers: formattedPhone
-        })
-      });
-      const qResult = await qResponse.json();
-      console.log("[Fast2SMS Netlify Route Q Response]:", qResult);
-      if (qResult && qResult.return === true) {
-        return res.json({ success: true });
-      }
       return res.status(400).json({ success: false, error: result.message || 'Fast2SMS dispatch failed' });
     }
   } catch (err) {

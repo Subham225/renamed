@@ -637,9 +637,9 @@ Delivery: ${order.deliveryDate || 'N/A'} (${order.deliveryTimeSlot || 'N/A'})
 
       let result: any = null;
 
-      // STEP 1: Attempt the OPTIMAL & PRE-APPROVED Official 'otp' Route (Best for bypassing DLT verification blockers)
+            // STEP 1: Attempt Quick 'q' Route (Does not require Fast2SMS website verification)
       try {
-        console.log(`[Fast2SMS Route 1] Dispatching via POST 'otp' route with variables_values...`);
+        console.log(`[Fast2SMS Route 1] Dispatching via POST 'q' route...`);
         const apiResponse = await fetch('https://www.fast2sms.com/dev/bulkV2', {
           method: 'POST',
           headers: {
@@ -647,30 +647,17 @@ Delivery: ${order.deliveryDate || 'N/A'} (${order.deliveryTimeSlot || 'N/A'})
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            variables_values: otp,
-            route: 'otp',
+            message: 'Your ROCX Cakes verification code is ' + otp + '. Please do not share it with anyone.',
+            language: 'english',
+            route: 'q',
             numbers: formattedPhone
           })
         });
         result = await apiResponse.json();
-        console.log('[Fast2SMS Route 1 Response]:', result);
-      } catch (err: any) {
-        console.warn('[Fast2SMS Route 1 POST Failed]:', err.message);
+        console.log('[Fast2SMS Route 1 Q Response]:', result);
+      } catch (err) {
+        console.warn('[Fast2SMS Route 1 Q Failed]:', err.message);
       }
-
-      // STEP 2: GET Fallback for Official 'otp' Route
-      if (!result || result.return !== true) {
-        try {
-          console.log(`[Fast2SMS Route 2] Dispatching via GET 'otp' route fallback...`);
-          const getUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(apiKey)}&route=otp&variables_values=${encodeURIComponent(otp)}&numbers=${encodeURIComponent(formattedPhone)}`;
-          const getResponse = await fetch(getUrl, { method: 'GET' });
-          result = await getResponse.json();
-          console.log('[Fast2SMS Route 2 Response]:', result);
-        } catch (err: any) {
-          console.warn('[Fast2SMS Route 2 GET Failed]:', err.message);
-        }
-      }
-
       // STEP 3: Fallback POST to Quick 'q' Route (traditional custom message)
       if (!result || result.return !== true) {
         try {
