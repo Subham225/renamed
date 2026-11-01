@@ -243,7 +243,69 @@ app.post('*/send-email', async (req, res) => {
   }
 });
 
-app.post('*/send-otp', (req, res) => { res.json({ success: true }); });
+app.post('*/send-otp', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    if (!phone || !otp) {
+      return res.status(400).json({ success: false, error: 'Phone and OTP are required' });
+    }
+
+    let apiKey = process.env.VITE_FAST2SMS_API_KEY || process.env.FAST2SMS_API_KEY || '';
+    if (!apiKey || apiKey.trim() === '' || apiKey === 'undefined') {
+      apiKey = 'gF1kuBFGNPefmjPFJ7DVb7ALslFZLcNSCLkfYALnYgRhKUYQEOFCl6qZZ72u';
+    }
+    apiKey = apiKey.trim();
+
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (formattedPhone.length > 10) {
+      formattedPhone = formattedPhone.slice(-10);
+    }
+
+    console.log(`[Fast2SMS Netlify Serverless] Dispatched OTP requested. Code: ${otp}, Phone: ${formattedPhone}`);
+
+    const apiResponse = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+      method: 'POST',
+      headers: {
+        'authorization': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        variables_values: otp,
+        route: 'otp',
+        numbers: formattedPhone
+      })
+    });
+    const result = await apiResponse.json();
+    console.log("[Fast2SMS Netlify Response]:", result);
+
+    if (result && result.return === true) {
+      return res.json({ success: true });
+    } else {
+      const qResponse = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+        method: 'POST',
+        headers: {
+          'authorization': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `Your ROCX OTP is ${otp}. Please do not share it with anyone.`,
+          language: 'english',
+          route: 'q',
+          numbers: formattedPhone
+        })
+      });
+      const qResult = await qResponse.json();
+      console.log("[Fast2SMS Netlify Route Q Response]:", qResult);
+      if (qResult && qResult.return === true) {
+        return res.json({ success: true });
+      }
+      return res.status(400).json({ success: false, error: result.message || 'Fast2SMS dispatch failed' });
+    }
+  } catch (err) {
+    console.error("[Fast2SMS Netlify Error]:", err);
+    return res.status(500).json({ success: false, error: err.message || 'Server error' });
+  }
+});
 app.get('*/test-api', (req, res) => { res.json({ success: true, message: "Netlify API is fully operational!" }); });
 
 // Export the serverless handler
