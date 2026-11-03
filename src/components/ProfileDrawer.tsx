@@ -77,8 +77,8 @@ export default function ProfileDrawer({
     return lastPlaced ? [lastPlaced] : [];
   });
 
-  // Authentication Interface States
-  const [activeTab, setActiveTab] = useState<'google' | 'phone'>('google');
+  // Authentication Interface States (Default to phone for 100% reliable mobile APK support)
+  const [activeTab, setActiveTab] = useState<'google' | 'phone'>('phone');
   const [phoneInput, setPhoneInput] = useState('');
   const [otpInput, setOtpInput] = useState('');
   const [sentOtp, setSentOtp] = useState('');
@@ -501,9 +501,10 @@ export default function ProfileDrawer({
                     {/* Tab 1: Google Native API Auth */}
                     {activeTab === 'google' && (
                       <div className="space-y-4 py-2 animate-fade-in">
-                        <p className="text-[11px] text-slate-500 leading-normal">
-                          Apnar Google Account (Gmail) diye secure login korun. Eta Google Dynamic Sign-in use kore standard real-time login complete korbe, kono manual token setup ba Client ID update lagbe na.
-                        </p>
+                        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 text-[11px] font-extrabold text-amber-950 flex items-center gap-2">
+                          <span>💡</span>
+                          <span>Use Mobile Login if using in-app</span>
+                        </div>
 
                         {/* Beautiful Custom Google Button triggering Firebase Sign-In popup */}
                         <div className="w-full flex justify-center py-2">

@@ -294,12 +294,18 @@ export default function CategoryDetailPage({
         );
       }
       if (categoryId === "birthday_cakes") {
+        const isCake = prod.category === "cakes" || prod.name.toLowerCase().includes("cake") || prod.categories?.includes("cakes");
+        const isFlowerOnly = prod.category === "flowers" || prod.name.toLowerCase().includes("flower") || prod.name.toLowerCase().includes("bouquet");
+        const isTeddyOnly = prod.name.toLowerCase().includes("teddy") || prod.name.toLowerCase().includes("soft toy");
         return (
-          prod.category === "birthday" ||
-          (prod.categories && prod.categories.includes("birthday")) ||
-          prod.name.toLowerCase().includes("birthday") ||
-          prod.description?.toLowerCase().includes("birthday") ||
-          (prod.category === "cakes" && prod.name.toLowerCase().includes("birthday"))
+          (prod.category === "birthday" ||
+           (prod.categories && prod.categories.includes("birthday")) ||
+           prod.name.toLowerCase().includes("birthday") ||
+           prod.description?.toLowerCase().includes("birthday") ||
+           (prod.category === "cakes" && prod.name.toLowerCase().includes("birthday"))) &&
+          isCake &&
+          !isFlowerOnly &&
+          !isTeddyOnly
         );
       }
       if (categoryId === "birthday") {
