@@ -188,6 +188,14 @@ export default function CakeCategoryLanding({
               key={cat.id}
               onClick={() => {
                 if (
+                  cat.id === "birthday" ||
+                  cat.id === "birthday_cakes" ||
+                  cat.name.toLowerCase().includes("birthday")
+                ) {
+                  if (onSelectCategory) onSelectCategory("birthday_cakes" as CategoryID);
+                  return;
+                }
+                if (
                   cat.id === "cakes" ||
                   cat.id === "all_cakes" ||
                   cat.id === "cakes_all" ||

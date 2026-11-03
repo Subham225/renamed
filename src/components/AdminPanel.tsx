@@ -6968,6 +6968,52 @@ export default function AdminPanel({
               {/* TAB 8: STORE CUSTOMIZER SETTINGS PANEL */}
               {activeTab === "settings" && (
                 <div className="space-y-6 max-w-5xl">
+                  {/* STORE OPERATING HOURS & MASTER OVERRIDE CONTROL CARD */}
+                  <div className="bg-gradient-to-r from-pink-50 via-rose-50 to-amber-50 rounded-3xl p-6 border border-pink-200/80 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-pink-600 text-white flex items-center justify-center font-black text-lg">
+                          ⏰
+                        </div>
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                            Store Operating Hours & Master Control (12:00 AM - 8:00 PM)
+                          </h4>
+                          <p className="text-[10px] text-slate-600 font-bold">
+                            Orders and online payments are automatically active between 12:00 AM and 8:00 PM. Use manual override below to pause store anytime.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-2xl p-4 border border-pink-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <span className="text-xs font-black text-slate-800 block">
+                          Manual Store Closure Switch
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-semibold">
+                          When turned ON, store is closed immediately and customers cannot place orders or make payments.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newState = !(localStorage.getItem('rocx_store_manual_closed') === 'true');
+                            localStorage.setItem('rocx_store_manual_closed', newState ? 'true' : 'false');
+                            window.location.reload();
+                          }}
+                          className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs ${
+                            localStorage.getItem('rocx_store_manual_closed') === 'true'
+                              ? "bg-red-600 text-white hover:bg-red-700"
+                              : "bg-emerald-600 text-white hover:bg-emerald-700"
+                          }`}
+                        >
+                          {localStorage.getItem('rocx_store_manual_closed') === 'true' ? "🔴 Store Closed (Manual)" : "🟢 Store Open (Accepting Orders)"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Header Intro Banner */}
                   <div className="bg-slate-900 text-white rounded-3xl p-6 relative overflow-hidden shadow-lg shadow-slate-900/10">
                     <div className="relative z-10 space-y-1.5 p-1">

@@ -30,6 +30,7 @@ import {
 import { sendOrderEmailNotification } from "../services/notificationService";
 import { auth } from "../firebase";
 import { ACCESSORY_ADDONS } from "../data";
+import { isStoreOpenNow } from "../services/storeSettings";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -2063,24 +2064,38 @@ export default function CartDrawer({
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          const now = new Date();
-                          const currentHour = now.getHours();
-                          const isOpenNow = currentHour >= 0 && currentHour < 20;
-
-                          if (!isOpenNow) {
-                            window.alert("Order Placing Time Is Over , Try Again in The mentioned Time");
-                            return;
-                          }
-                          setStep("checkout_profile");
-                        }}
-                        className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black py-4 rounded-xl transition duration-150 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer"
-                      >
-                        <CreditCard className="w-4 h-4" /> Checkout Booking
-                        Details
-                      </button>
+                    <div className="space-y-3">
+                      {!isStoreOpenNow().isOpen && (
+                        <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 border-2 border-rose-300 rounded-2.5xl p-4 text-left space-y-2 shadow-xs">
+                          <div className="flex items-center gap-2 text-rose-700">
+                            <span className="text-lg">⚠️</span>
+                            <h4 className="text-xs font-black uppercase tracking-wider font-sans">
+                              Store Currently Closed
+                            </h4>
+                          </div>
+                          <p className="text-xs sm:text-sm font-extrabold text-slate-900 leading-relaxed font-sans">
+                            At this time ROCX Cakes & Gifts doesn't accept orders. Please try again between <span className="text-pink-600 font-black">12:00 AM and 8:00 PM</span>.
+                          </p>
+                        </div>
+                      )}
+                      {!isStoreOpenNow().isOpen ? (
+                        <div className="w-full bg-slate-100 text-slate-400 font-black py-4 rounded-xl border border-slate-200 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-not-allowed">
+                          🔒 Orders Currently Closed (12 AM - 8 PM)
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const storeCheck = isStoreOpenNow();
+                            if (!storeCheck.isOpen) {
+                              return;
+                            }
+                            setStep("checkout_profile");
+                          }}
+                          className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black py-4 rounded-xl transition duration-150 shadow-md flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer"
+                        >
+                          <CreditCard className="w-4 h-4" /> Checkout Booking Details
+                        </button>
+                      )}
                     </div>
                   ))}
 
