@@ -333,78 +333,35 @@ export default function App() {
     }
   };
 
-  // --- DURABLE STORE SETTINGS STATE ---
-  // Dynamic sanitizer to correct any broken Unsplash image references in users static configuration
-  const sanitizeStoreConfig = (config: StoreConfig): StoreConfig => {
-    if (!config || !config.cakeSubcategories) return config;
-    let converted = false;
-    const cleanSubcategories = config.cakeSubcategories.map((item) => {
-      if (item.image && item.image.includes("photo-1557925923-33b251d59293")) {
-        converted = true;
-        return {
-          ...item,
-          image: item.image.replace(
-            "photo-1557925923-33b251d59293",
-            "photo-1621303837174-89787a7d4729",
-          ),
-        };
+    // --- DURABLE STORE SETTINGS STATE ---
+  // Robust deep merge to preserve 100% of admin custom images and edits across deployments
+  const deepMergeStoreConfig = (base: any, custom: any): any => {
+    if (!custom) return base;
+    if (!base) return custom;
+    if (Array.isArray(base)) {
+      return custom.length > 0 ? custom : base;
+    }
+    const merged = { ...base };
+    for (const key of Object.keys(base)) {
+      if (custom[key] !== undefined && custom[key] !== null) {
+        if (typeof base[key] === "object" && base[key] !== null && !Array.isArray(base[key])) {
+          merged[key] = deepMergeStoreConfig(base[key], custom[key]);
+        } else {
+          merged[key] = custom[key];
+        }
       }
-      return item;
-    });
-
-    let newConfig = { ...config };
-    if (converted) {
-      newConfig.cakeSubcategories = cleanSubcategories;
     }
-
-    if (!newConfig.deliveryZones) {
-      newConfig.deliveryZones = DEFAULT_STORE_CONFIG.deliveryZones;
-      converted = true;
+    for (const key of Object.keys(custom)) {
+      if (merged[key] === undefined) {
+        merged[key] = custom[key];
+      }
     }
+    return merged;
+  };
 
-    if (!newConfig.deliveryTimeSlots) {
-      newConfig.deliveryTimeSlots = DEFAULT_STORE_CONFIG.deliveryTimeSlots;
-      converted = true;
-    }
-
-    if (
-      !newConfig.categoryReviews ||
-      !newConfig.categoryReviews["default"] ||
-      newConfig.categoryReviews["default"].length === 0
-    ) {
-      newConfig.categoryReviews = {
-        ...newConfig.categoryReviews,
-        default: DEFAULT_STORE_CONFIG.categoryReviews?.["default"] || [
-          {
-            id: "1",
-            name: "Amit Sharma",
-            rating: 5,
-            text: "Absolutely wonderful experience. The cake was fresh and delivered right on time!",
-          },
-          {
-            id: "2",
-            name: "Priya Das",
-            rating: 5,
-            text: "Amazing taste and presentation. Highly recommended for any celebration.",
-          },
-          {
-            id: "3",
-            name: "Rahul Verma",
-            rating: 4,
-            text: "Very good quality, the packaging was also very premium. Loved it.",
-          },
-          {
-            id: "4",
-            name: "Sneha Gupta",
-            rating: 5,
-            text: "Best customized gift I have ordered online. Great value and service.",
-          },
-        ],
-      };
-      converted = true;
-    }
-
-    return converted ? newConfig : config;
+  const sanitizeStoreConfig = (config: StoreConfig): StoreConfig => {
+    if (!config) return DEFAULT_STORE_CONFIG;
+    return deepMergeStoreConfig(DEFAULT_STORE_CONFIG, config);
   };
 
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => {

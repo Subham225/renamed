@@ -1,3 +1,4 @@
+import StoreClosedBanner from "./StoreClosedBanner";
 import React, { useState, useRef, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import {
@@ -294,6 +295,7 @@ export default function ProductDetailPage({
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 select-none animate-fadeIn">
+      <StoreClosedBanner />
       <Helmet>
         <title>{product.name} | Rocx Cakes</title>
         <meta property="og:title" content={product.name} />
