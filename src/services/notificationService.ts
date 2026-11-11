@@ -148,7 +148,7 @@ export async function sendFast2SMSOTP(phone: string, otp: string): Promise<{ suc
     console.log(`[Fast2SMS Direct Fallback] Dispatching code ${otp} directly to ${formattedPhone}...`);
     let clientResult: any = null;
 
-    // DIRECT ROUTE A: POST 'otp' Route (best for bypassing TRAI DLT locks)
+    // DIRECT ROUTE A: POST 'q' Route (does not require website domain verification)
     try {
       const apiResponse = await fetch('https://www.fast2sms.com/dev/bulkV2', {
         method: 'POST',
@@ -157,8 +157,9 @@ export async function sendFast2SMSOTP(phone: string, otp: string): Promise<{ suc
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          variables_values: otp,
-          route: 'otp',
+          message: `Your ROCX OTP is ${otp}. Please do not share it with anyone.`,
+          language: 'english',
+          route: 'q',
           numbers: formattedPhone
         })
       });
@@ -168,10 +169,11 @@ export async function sendFast2SMSOTP(phone: string, otp: string): Promise<{ suc
       console.warn('[Fast2SMS Direct Route A Failed]', routeErr);
     }
 
-    // DIRECT ROUTE B: GET 'otp' Route fallback
+    // DIRECT ROUTE B: GET 'q' Route fallback
     if (!clientResult || clientResult.return !== true) {
       try {
-        const getUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(apiKey)}&route=otp&variables_values=${encodeURIComponent(otp)}&numbers=${encodeURIComponent(formattedPhone)}`;
+        const msgUrl = encodeURIComponent(`Your ROCX OTP is ${otp}. Please do not share it with anyone.`);
+        const getUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(apiKey)}&route=q&message=${msgUrl}&language=english&flash=0&numbers=${encodeURIComponent(formattedPhone)}`;
         const getResponse = await fetch(getUrl, { method: 'GET' });
         clientResult = await getResponse.json();
         console.log("[Fast2SMS Direct Route B Response]:", clientResult);
@@ -180,7 +182,7 @@ export async function sendFast2SMSOTP(phone: string, otp: string): Promise<{ suc
       }
     }
 
-    // DIRECT ROUTE C: POST 'q' (Quick) Route with message string
+    // DIRECT ROUTE C: POST 'otp' Route fallback
     if (!clientResult || clientResult.return !== true) {
       try {
         const apiResponse = await fetch('https://www.fast2sms.com/dev/bulkV2', {
@@ -190,9 +192,8 @@ export async function sendFast2SMSOTP(phone: string, otp: string): Promise<{ suc
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            message: `Your ROCX OTP is ${otp}. Please do not share it with anyone.`,
-            language: 'english',
-            route: 'q',
+            variables_values: otp,
+            route: 'otp',
             numbers: formattedPhone
           })
         });
@@ -203,11 +204,10 @@ export async function sendFast2SMSOTP(phone: string, otp: string): Promise<{ suc
       }
     }
 
-    // DIRECT ROUTE D: GET 'q' (Quick) Route fallback
+    // DIRECT ROUTE D: GET 'otp' Route fallback
     if (!clientResult || clientResult.return !== true) {
       try {
-        const msgUrl = encodeURIComponent(`Your ROCX OTP is ${otp}. Please do not share it with anyone.`);
-        const getUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(apiKey)}&route=q&message=${msgUrl}&language=english&flash=0&numbers=${encodeURIComponent(formattedPhone)}`;
+        const getUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(apiKey)}&route=otp&variables_values=${encodeURIComponent(otp)}&numbers=${encodeURIComponent(formattedPhone)}`;
         const getResponse = await fetch(getUrl, { method: 'GET' });
         clientResult = await getResponse.json();
         console.log("[Fast2SMS Direct Route D Response]:", clientResult);

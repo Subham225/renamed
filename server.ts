@@ -354,14 +354,10 @@ async function startServer() {
 
         const summaryLine = `Cake size: ${cakeSize} | Cake type: ${cakeType} | Delivery Time Slot: ${order.deliveryTimeSlot || 'Any Time On Specified Date'}`;
         let displayedProductImage = it.productImageCid ? `cid:${it.productImageCid}` : it.productImage;
-        const cakeFallback = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
-        if (!displayedProductImage) {
+        const cakeFallback = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80";
+        if (!displayedProductImage || displayedProductImage.startsWith('data:') || displayedProductImage.startsWith('blob:') || displayedProductImage.includes('localhost') || displayedProductImage.includes('127.0.0.1')) {
           displayedProductImage = cakeFallback;
-        } else if (displayedProductImage.startsWith('http://') || displayedProductImage.startsWith('https://')) {
-          if (displayedProductImage.includes('localhost') || displayedProductImage.includes('127.0.0.1')) {
-            displayedProductImage = cakeFallback;
-          }
-        } else if (!displayedProductImage.startsWith('data:') && !displayedProductImage.startsWith('cid:')) {
+        } else if (!displayedProductImage.startsWith('http://') && !displayedProductImage.startsWith('https://') && !displayedProductImage.startsWith('cid:')) {
           displayedProductImage = cakeFallback;
         }
 

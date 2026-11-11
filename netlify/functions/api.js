@@ -146,7 +146,11 @@ app.post('*/send-email', async (req, res) => {
         else if (it.options.toLowerCase().includes('midnight')) deliveryType = 'midnight';
       }
 
-      let displayedProductImage = it.productImage || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
+      const cakeFallback = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80";
+      let displayedProductImage = it.productImage;
+      if (!displayedProductImage || displayedProductImage.startsWith("data:") || displayedProductImage.startsWith("blob:") || (!displayedProductImage.startsWith("http://") && !displayedProductImage.startsWith("https://"))) {
+        displayedProductImage = cakeFallback;
+      }
 
       return `
         <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: left;">
