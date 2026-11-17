@@ -10,10 +10,24 @@
         "price": { "type": "number" },
         "originalPrice": { "type": "number" },
         "category": { "type": "string" },
+        "categories": { "type": "array", "items": { "type": "string" } },
         "image": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
         "description": { "type": "string" },
+        "aboutProduct": { "type": "string" },
+        "deliveryCare": { "type": "string" },
         "rating": { "type": "number" },
-        "reviewsCount": { "type": "number" }
+        "reviewsCount": { "type": "number" },
+        "isPersonalisedBestSeller": { "type": "boolean" },
+        "personalisedBestSellerOrder": { "type": "number" },
+        "isTwoHourDelivery": { "type": "boolean" },
+        "deliveryFee": { "type": "number" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "options": { "type": "object" },
+        "weightPrices": { "type": "object" },
+        "allowedWeights": { "type": "array", "items": { "type": "string" } },
+        "addonProductIds": { "type": "array", "items": { "type": "string" } },
+        "adminNote": { "type": "string" }
       },
       "required": ["id", "name", "price", "category", "image", "description"]
     },
@@ -25,6 +39,7 @@
         "id": { "type": "string" },
         "customerName": { "type": "string" },
         "customerPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
         "recipientName": { "type": "string" },
         "recipientPhone": { "type": "string" },
         "streetAddress": { "type": "string" },
@@ -32,9 +47,16 @@
         "city": { "type": "string" },
         "landmark": { "type": "string" },
         "paymentMode": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "itemsSubtotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
         "total": { "type": "number" },
+        "deliveryOtp": { "type": "string" },
         "status": { "type": "string" },
-        "date": { "type": "string" }
+        "date": { "type": "string" },
+        "deliveryDate": { "type": "string" },
+        "deliveryTimeSlot": { "type": "string" }
       },
       "required": [
         "id",
@@ -87,6 +109,17 @@
         "passcode": { "type": "string" }
       },
       "required": ["id", "name", "type"]
+    },
+    "StoreConfig": {
+      "title": "StoreConfig",
+      "description": "Store configuration document",
+      "type": "object",
+      "properties": {
+        "deliveryZones": { "type": "array", "items": { "type": "object" } },
+        "deliveryTimeSlots": { "type": "array", "items": { "type": "object" } },
+        "aboutPoints": { "type": "array", "items": { "type": "string" } },
+        "aboutBgImage": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -109,6 +142,10 @@
     "/delivery_riders/{riderId}": {
       "schema": "DeliveryAgent",
       "description": "Dynamically registered active deliverers"
+    },
+    "/store_config/{configId}": {
+      "schema": "StoreConfig",
+      "description": "Global store settings, subcategories, and curation structures"
     }
   }
 }

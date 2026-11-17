@@ -3911,19 +3911,35 @@ export default function AdminPanel({
                                       className="bg-slate-50 border border-slate-150 p-2 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-slate-800 leading-snug"
                                     >
                                       <div className="flex items-center gap-2.5 min-w-0">
-                                        {/* Catalog original picture */}
-                                        <img
-                                          src={
+                                        {/* Catalog original picture with robust matching and fallback */}
+                                        {(() => {
+                                          const matchingProd = products?.find(
+                                            (p) =>
+                                              p.name?.toLowerCase().trim() === it.name?.toLowerCase().trim() ||
+                                              p.id === it.id
+                                          );
+                                          const displayImg =
                                             it.productImage ||
-                                            "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80"
-                                          }
-                                          alt={it.name}
-                                          className="w-9 h-9 object-cover rounded-lg border border-slate-200 bg-white shrink-0 shadow-3xs"
-                                          onError={(e) => {
-                                            (e.target as HTMLImageElement).src =
-                                              "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80";
-                                          }}
-                                        />
+                                            matchingProd?.image ||
+                                            (matchingProd?.images && matchingProd.images[0]) ||
+                                            "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80";
+
+                                          return (
+                                            <img
+                                              src={displayImg}
+                                              alt={it.name}
+                                              className="w-10 h-10 object-cover rounded-lg border border-slate-200 bg-white shrink-0 shadow-3xs"
+                                              onError={(e) => {
+                                                if (matchingProd?.image && (e.target as HTMLImageElement).src !== matchingProd.image) {
+                                                  (e.target as HTMLImageElement).src = matchingProd.image;
+                                                } else {
+                                                  (e.target as HTMLImageElement).src =
+                                                    "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80";
+                                                }
+                                              }}
+                                            />
+                                          );
+                                        })()}
                                         <div className="min-w-0">
                                           <div className="flex items-center gap-1.5">
                                             <span className="font-mono text-[10px] bg-slate-900 text-white font-extrabold px-1.5 py-0.5 rounded">

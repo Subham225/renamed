@@ -50,7 +50,10 @@ export async function sendOrderEmailNotification(order: {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ order })
+      body: JSON.stringify({ 
+        order,
+        origin: typeof window !== 'undefined' ? window.location.origin : ''
+      })
     });
 
     const contentType = response.headers.get("content-type") || "";

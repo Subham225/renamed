@@ -801,8 +801,8 @@ export default function App() {
   // --- PERSISTENCE & FIRESTORE SYNCHRONIZATION ---
   useEffect(() => {
     // 0. Ensure default catalog and coupons are seeded in background in Firestore
-    // ensureDefaultProducts();
-    // ensureDefaultCoupons();
+    ensureDefaultProducts().catch((e) => console.warn("Notice: ensureDefaultProducts sync:", e));
+    ensureDefaultCoupons().catch((e) => console.warn("Notice: ensureDefaultCoupons sync:", e));
 
     // 1. Load initial cart and city if present
     const savedCart = localStorage.getItem("rocx_cart");

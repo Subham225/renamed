@@ -153,15 +153,78 @@ async function startServer() {
   // No global transporter; initialized dynamically inside the route handler
 
 
+  // API route to stream order product images or uploaded customer photos directly from Firestore
+  app.get('/api/order-image', async (req, res) => {
+    try {
+      const orderId = req.query.orderId as string;
+      const itemIndex = parseInt((req.query.item as string) || '0', 10);
+      const imageType = (req.query.type as string) || 'product';
+
+      if (!orderId) {
+        return res.status(400).send('Missing orderId');
+      }
+
+      const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'rocxcakes-9fb4b';
+      const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/orders/${encodeURIComponent(orderId)}`;
+      
+      const firestoreRes = await fetch(firestoreUrl);
+      if (!firestoreRes.ok) {
+        return res.redirect('https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80');
+      }
+
+      const orderData = await firestoreRes.json();
+      const items = orderData.fields?.items?.arrayValue?.values || [];
+      const targetItem = items[itemIndex]?.mapValue?.fields;
+
+      if (!targetItem) {
+        return res.redirect('https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80');
+      }
+
+      const rawImage = imageType === 'photo' 
+        ? targetItem.photoUrl?.stringValue 
+        : targetItem.productImage?.stringValue;
+
+      if (!rawImage) {
+        return res.redirect('https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80');
+      }
+
+      if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
+        return res.redirect(rawImage);
+      }
+
+      if (rawImage.startsWith('data:')) {
+        const commaIndex = rawImage.indexOf(',');
+        if (commaIndex !== -1) {
+          const mimePart = rawImage.slice(0, commaIndex);
+          const base64Data = rawImage.slice(commaIndex + 1).replace(/\s/g, '');
+          const mimeMatch = mimePart.match(/data:image\/([a-zA-Z0-9\-_+]+);base64/);
+          const contentType = mimeMatch ? (mimeMatch[1] === 'jpeg' ? 'image/jpeg' : `image/${mimeMatch[1]}`) : 'image/jpeg';
+          const buffer = Buffer.from(base64Data, 'base64');
+
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Length', buffer.length);
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          return res.send(buffer);
+        }
+      }
+
+      return res.redirect('https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80');
+    } catch (e) {
+      console.error('[Order Image API Error]:', e);
+      return res.redirect('https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80');
+    }
+  });
+
   // API route to securely dispatch order placement notifications
   app.post('/api/send-email', async (req, res) => {
     try {
-      const { order } = req.body;
+      const { order, origin } = req.body;
       if (!order) {
         return res.status(400).json({ success: false, error: 'Order details are missing.' });
       }
 
-      console.log(`[SMTP Backend] Received delivery request for order #${order.id}`);
+      const hostUrl = origin || (req.headers['x-forwarded-host'] ? `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers['x-forwarded-host']}` : `${req.protocol}://${req.get('host')}`);
+      console.log(`[SMTP Backend] Received delivery request for order #${order.id} with hostUrl: ${hostUrl}`);
 
       // Safe check for Gmail SMTP App Password configuration
       const effectivePass = (process.env.VITE_GMAIL_APP_PASS || process.env.GMAIL_APP_PASS || GMAIL_APP_PASS || '').replace(/["'\s]/g, '').trim();
@@ -188,138 +251,60 @@ async function startServer() {
         }
       }
 
-      // Extract attachments & rewrite photo urls to inline CIDs if they are base64 or remote URLs
       const attachments: any[] = [];
-      const processedItems = await Promise.all(order.items.map(async (it: any, index: number) => {
+      const defaultCakeFallback = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80";
+
+      const processedItems = (order.items || []).map((it: any, index: number) => {
         const itemCopy = { ...it };
 
-        // 1. Convert customer-uploaded reference design photos (if base64)
-        if (itemCopy.photoUrl && itemCopy.photoUrl.startsWith('data:')) {
-          const commaIndex = itemCopy.photoUrl.indexOf(',');
+        // 1. Resolve product catalog visual image
+        let productImg = it.productImage || '';
+        if (productImg.startsWith('http://') || productImg.startsWith('https://')) {
+          itemCopy.emailProductImage = productImg;
+        } else if (productImg.startsWith('data:')) {
+          itemCopy.emailProductImage = `${hostUrl}/api/order-image?orderId=${encodeURIComponent(order.id)}&item=${index}&type=product`;
+          const commaIndex = productImg.indexOf(',');
           if (commaIndex !== -1) {
-            const mimePart = itemCopy.photoUrl.slice(0, commaIndex);
-            const base64Data = itemCopy.photoUrl.slice(commaIndex + 1).replace(/\s/g, ''); // strip any newlines or spaces safely
+            const mimePart = productImg.slice(0, commaIndex);
+            const base64Data = productImg.slice(commaIndex + 1).replace(/\s/g, '');
             const mimeMatch = mimePart.match(/data:image\/([a-zA-Z0-9\-_+]+);base64/);
-            if (mimeMatch) {
-              const mimeType = mimePart.replace('data:', '').split(';')[0];
-              const ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1];
-              const cid = `uploaded_photo_${index}_${Date.now()}`;
-              
-              // 1. Inline version for HTML body display
-              attachments.push({
-                filename: `customer_uploaded_photo_${index + 1}.${ext}`,
-                content: Buffer.from(base64Data, 'base64'),
-                cid: cid,
-                contentType: mimeType,
-                disposition: 'inline'
-              });
-
-              // 2. Separate downloadable attachment file for Gmail tray
-              attachments.push({
-                filename: `customer_uploaded_photo_${index + 1}.${ext}`,
-                content: Buffer.from(base64Data, 'base64'),
-                contentType: mimeType,
-                disposition: 'attachment'
-              });
-
-              itemCopy.emailCid = cid;
-            }
+            const ext = mimeMatch && mimeMatch[1] === 'jpeg' ? 'jpg' : (mimeMatch ? mimeMatch[1] : 'jpg');
+            const mimeType = mimeMatch ? (mimeMatch[1] === 'jpeg' ? 'image/jpeg' : `image/${mimeMatch[1]}`) : 'image/jpeg';
+            attachments.push({
+              filename: `product_${index + 1}.${ext}`,
+              content: Buffer.from(base64Data, 'base64'),
+              contentType: mimeType,
+              disposition: 'attachment'
+            });
           }
+        } else {
+          itemCopy.emailProductImage = defaultCakeFallback;
         }
 
-        // 2. Convert admin-uploaded product catalog pictures (if base64)
-        if (itemCopy.productImage && itemCopy.productImage.startsWith('data:')) {
-          const commaIndex = itemCopy.productImage.indexOf(',');
+        // 2. Resolve customer custom uploaded reference design photo
+        let photoImg = it.photoUrl || '';
+        if (photoImg.startsWith('http://') || photoImg.startsWith('https://')) {
+          itemCopy.emailPhotoUrl = photoImg;
+        } else if (photoImg.startsWith('data:')) {
+          itemCopy.emailPhotoUrl = `${hostUrl}/api/order-image?orderId=${encodeURIComponent(order.id)}&item=${index}&type=photo`;
+          const commaIndex = photoImg.indexOf(',');
           if (commaIndex !== -1) {
-            const mimePart = itemCopy.productImage.slice(0, commaIndex);
-            const base64Data = itemCopy.productImage.slice(commaIndex + 1).replace(/\s/g, '');
+            const mimePart = photoImg.slice(0, commaIndex);
+            const base64Data = photoImg.slice(commaIndex + 1).replace(/\s/g, '');
             const mimeMatch = mimePart.match(/data:image\/([a-zA-Z0-9\-_+]+);base64/);
-            if (mimeMatch) {
-              const mimeType = mimePart.replace('data:', '').split(';')[0];
-              const ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1];
-              const cid = `product_image_${index}_${Date.now()}`;
-              
-              attachments.push({
-                filename: `product_catalog_image_${index + 1}.${ext}`,
-                content: Buffer.from(base64Data, 'base64'),
-                cid: cid,
-                contentType: mimeType,
-                disposition: 'inline'
-              });
-
-              itemCopy.productImageCid = cid;
-            }
-          }
-        }
-        // 3. Convert external product images (HTTP/HTTPS URL) to inline attachments
-        else if (itemCopy.productImage && itemCopy.productImage.startsWith('http')) {
-          try {
-            console.log(`[SMTP Backend] Downloading product catalog image to attach inline: ${itemCopy.productImage}`);
-            const imgRes = await fetch(itemCopy.productImage);
-            if (imgRes.ok) {
-              const arrayBuffer = await imgRes.arrayBuffer();
-              const buffer = Buffer.from(arrayBuffer);
-              const cid = `product_image_${index}_${Date.now()}`;
-              const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-              const ext = contentType.split('/')[1] || 'jpg';
-
-              attachments.push({
-                filename: `product_catalog_image_${index + 1}.${ext}`,
-                content: buffer,
-                cid: cid,
-                contentType: contentType,
-                disposition: 'inline'
-              });
-
-              itemCopy.productImageCid = cid;
-            } else {
-              console.warn(`[SMTP] External product fetch failed with status: ${imgRes.status}`);
-            }
-          } catch (e) {
-            console.error("[SMTP] Error loading product image for email attachment:", e);
-          }
-        }
-        // 4. Convert relative local product images to inline attachments (read from dist/ folder)
-        else if (
-          itemCopy.productImage &&
-          !itemCopy.productImage.startsWith('data:') &&
-          !itemCopy.productImage.startsWith('cid:')
-        ) {
-          try {
-            const urlPath = itemCopy.productImage.startsWith('/')
-              ? itemCopy.productImage
-              : `/${itemCopy.productImage}`;
-            const absolutePath = path.join(process.cwd(), 'dist', urlPath);
-            console.log(`[SMTP Backend] Reading local product catalog image for inline attachment: ${absolutePath}`);
-
-            if (fs.existsSync(absolutePath)) {
-              const buffer = fs.readFileSync(absolutePath);
-              const cid = `product_image_${index}_${Date.now()}`;
-              const ext = path.extname(absolutePath).toLowerCase().replace('.', '') || 'jpg';
-              let contentType = 'image/jpeg';
-              if (ext === 'png') contentType = 'image/png';
-              else if (ext === 'webp') contentType = 'image/webp';
-              else if (ext === 'gif') contentType = 'image/gif';
-
-              attachments.push({
-                filename: `product_catalog_image_${index + 1}.${ext}`,
-                content: buffer,
-                cid: cid,
-                contentType: contentType,
-                disposition: 'inline'
-              });
-
-              itemCopy.productImageCid = cid;
-            } else {
-              console.warn(`[SMTP] Local product image not found on filesystem at: ${absolutePath}`);
-            }
-          } catch (e) {
-            console.error("[SMTP] Error processing local asset file for inline email attachment:", e);
+            const ext = mimeMatch && mimeMatch[1] === 'jpeg' ? 'jpg' : (mimeMatch ? mimeMatch[1] : 'jpg');
+            const mimeType = mimeMatch ? (mimeMatch[1] === 'jpeg' ? 'image/jpeg' : `image/${mimeMatch[1]}`) : 'image/jpeg';
+            attachments.push({
+              filename: `customer_upload_${index + 1}.${ext}`,
+              content: Buffer.from(base64Data, 'base64'),
+              contentType: mimeType,
+              disposition: 'attachment'
+            });
           }
         }
 
         return itemCopy;
-      }));
+      });
 
       // Generate items markup
       const itemsHtml = processedItems.map((it: any) => {
@@ -353,13 +338,8 @@ async function startServer() {
         }
 
         const summaryLine = `Cake size: ${cakeSize} | Cake type: ${cakeType} | Delivery Time Slot: ${order.deliveryTimeSlot || 'Any Time On Specified Date'}`;
-        let displayedProductImage = it.productImageCid ? `cid:${it.productImageCid}` : it.productImage;
-        const cakeFallback = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80";
-        if (!displayedProductImage || displayedProductImage.startsWith('data:') || displayedProductImage.startsWith('blob:') || displayedProductImage.includes('localhost') || displayedProductImage.includes('127.0.0.1')) {
-          displayedProductImage = cakeFallback;
-        } else if (!displayedProductImage.startsWith('http://') && !displayedProductImage.startsWith('https://') && !displayedProductImage.startsWith('cid:')) {
-          displayedProductImage = cakeFallback;
-        }
+        const displayedProductImage = it.emailProductImage || defaultCakeFallback;
+        const displayedCustomerPhoto = it.emailPhotoUrl || '';
 
         return `
           <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: left;">
@@ -410,10 +390,10 @@ async function startServer() {
             ` : ''}
 
             <!-- UPLOADED CUSTOM PHOTO SLOT -->
-            ${it.photoUrl ? `
+            ${displayedCustomerPhoto ? `
               <div style="margin-top: 12px; background-color: #064e3b; border: 1px solid #047857; border-radius: 12px; padding: 12px;">
                 <span style="font-size: 9px; font-weight: 950; text-transform: uppercase; color: #10b981; display: block; margin-bottom: 6px; letter-spacing: 0.1em;">Uploaded Customer Photo</span>
-                <img src="${it.emailCid ? `cid:${it.emailCid}` : it.photoUrl}" style="max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; border: 1px solid #059669;" alt="Customer Attached Custom Visual" />
+                <img src="${displayedCustomerPhoto}" style="max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; border: 1px solid #059669;" alt="Customer Attached Custom Visual" />
               </div>
             ` : ''}
           </div>

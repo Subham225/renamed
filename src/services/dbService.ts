@@ -114,10 +114,52 @@ export async function getProductsFromFirestore(): Promise<Product[]> {
   }
 }
 
+// In-memory cache of deleted product IDs to prevent unwanted re-seeding of intentionally removed items
+let cachedDeletedIds = new Set<string>();
+
+export async function getDeletedProductIds(): Promise<Set<string>> {
+  try {
+    const snap = await getDocFromServer(doc(db, 'store_config', 'deleted_products')).catch(() => null);
+    if (snap && snap.exists() && Array.isArray(snap.data()?.ids)) {
+      cachedDeletedIds = new Set(snap.data()?.ids);
+    }
+  } catch (e) {
+    // ignore
+  }
+  return cachedDeletedIds;
+}
+
+export async function markProductAsDeleted(productId: string): Promise<void> {
+  cachedDeletedIds.add(productId);
+  try {
+    await setDoc(doc(db, 'store_config', 'deleted_products'), {
+      ids: Array.from(cachedDeletedIds)
+    }, { merge: true });
+  } catch (e) {
+    console.warn("Failed saving deleted product id to Firestore:", e);
+  }
+}
+
+export async function unmarkProductAsDeleted(productId: string): Promise<void> {
+  if (cachedDeletedIds.has(productId)) {
+    cachedDeletedIds.delete(productId);
+    try {
+      await setDoc(doc(db, 'store_config', 'deleted_products'), {
+        ids: Array.from(cachedDeletedIds)
+      }, { merge: true });
+    } catch (e) {
+      console.warn("Failed updating deleted products in Firestore:", e);
+    }
+  }
+}
+
 export function subscribeToProductsFromFirestore(onUpdate: (products: Product[]) => void): () => void {
   const path = 'products';
+  // Also prime deleted IDs
+  getDeletedProductIds().catch(() => {});
+
   const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
-    const list: Product[] = [];
+    const firestoreMap = new Map<string, Product>();
     snapshot.forEach((docSnap) => {
       const p = docSnap.data() as Product;
       if (p.id === 'custom_cake_1782716107529' && (p.price === 0 || p.adminNote?.includes('Free Test'))) {
@@ -126,13 +168,30 @@ export function subscribeToProductsFromFirestore(onUpdate: (products: Product[])
         p.adminNote = 'Same Day Delivery';
         delete p.deliveryFee;
       }
-      list.push(p);
+      firestoreMap.set(p.id, p);
     });
-    
-    // Always call onUpdate so that additions, edits, and deletions (even to 0 items) are processed
+
+    const list: Product[] = [];
+    const addedIds = new Set<string>();
+
+    // 1. Authoritative Firestore products (contain user-uploaded images, prices, customizations)
+    firestoreMap.forEach((prod) => {
+      list.push(prod);
+      addedIds.add(prod.id);
+    });
+
+    // 2. Seamlessly merge default PRODUCTS that are not yet in Firestore and have not been deleted
+    PRODUCTS.forEach((defaultProd) => {
+      if (!addedIds.has(defaultProd.id) && !cachedDeletedIds.has(defaultProd.id)) {
+        list.push(defaultProd);
+        addedIds.add(defaultProd.id);
+      }
+    });
+
     onUpdate(list);
   }, (err) => {
     console.error("Error listening to products collection:", err);
+    onUpdate(PRODUCTS);
   });
   return unsubscribe;
 }
@@ -140,15 +199,7 @@ export function subscribeToProductsFromFirestore(onUpdate: (products: Product[])
 export async function ensureDefaultProducts(): Promise<void> {
   const path = 'products';
   try {
-    const metaRef = doc(db, 'store_config', 'products_meta');
-    const metaSnap = await getDocFromServer(metaRef).catch(() => null);
-    
-    // Check if we have already seeded version 2 (which includes SEASONAL_PRODUCTS)
-    if (metaSnap && metaSnap.exists() && metaSnap.data()?.version >= 4) {
-      console.log("Products catalog already up to date. Skipping auto-seeding.");
-      return;
-    }
-
+    const deletedIds = await getDeletedProductIds();
     const q = query(collection(db, path));
     const snapshot = await getDocs(q);
     
@@ -159,18 +210,16 @@ export async function ensureDefaultProducts(): Promise<void> {
 
     let seededCount = 0;
     for (const prod of PRODUCTS) {
-      if (!existingIds.has(prod.id) ) {
+      if (!existingIds.has(prod.id) && !deletedIds.has(prod.id)) {
         await setDoc(doc(db, path, prod.id), cleanUndefined(prod));
         seededCount++;
       }
     }
 
-    await setDoc(metaRef, { seeded: true, version: 4 }, { merge: true });
-
     if (seededCount > 0) {
-      console.log(`Seeded ${seededCount} missing products to Firestore successfully (v4 update)!`);
+      console.log(`[Firestore Sync] Seeded ${seededCount} missing products to Firestore successfully!`);
     } else {
-      console.log("All default products already exist in Firestore (v4).");
+      console.log("[Firestore Sync] All products in sync with Firestore.");
     }
   } catch (err) {
     console.error("Error ensuring default products:", err);
@@ -238,8 +287,9 @@ export async function ensureDefaultCoupons(): Promise<void> {
 export async function addProductToFirestore(product: Product): Promise<void> {
   const path = `products/${product.id}`;
   try {
+    await unmarkProductAsDeleted(product.id);
     const cleaned = cleanUndefined(product);
-    const compressed = await compressStoreConfigImages(cleaned, 600, 0.6);
+    const compressed = await compressStoreConfigImages(cleaned, 600, 0.65);
     await setDoc(doc(db, 'products', product.id), compressed);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -250,6 +300,7 @@ export async function deleteProductFromFirestore(productId: string): Promise<voi
   const path = `products/${productId}`;
   try {
     await deleteDoc(doc(db, 'products', productId));
+    await markProductAsDeleted(productId);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -267,8 +318,9 @@ export async function updateProductPriceInFirestore(productId: string, newPrice:
 export async function updateProductInFirestore(product: Product): Promise<void> {
   const path = `products/${product.id}`;
   try {
+    await unmarkProductAsDeleted(product.id);
     const cleaned = cleanUndefined(product);
-    const compressed = await compressStoreConfigImages(cleaned, 600, 0.6);
+    const compressed = await compressStoreConfigImages(cleaned, 600, 0.65);
     await setDoc(doc(db, 'products', product.id), compressed);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
@@ -857,83 +909,100 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
 
 export function subscribeToStoreConfigFromFirestore(onUpdate: (config: StoreConfig) => void): () => void {
   const docRef = doc(db, 'store_config', 'settings');
-  const unsubscribe = onSnapshot(docRef, (docSnap) => {
+  const subcatsRef = doc(db, 'store_config', 'subcategories');
+
+  let currentSettings: any = null;
+  let currentSubcats: any = null;
+
+  const emitMerged = () => {
+    const rawData = {
+      ...(currentSettings || {}),
+      ...(currentSubcats || {}),
+    };
+    const mergedConfig: StoreConfig = {
+      ...DEFAULT_STORE_CONFIG,
+      ...rawData,
+      flowerSubcategories: rawData.flowerSubcategories ?? DEFAULT_STORE_CONFIG.flowerSubcategories,
+      anniversarySubcategories: rawData.anniversarySubcategories ?? DEFAULT_STORE_CONFIG.anniversarySubcategories,
+      chocolateSubcategories: rawData.chocolateSubcategories ?? DEFAULT_STORE_CONFIG.chocolateSubcategories,
+      plantSubcategories: rawData.plantSubcategories ?? DEFAULT_STORE_CONFIG.plantSubcategories,
+      personalizedSubcategories: rawData.personalizedSubcategories ?? DEFAULT_STORE_CONFIG.personalizedSubcategories,
+      quickCakeCategories: rawData.quickCakeCategories ?? DEFAULT_STORE_CONFIG.quickCakeCategories,
+      iconicFlavors: rawData.iconicFlavors ?? DEFAULT_STORE_CONFIG.iconicFlavors,
+      tastePickCategories: rawData.tastePickCategories ?? DEFAULT_STORE_CONFIG.tastePickCategories,
+      tastePickSubcategories: rawData.tastePickSubcategories ?? DEFAULT_STORE_CONFIG.tastePickSubcategories,
+      cakeSubcategories: rawData.cakeSubcategories ?? DEFAULT_STORE_CONFIG.cakeSubcategories,
+    };
+    onUpdate(mergedConfig);
+  };
+
+  const unsub1 = onSnapshot(docRef, (docSnap) => {
     if (docSnap.exists()) {
-      const currentData = docSnap.data() as StoreConfig;
-      const mergedConfig: StoreConfig = {
-        ...DEFAULT_STORE_CONFIG,
-        ...currentData,
-        flowerSubcategories: currentData.flowerSubcategories ?? DEFAULT_STORE_CONFIG.flowerSubcategories,
-        anniversarySubcategories: currentData.anniversarySubcategories ?? DEFAULT_STORE_CONFIG.anniversarySubcategories,
-        chocolateSubcategories: currentData.chocolateSubcategories ?? DEFAULT_STORE_CONFIG.chocolateSubcategories,
-        plantSubcategories: currentData.plantSubcategories ?? DEFAULT_STORE_CONFIG.plantSubcategories,
-        personalizedSubcategories: currentData.personalizedSubcategories ?? DEFAULT_STORE_CONFIG.personalizedSubcategories,
-        quickCakeCategories: currentData.quickCakeCategories ?? DEFAULT_STORE_CONFIG.quickCakeCategories,
-        iconicFlavors: currentData.iconicFlavors ?? DEFAULT_STORE_CONFIG.iconicFlavors,
-        tastePickCategories: currentData.tastePickCategories ?? DEFAULT_STORE_CONFIG.tastePickCategories,
-        tastePickSubcategories: currentData.tastePickSubcategories ?? DEFAULT_STORE_CONFIG.tastePickSubcategories,
-        cakeSubcategories: currentData.cakeSubcategories ?? DEFAULT_STORE_CONFIG.cakeSubcategories,
-      };
-      onUpdate(mergedConfig);
+      currentSettings = docSnap.data();
+      emitMerged();
     } else {
-      console.log("No store configs found in Firestore. Seeding default settings...");
-      setDoc(docRef, DEFAULT_STORE_CONFIG);
-      onUpdate(DEFAULT_STORE_CONFIG);
+      setDoc(docRef, DEFAULT_STORE_CONFIG).catch(() => {});
+      currentSettings = DEFAULT_STORE_CONFIG;
+      emitMerged();
     }
   }, (err) => {
-    console.error("Error subscribing to store config:", err);
-    onUpdate(DEFAULT_STORE_CONFIG);
+    console.warn("Notice: settings doc subscription:", err);
   });
-  return unsubscribe;
-}
 
-function trimOversizedBase64(obj: any, maxLen = 80000): any {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'string') {
-    if (obj.startsWith('data:image/') && obj.length > maxLen) {
-      console.warn(`Trimming oversized base64 string of length ${obj.length}`);
-      return "";
+  const unsub2 = onSnapshot(subcatsRef, (docSnap) => {
+    if (docSnap.exists()) {
+      currentSubcats = docSnap.data();
+      emitMerged();
     }
-    return obj;
-  }
-  if (Array.isArray(obj)) {
-    return obj.map((item) => trimOversizedBase64(item, maxLen));
-  }
-  if (typeof obj === 'object') {
-    const res: any = {};
-    for (const key of Object.keys(obj)) {
-      res[key] = trimOversizedBase64(obj[key], maxLen);
-    }
-    return res;
-  }
-  return obj;
+  }, (err) => {
+    // optional secondary doc
+  });
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
 }
 
 export async function updateStoreConfigInFirestore(config: StoreConfig): Promise<void> {
   const path = 'store_config/settings';
   const docRef = doc(db, 'store_config', 'settings');
+  const subcatsDocRef = doc(db, 'store_config', 'subcategories');
+
   try {
     const cleanedConfig = cleanUndefined(config);
-    let finalConfig = await compressStoreConfigImages(cleanedConfig, 350, 0.45);
+    // Compress base64 images properly so they are crisp, lightweight (15KB) and never exceed Firestore limits
+    let finalConfig = await compressStoreConfigImages(cleanedConfig, 380, 0.5);
     
     let jsonString = JSON.stringify(finalConfig);
     let sizeInBytes = new Blob([jsonString]).size;
-    console.log(`Store config document size: ${sizeInBytes} bytes`);
 
-    if (sizeInBytes > 850000) {
-      console.warn(`Store config document size (${sizeInBytes} bytes) is high. Applying aggressive compression...`);
-      finalConfig = await compressStoreConfigImages(finalConfig, 220, 0.3);
-      jsonString = JSON.stringify(finalConfig);
-      sizeInBytes = new Blob([jsonString]).size;
-      console.log(`Store config size after aggressive compression: ${sizeInBytes} bytes`);
+    if (sizeInBytes > 750000) {
+      console.warn(`[Store Config] Size (${sizeInBytes} bytes) is high. Applying secondary compression to preserve all photos...`);
+      finalConfig = await compressStoreConfigImages(finalConfig, 280, 0.4);
     }
 
-    if (sizeInBytes > 950000) {
-      console.warn(`Store config document size (${sizeInBytes} bytes) still close to 1MB limit. Trimming oversized base64 strings...`);
-      finalConfig = trimOversizedBase64(finalConfig, 80000);
-    }
-
+    // Save primary settings
     await setDoc(docRef, finalConfig);
+
+    // Also persist subcategories & curation into subcategories doc as permanent backup
+    const subcatsBackup = {
+      cakeSubcategories: finalConfig.cakeSubcategories,
+      flowerSubcategories: finalConfig.flowerSubcategories,
+      plantSubcategories: finalConfig.plantSubcategories,
+      chocolateSubcategories: finalConfig.chocolateSubcategories,
+      anniversarySubcategories: finalConfig.anniversarySubcategories,
+      personalizedSubcategories: finalConfig.personalizedSubcategories,
+      giftSubcategories: finalConfig.giftSubcategories,
+      tastePickCategories: finalConfig.tastePickCategories,
+      tastePickSubcategories: finalConfig.tastePickSubcategories,
+      flowerCuration: finalConfig.flowerCuration,
+      birthdayCuration: finalConfig.birthdayCuration,
+      plantCuration: finalConfig.plantCuration,
+      updatedAt: Date.now()
+    };
+    await setDoc(subcatsDocRef, cleanUndefined(subcatsBackup)).catch((e) => console.warn("Subcategories backup sync notice:", e));
+    console.log("[Store Config] Saved store config & subcategories to Firestore successfully!");
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }

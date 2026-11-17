@@ -643,11 +643,12 @@ export default function CartDrawer({
       id: newOrderId,
       deliveryOtp: randomOtpStr,
       items: cartItems.map((item) => ({
+        id: item.product.id,
         name: item.product.name,
         quantity: item.quantity,
         price: calculateItemPrice(item),
         photoUrl: item.uploadedPhotoUrl || undefined,
-        productImage: item.product.image || undefined,
+        productImage: item.product.image || (item.product.images && item.product.images[0]) || "",
         options:
           `${item.selectedWeight ? item.selectedWeight : ""} ${item.isEggless ? "Eggless" : ""} ${item.selectedPot ? item.selectedPot : ""} ${item.customMessage ? "Msg: " + item.customMessage : ""} ${item.customName ? "Name: " + item.customName : ""} ${item.uploadedPhotoUrl ? "[Attached Photo]" : ""}`.trim(),
       })),
