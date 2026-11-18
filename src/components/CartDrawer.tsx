@@ -676,7 +676,7 @@ export default function CartDrawer({
         year: "numeric",
       }),
       deliveryDate: formData.deliveryDate || "",
-      deliveryTimeSlot: hasCakeInCart ? formData.deliveryTimeSlot : undefined,
+      deliveryTimeSlot: formData.deliveryTimeSlot || "Any Time On Specified Date",
     };
 
     // Call callback to store order structurally

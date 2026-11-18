@@ -366,7 +366,7 @@ async function startServer() {
               <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Price:</strong> <span style="color: #ffffff;">INR ${it.price !== undefined ? it.price : 'N/A'}</span></div>
               <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Cake size:</strong> <span style="color: #ffffff;">${cakeSize}</span></div>
               <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Cake type:</strong> <span style="color: #ffffff; font-weight: 900; ${cakeType === 'eggless' ? 'color: #10b981;' : ''}">${cakeType.toUpperCase()} ${cakeType === 'eggless' ? '🟢 (100% VEG)' : ''}</span></div>
-              <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Custom name:</strong> <span style="color: #ffffff;">${customName}</span></div>
+              <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Customized Name on Cake:</strong> <span style="color: #ffffff;">${customName}</span></div>
               <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Custom message:</strong> <span style="color: #ffffff;">${customMsg}</span></div>
               <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Delivery type / speed:</strong> <span style="color: #ffffff;">${deliveryType}</span></div>
               <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Delivery time slot:</strong> <strong style="color: #f472b6;">${order.deliveryTimeSlot || 'Any Time On Specified Date'}</strong></div>
