@@ -3831,11 +3831,17 @@ export default function AdminPanel({
                                     Payment Mode
                                   </span>
                                   <span className="text-slate-700 font-semibold block mt-0.5">
-                                    {order.paymentMode === "COD" || order.paymentMode === "Cash on Delivery" || order.paymentMode === "cash"
-                                      ? "COD"
-                                      : order.paymentMode === "Online Payment" || order.paymentMode === "upi"
-                                        ? "Paid and Verified"
-                                        : (order.paymentMode || "Online Payment")}
+                                    {(() => {
+                                      const pm = String(order.paymentMode || "").toLowerCase().trim();
+                                      const ps = String(order.paymentStatus || "").toLowerCase().trim();
+                                      if (pm.includes("cod") || pm.includes("cash") || ps === "cod") {
+                                        return "COD (Cash on Delivery)";
+                                      }
+                                      if (pm === "online payment" || pm === "upi" || ps === "paid and verified" || ps === "completed") {
+                                        return "Paid and Verified";
+                                      }
+                                      return order.paymentMode || "Online Payment";
+                                    })()}
                                   </span>
                                 </div>
                                 <div className="sm:col-span-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -4023,9 +4029,23 @@ export default function AdminPanel({
                                   </div>
                                 </div>
                                 <div className="flex items-center mt-1">
-                                  <span className="text-[10px] font-black text-emerald-805 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                                    Paid &amp; Verified
-                                  </span>
+                                  {(() => {
+                                    const pm = String(order.paymentMode || "").toLowerCase().trim();
+                                    const ps = String(order.paymentStatus || "").toLowerCase().trim();
+                                    const isCod = pm.includes("cod") || pm.includes("cash") || ps === "cod";
+                                    if (isCod && ps !== "completed") {
+                                      return (
+                                        <span className="text-[10px] font-black text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200">
+                                          Cash on Delivery (COD)
+                                        </span>
+                                      );
+                                    }
+                                    return (
+                                      <span className="text-[10px] font-black text-emerald-805 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                                        Paid &amp; Verified
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                               </div>
 

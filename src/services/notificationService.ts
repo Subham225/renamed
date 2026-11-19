@@ -37,6 +37,7 @@ export async function sendOrderEmailNotification(order: {
   pincode?: string;
   city?: string;
   paymentMode: string;
+  paymentStatus?: string;
   total: number;
   date: string;
   status: string;

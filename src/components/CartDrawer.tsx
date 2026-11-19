@@ -664,8 +664,8 @@ export default function CartDrawer({
       pincode: formData.pincode,
       city: formData.city,
       landmark: formData.landmark || "None",
-      paymentMode: finalTotalAmount === 0 ? "Free Test Order" : (formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery" ? "COD" : "Online Payment"),
-      paymentStatus: finalTotalAmount === 0 || formData.paymentMode === "Online Payment" ? "Paid and Verified" : "COD",
+      paymentMode: formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery" ? "COD" : (finalTotalAmount === 0 ? "Free Test Order" : "Online Payment"),
+      paymentStatus: formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery" ? "COD" : (finalTotalAmount === 0 || formData.paymentMode === "Online Payment" ? "Paid and Verified" : "COD"),
       itemsSubtotal: itemsSubtotal,
       total: finalTotalAmount,
       deliveryFee: deliverySubtotal,
@@ -1584,7 +1584,11 @@ export default function CartDrawer({
                     
                     <div className="space-y-2">
                       <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                        {finalTotalAmount === 0 ? "🎉 Free Promotional / Test Order" : "Secure Online Payment"}
+                        {finalTotalAmount === 0
+                          ? "🎉 Free Promotional / Test Order"
+                          : formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery"
+                            ? "Cash on Delivery (COD)"
+                            : "Secure Online Payment"}
                       </h4>
                       <p className="text-[11px] text-slate-500 font-bold leading-relaxed px-2">
                         {finalTotalAmount === 0
@@ -2127,7 +2131,11 @@ export default function CartDrawer({
                     className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black py-4 rounded-xl transition duration-150 shadow-lg flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer font-sans"
                   >
                     <Sparkles className="w-4 h-4 fill-current animate-pulse" />{" "}
-                    {finalTotalAmount === 0 ? "Place Free Test Order Now (₹0)" : "Confirm Payment & Place Order"}
+                    {finalTotalAmount === 0
+                      ? "Place Free Test Order Now (₹0)"
+                      : formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery"
+                        ? "Confirm COD & Place Order"
+                        : "Confirm Payment & Place Order"}
                   </button>
                   {paymentError && <div className="text-red-500 text-xs font-bold text-center mt-2 bg-red-50 p-2 rounded-lg border border-red-100">{paymentError}</div>}
 

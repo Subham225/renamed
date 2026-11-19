@@ -719,7 +719,15 @@ export default function DeliveryPanel({
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 font-bold uppercase text-[9px]">Payment Method:</span>
                   <span className="text-white font-mono font-bold bg-slate-800/60 px-2.5 py-0.5 rounded border border-slate-750">
-                    {pickedOrder.paymentMode || 'COD'} ({pickedOrder.paymentStatus || 'Paid'})
+                    {(() => {
+                      const pm = String(pickedOrder.paymentMode || '').toLowerCase().trim();
+                      const ps = String(pickedOrder.paymentStatus || '').toLowerCase().trim();
+                      const isCod = pm.includes('cod') || pm.includes('cash') || ps === 'cod' || !pickedOrder.paymentMode;
+                      if (isCod && ps !== 'completed') {
+                        return `${pickedOrder.paymentMode || 'COD'} (Cash on Delivery)`;
+                      }
+                      return `${pickedOrder.paymentMode || 'Online Payment'} (${pickedOrder.paymentStatus || 'Paid'})`;
+                    })()}
                   </span>
                 </div>
                 
