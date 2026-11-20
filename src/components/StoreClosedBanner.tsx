@@ -1,9 +1,14 @@
 import React from 'react';
 import { isStoreOpenNow } from '../services/storeSettings';
+import { StoreConfig } from '../types';
 import { Clock } from 'lucide-react';
 
-export default function StoreClosedBanner() {
-  const storeCheck = isStoreOpenNow();
+interface StoreClosedBannerProps {
+  storeConfig?: StoreConfig | null;
+}
+
+export default function StoreClosedBanner({ storeConfig }: StoreClosedBannerProps) {
+  const storeCheck = isStoreOpenNow(storeConfig);
   if (storeCheck.isOpen) return null;
 
   return (
@@ -15,7 +20,9 @@ export default function StoreClosedBanner() {
           </div>
           <div>
             <p className="text-xs sm:text-sm font-extrabold text-amber-100 leading-snug">
-              Lots of orders, bakers are busy, ROCX Cakes & Gifts will be back soon, don't you worry :)
+              {storeConfig?.manualClosed && storeConfig?.customStoreClosedMessage?.trim()
+                ? storeConfig.customStoreClosedMessage
+                : "Lots of orders, bakers are busy, ROCX Cakes & Gifts will be back soon, don't you worry :)"}
             </p>
             <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-0.5 text-[10px] text-rose-300 font-bold">
               <Clock className="w-3 h-3" />

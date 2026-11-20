@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Category, StoreConfig, CategoryID, Product } from '../types';
 import { ChevronDown, ChevronRight, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import HorizontalScrollRow from './HorizontalScrollRow';
 
 interface CategoryExplorePageProps {
   categories: Category[];
@@ -64,13 +65,20 @@ export default function CategoryExplorePage({ categories, storeConfig, products,
                   setExpandedId(isExpanded ? null : cat.id);
                 }}
               >
-                <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 bg-slate-50">
+                <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 bg-slate-50 ios-img-frame">
                   <img 
-                    src={cat.image} 
+                    src={cat.image || "/logo.png"} 
                     alt={cat.name} 
-                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    decoding="async"
+                    draggable={false}
+                    className="absolute inset-0 w-full h-full object-cover object-center block"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=120&q=80';
+                      const img = e.currentTarget;
+                      if (!img.dataset.fallbackApplied) {
+                        img.dataset.fallbackApplied = '1';
+                        img.src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=120&q=80';
+                      }
                     }}
                   />
                 </div>
@@ -104,14 +112,21 @@ export default function CategoryExplorePage({ categories, storeConfig, products,
                               onClick={() => onSelectCategory(sub.id)}
                               className="flex flex-col bg-white rounded-2xl p-2 border border-slate-100 cursor-pointer hover:border-pink-200 hover:shadow-sm transition-all group"
                             >
-                              <div className="w-full aspect-square rounded-xl overflow-hidden mb-2 bg-slate-50">
+                              <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-2 bg-slate-50 ios-img-frame">
                                 {sub.image ? (
                                   <img 
                                     src={sub.image} 
                                     alt={sub.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                    referrerPolicy="no-referrer"
+                                    decoding="async"
+                                    draggable={false}
+                                    className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform"
                                     onError={(e) => {
-                                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=120&q=80';
+                                      const img = e.currentTarget;
+                                      if (!img.dataset.fallbackApplied) {
+                                        img.dataset.fallbackApplied = '1';
+                                        img.src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=120&q=80';
+                                      }
                                     }}
                                   />
                                 ) : (
@@ -132,15 +147,33 @@ export default function CategoryExplorePage({ categories, storeConfig, products,
                     {catProducts.length > 0 && (
                       <div className="p-3 pt-1">
                         <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Popular Products</h4>
-                        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+                        <HorizontalScrollRow
+                          className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide"
+                          hintClassName="mt-0.5"
+                          arrowSize="xs"
+                        >
                           {catProducts.slice(0, 5).map((prod) => (
                             <div 
                               key={prod.id}
                               onClick={() => onSelectProduct?.(prod)}
                               className="flex-none w-[120px] bg-white rounded-2xl border border-slate-100 overflow-hidden cursor-pointer hover:border-pink-200"
                             >
-                              <div className="w-full h-[120px] bg-slate-50">
-                                <img src={prod.image} alt={prod.name} className="w-full h-full object-cover" />
+                              <div className="relative w-full h-[120px] bg-slate-50 overflow-hidden ios-img-frame">
+                                <img
+                                  src={prod.image || "/logo.png"}
+                                  alt={prod.name}
+                                  referrerPolicy="no-referrer"
+                                  decoding="async"
+                                  draggable={false}
+                                  onError={(e) => {
+                                    const img = e.currentTarget;
+                                    if (!img.dataset.fallbackApplied) {
+                                      img.dataset.fallbackApplied = '1';
+                                      img.src = "/logo.png";
+                                    }
+                                  }}
+                                  className="absolute inset-0 w-full h-full object-cover object-center block"
+                                />
                               </div>
                               <div className="p-2">
                                 <h5 className="text-[10px] font-bold text-slate-800 line-clamp-2 leading-tight">{prod.name}</h5>
@@ -159,7 +192,7 @@ export default function CategoryExplorePage({ categories, storeConfig, products,
                               <span className="text-[10px] font-bold text-pink-700">View {catProducts.length - 5} More</span>
                             </div>
                           )}
-                        </div>
+                        </HorizontalScrollRow>
                       </div>
                     )}
                     

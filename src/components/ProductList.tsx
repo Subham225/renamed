@@ -19,6 +19,7 @@ import {
 import CakeGallery from "./CakeGallery";
 import ScrollReveal from "./ScrollReveal";
 import OrderTimer from "./OrderTimer";
+import HorizontalScrollRow from "./HorizontalScrollRow";
 
 interface ProductListProps {
   products: Product[];
@@ -300,16 +301,21 @@ export default function ProductList({
         className="bg-white rounded-2xl overflow-hidden border border-slate-100/80 hover:border-slate-200 hover:shadow-md transition-all duration-300 group flex flex-col justify-between cursor-pointer text-left"
       >
         {/* Image Section */}
-        <div className="relative aspect-square w-full overflow-hidden bg-slate-50">
+        <div className="relative aspect-square w-full overflow-hidden bg-slate-50 ios-img-frame">
           <img
-            src={prod.image}
+            src={prod.image || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80"}
             alt={prod.name}
             referrerPolicy="no-referrer"
+            decoding="async"
+            draggable={false}
             onError={(e) => {
-              (e.target as HTMLImageElement).src =
+              const imgEl = e.target as HTMLImageElement;
+              if (imgEl.dataset.fallbackApplied) return;
+              imgEl.dataset.fallbackApplied = "1";
+              imgEl.src =
                 "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
             }}
-            className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-300"
+            className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-103 transition-transform duration-300"
           />
           {/* Discount Badge */}
           {discount > 0 && (
@@ -346,7 +352,7 @@ export default function ProductList({
             {/* Rating and Reviews */}
             <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-amber-500 font-semibold">
               <div className="flex items-center bg-amber-50 rounded px-1 sm:px-1.5 py-0.5 border border-amber-100 gap-0.5">
-                <Star className="w-2.5 h-2.5 sm:w-1.5 sm:h-1.5 fill-current" />
+                <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
                 <span>{prod.rating}</span>
               </div>
               <span className="text-slate-400 font-normal">
@@ -611,7 +617,7 @@ export default function ProductList({
   ) => {
     if (layoutMode === "slider") {
       return (
-        <div className="flex overflow-x-auto gap-4 pb-4 px-1 select-none scrollbar-hide snap-x">
+        <HorizontalScrollRow className="flex overflow-x-auto gap-4 pb-2 px-1 select-none scrollbar-hide snap-x">
           {productsList.map((prod) => (
             <div
               key={prod.id}
@@ -620,7 +626,7 @@ export default function ProductList({
               {renderProductCard(prod)}
             </div>
           ))}
-        </div>
+        </HorizontalScrollRow>
       );
     }
     return (
@@ -651,14 +657,16 @@ export default function ProductList({
                             <div
                               key={cat.id}
                               onClick={() => onSelectCategory?.(cat.id)}
-                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-amber-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end"
+                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-amber-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end ios-img-frame"
                             >
                               <div className="absolute inset-0">
                                 <img
                                   src={cat.image}
                                   alt={cat.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-104"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="w-full h-full object-cover block transition-transform duration-500 ease-out md:group-hover:scale-104"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent group-hover:from-amber-950/80 transition-colors duration-300" />
                               </div>
@@ -693,14 +701,16 @@ export default function ProductList({
                             <div
                               key={cat.id}
                               onClick={() => onSelectCategory?.(cat.id)}
-                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-orange-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end"
+                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-orange-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end ios-img-frame"
                             >
                               <div className="absolute inset-0">
                                 <img
                                   src={cat.image}
                                   alt={cat.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-104"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="w-full h-full object-cover block transition-transform duration-500 ease-out md:group-hover:scale-104"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent group-hover:from-orange-950/80 transition-colors duration-300" />
                               </div>
@@ -735,14 +745,16 @@ export default function ProductList({
                             <div
                               key={cat.id}
                               onClick={() => onSelectCategory?.(cat.id)}
-                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-amber-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end"
+                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-amber-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end ios-img-frame"
                             >
                               <div className="absolute inset-0">
                                 <img
                                   src={cat.image}
                                   alt={cat.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-104"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="w-full h-full object-cover block transition-transform duration-500 ease-out md:group-hover:scale-104"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent group-hover:from-amber-950/80 transition-colors duration-300" />
                               </div>
@@ -777,14 +789,16 @@ export default function ProductList({
                             <div
                               key={cat.id}
                               onClick={() => onSelectCategory?.(cat.id)}
-                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-rose-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end"
+                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-rose-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end ios-img-frame"
                             >
                               <div className="absolute inset-0">
                                 <img
                                   src={cat.image}
                                   alt={cat.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-104"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="w-full h-full object-cover block transition-transform duration-500 ease-out md:group-hover:scale-104"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent group-hover:from-rose-950/80 transition-colors duration-300" />
                               </div>
@@ -819,14 +833,16 @@ export default function ProductList({
                             <div
                               key={cat.id}
                               onClick={() => onSelectCategory?.(cat.id)}
-                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-sky-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end"
+                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-sky-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end ios-img-frame"
                             >
                               <div className="absolute inset-0">
                                 <img
                                   src={cat.image}
                                   alt={cat.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-104"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="w-full h-full object-cover block transition-transform duration-500 ease-out md:group-hover:scale-104"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent group-hover:from-sky-950/80 transition-colors duration-300" />
                               </div>
@@ -1003,14 +1019,16 @@ export default function ProductList({
                             <div
                               key={cat.id}
                               onClick={() => onSelectCategory?.(cat.id)}
-                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-pink-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end"
+                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-pink-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end ios-img-frame"
                             >
                               <div className="absolute inset-0">
                                 <img
                                   src={cat.image}
                                   alt={cat.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-104"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="w-full h-full object-cover block transition-transform duration-500 ease-out md:group-hover:scale-104"
                                 />
                                 {/* Modern Rich Gradient Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent group-hover:from-pink-950/80 transition-colors duration-300" />
@@ -1057,7 +1075,10 @@ export default function ProductList({
                         )}
 
                         {/* Horizontally scrollable row wrapper */}
-                        <div className="flex overflow-x-auto gap-4 pb-4 px-1 select-none scrollbar-hide snap-x">
+                        <HorizontalScrollRow
+                          className="flex overflow-x-auto gap-4 pb-4 px-1 select-none scrollbar-hide snap-x"
+                          hintClassName="-mt-2"
+                        >
                           {personalisedBestSellers.map((prod) => {
                             const disc = prod.originalPrice
                               ? Math.round(
@@ -1072,14 +1093,23 @@ export default function ProductList({
                                 key={prod.id}
                                 id={`pers-carousel-card-${prod.id}`}
                                 onClick={() => onSelectProduct(prod)}
-                                className="bg-white rounded-3xl overflow-hidden border border-slate-100 flex-none w-[200px] sm:w-[240px] hover:shadow-lg hover:border-pink-100 duration-300 transition-all cursor-pointer text-left flex flex-col justify-between snap-start relative"
+                                className="group bg-white rounded-3xl overflow-hidden border border-slate-100 flex-none w-[200px] sm:w-[240px] hover:shadow-lg hover:border-pink-100 duration-300 transition-all cursor-pointer text-left flex flex-col justify-between snap-start relative"
                               >
-                                <div className="relative aspect-square overflow-hidden bg-slate-50">
+                                <div className="relative aspect-square w-full overflow-hidden bg-slate-50 ios-img-frame">
                                   <img
-                                    src={prod.image}
+                                    src={prod.image || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80"}
                                     alt={prod.name}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-104"
+                                    className="absolute inset-0 w-full h-full object-cover object-center block transition-transform duration-500 md:group-hover:scale-104"
                                     referrerPolicy="no-referrer"
+                                    decoding="async"
+                                    draggable={false}
+                                    onError={(e) => {
+                                      const imgEl = e.target as HTMLImageElement;
+                                      if (imgEl.dataset.fallbackApplied) return;
+                                      imgEl.dataset.fallbackApplied = "1";
+                                      imgEl.src =
+                                        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
+                                    }}
                                   />
                                   {disc > 0 && (
                                     <span className="absolute top-2 left-2 bg-pink-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded">
@@ -1139,7 +1169,7 @@ export default function ProductList({
                               </div>
                             );
                           })}
-                        </div>
+                        </HorizontalScrollRow>
                       </div>
                     </ScrollReveal>
                   )
@@ -1261,14 +1291,16 @@ export default function ProductList({
                             <div
                               key={cat.id}
                               onClick={() => onSelectCategory?.(cat.id)}
-                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-pink-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end"
+                              className="group relative h-[140px] xs:h-[160px] sm:h-[185px] rounded-3xl overflow-hidden border border-slate-100 bg-white hover:border-pink-200 duration-300 transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-end ios-img-frame"
                             >
                               <div className="absolute inset-0">
                                 <img
                                   src={cat.image}
                                   alt={cat.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-104"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="w-full h-full object-cover block transition-transform duration-500 ease-out md:group-hover:scale-104"
                                 />
                                 {/* Modern Elegant Gradient Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/10 to-transparent group-hover:from-pink-950/85 transition-colors duration-300" />
@@ -1326,7 +1358,10 @@ export default function ProductList({
                             <h2 className="text-xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
                               Our Latest Insights & FAQs
                             </h2>
-                            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 lg:gap-6 mt-4 pb-4 scrollbar-hide -mx-6 px-6 sm:mx-0 sm:px-0">
+                            <HorizontalScrollRow
+                              className="flex overflow-x-auto snap-x snap-mandatory gap-4 lg:gap-6 mt-4 pb-4 scrollbar-hide -mx-6 px-6 sm:mx-0 sm:px-0"
+                              hintClassName="-mt-2"
+                            >
                               <a
                                 href="#"
                                 className="flex-none w-[85%] sm:w-[350px] snap-center p-6 bg-slate-50 hover:bg-pink-50/50 rounded-2xl border border-slate-100 hover:border-pink-200 transition-all duration-300 group"
@@ -1393,7 +1428,7 @@ export default function ProductList({
                                   your moments memorable.
                                 </p>
                               </a>
-                            </div>
+                            </HorizontalScrollRow>
                           </div>
                         </section>
                       </ScrollReveal>

@@ -259,11 +259,14 @@ export default function FlowerCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="bg-white rounded-2xl border border-slate-200/80 p-2.5 shadow-2xs hover:shadow-md transition-all cursor-pointer text-center group flex flex-col items-center justify-between"
             >
-              <div className="w-full aspect-square rounded-xl overflow-hidden bg-rose-50/50 mb-2 border border-slate-100">
+              <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-rose-50/50 mb-2 border border-slate-100 ios-img-frame">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-108 transition-transform duration-300"
                 />
               </div>
               <p className="text-xs font-black text-slate-800 group-hover:text-rose-600 transition-colors line-clamp-2">
@@ -313,11 +316,14 @@ export default function FlowerCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="bg-white rounded-3xl border border-slate-200 p-2 shadow-2xs hover:shadow-md transition-all cursor-pointer text-center group flex flex-col items-center"
             >
-              <div className="w-full aspect-square rounded-2xl overflow-hidden bg-rose-50 mb-2">
+              <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-rose-50 mb-2 ios-img-frame">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-108 transition-transform duration-300"
                 />
               </div>
               <span className="text-xs font-black text-slate-800 pb-1 group-hover:text-rose-600">
@@ -408,11 +414,14 @@ export default function FlowerCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition-all cursor-pointer group relative flex flex-col"
             >
-              <div className="w-full aspect-square overflow-hidden bg-slate-100 relative">
+              <div className="w-full aspect-square overflow-hidden bg-slate-100 relative ios-img-frame">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-108 transition-transform duration-500"
                 />
               </div>
               <div className="p-3 text-center bg-white">
@@ -481,11 +490,14 @@ export default function FlowerCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer group flex flex-col"
             >
-              <div className="w-full aspect-4/3 overflow-hidden bg-slate-100">
+              <div className="relative w-full aspect-4/3 overflow-hidden bg-slate-100 ios-img-frame">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-108 transition-transform duration-300"
                 />
               </div>
               <div className="p-2.5 text-center">
@@ -543,16 +555,21 @@ export default function FlowerCategoryLanding({
                   onClick={() => onSelectProduct(prod)}
                   className="bg-white rounded-2xl overflow-hidden border border-slate-200/90 hover:border-rose-300 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between cursor-pointer text-left"
                 >
-                  <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0">
+                  <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0 ios-img-frame">
                     <img
-                      src={prod.image}
+                      src={prod.image || "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80"}
                       alt={prod.name}
                       referrerPolicy="no-referrer"
+                      decoding="async"
+                      draggable={false}
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src =
+                        const imgEl = e.target as HTMLImageElement;
+                        if (imgEl.dataset.fallbackApplied) return;
+                        imgEl.dataset.fallbackApplied = "1";
+                        imgEl.src =
                           "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=400&q=80";
                       }}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
 

@@ -300,7 +300,8 @@ app.post('*/send-email', async (req, res) => {
           </div>
           <div style="font-size: 12px; color: #cbd5e1; font-weight: 700; line-height: 1.6; border-top: 1px solid #1f2937; padding-top: 16px;">
             <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Qty:</strong> <span style="color: #ffffff;">${it.quantity}</span></div>
-            <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Price:</strong> <span style="color: #ffffff;">INR ${it.price !== undefined ? it.price : 'N/A'}</span></div>
+            <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Unit Price:</strong> <span style="color: #ffffff;">INR ${it.unitPrice !== undefined ? it.unitPrice : (it.price !== undefined ? it.price : 'N/A')}</span></div>
+            <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Item Total (${it.quantity} x ${it.unitPrice !== undefined ? it.unitPrice : (it.price !== undefined ? it.price : 'N/A')}):</strong> <strong style="color: #34d399;">INR ${it.lineTotal !== undefined ? it.lineTotal : (it.price !== undefined ? Number(it.price) * Number(it.quantity || 1) : 'N/A')}</strong></div>
             <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Cake size:</strong> <span style="color: #ffffff;">${cakeSize}</span></div>
             <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Cake type:</strong> <span style="color: #ffffff; font-weight: 900; ${cakeType === 'eggless' ? 'color: #10b981;' : ''}">${cakeType.toUpperCase()} ${cakeType === 'eggless' ? '🟢 (100% VEG)' : ''}</span></div>
             <div style="margin-bottom: 4px;"><strong style="color: #9ca3af;">Customized Name on Cake:</strong> <span style="color: #ffffff;">${customName}</span></div>
@@ -379,6 +380,11 @@ app.post('*/send-email', async (req, res) => {
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Customer phone:</span> <span style="color: #ffffff;">${order.customerPhone || 'N/A'}</span></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Delivery Date:</span> <strong style="color: #ffffff;">${order.deliveryDate || 'N/A'}</strong></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Delivery Time:</span> <strong style="color: #f472b6;">${order.deliveryTimeSlot || 'Any Time On Specified Date'}</strong></div>
+              <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Products Subtotal:</span> <strong style="color: #ffffff;">INR ${order.itemsSubtotal !== undefined ? order.itemsSubtotal : (Number(order.total || 0) - Number(order.deliveryFee || 0) + Number(order.discountAmount || 0))}</strong></div>
+              ${Number(order.discountAmount || 0) > 0 || order.couponCode ? `
+              <div style="margin-bottom: 4px;"><span style="color: #34d399;">Discount Applied${order.couponCode ? ` (${order.couponCode})` : ''}${order.couponDiscountType === 'percentage' && order.couponDiscountValue ? ` [${order.couponDiscountValue}% OFF]` : (order.couponDiscountType === 'flat' && order.couponDiscountValue ? ` [Flat INR ${order.couponDiscountValue} OFF]` : '')}:</span> <strong style="color: #34d399;">- INR ${Number(order.discountAmount || 0)}</strong></div>
+              ` : ''}
+              <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Delivery Fee:</span> <strong style="color: #ffffff;">INR ${order.deliveryFee || 0}</strong></div>
               <div style="margin-bottom: 4px;"><span style="color: #9ca3af;">Total Amount:</span> <strong style="color: #f472b6; font-size: 14px;">INR ${order.total}</strong></div>
             </div>
           </div>
@@ -394,7 +400,7 @@ app.post('*/send-email', async (req, res) => {
       </html>
     `;
 
-    const plainTextFallback = `New order received: ${order.id}\nPayment Mode: ${paymentModeDisplay}\nTotal: INR ${order.total}\nAddress: ${order.streetAddress}`;
+    const plainTextFallback = `New order received: ${order.id}\nPayment Mode: ${paymentModeDisplay}\nProducts Subtotal: INR ${order.itemsSubtotal !== undefined ? order.itemsSubtotal : (Number(order.total || 0) - Number(order.deliveryFee || 0) + Number(order.discountAmount || 0))}\n${Number(order.discountAmount || 0) > 0 || order.couponCode ? `Discount (${order.couponCode || 'Promo'}): - INR ${Number(order.discountAmount || 0)}\n` : ''}Delivery Fee: INR ${order.deliveryFee || 0}\nTotal: INR ${order.total}\nAddress: ${order.streetAddress}`;
 
     const mailOptions = {
       from: `"Rocx Cakes & Gifts" <${gmailUser}>`,

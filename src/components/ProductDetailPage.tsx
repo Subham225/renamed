@@ -1,5 +1,6 @@
 import StoreClosedBanner from "./StoreClosedBanner";
 import React, { useState, useRef, useEffect } from "react";
+import ScrollLeftHint from "./ScrollLeftHint";
 import { Helmet } from "react-helmet-async";
 import {
   Sparkles,
@@ -16,6 +17,8 @@ import {
   ShoppingBag,
   Share2,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Product,
@@ -125,6 +128,15 @@ export default function ProductDetailPage({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sliderTrackRef = useRef<HTMLDivElement>(null);
+
+  const productImages = React.useMemo(() => {
+    const raw = [product.image, ...(product.images || [])].filter(
+      (u): u is string => typeof u === "string" && u.trim().length > 0,
+    );
+    const deduped = Array.from(new Set(raw));
+    return deduped.length > 0 ? deduped : ["/logo.png"];
+  }, [product.image, product.images]);
 
   const handleShare = async () => {
     const url = new URL(window.location.href);
@@ -159,19 +171,12 @@ export default function ProductDetailPage({
     setActiveImageIndex(0);
     setActiveDescTab("about");
     setIsDescExpanded(false);
+    if (sliderTrackRef.current) {
+      sliderTrackRef.current.scrollLeft = 0;
+    }
     // Scroll page to top to read comfortably
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [product, currentWeights]);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const scrollPosition = target.scrollLeft;
-    const itemWidth = target.clientWidth;
-    const newIndex = Math.round(scrollPosition / itemWidth);
-    if (newIndex !== activeImageIndex) {
-      setActiveImageIndex(newIndex);
-    }
-  };
 
   // Calculate customized final dynamic price
   let finalPrice = product.price;
@@ -295,7 +300,7 @@ export default function ProductDetailPage({
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 select-none animate-fadeIn">
-      <StoreClosedBanner />
+      <StoreClosedBanner storeConfig={storeConfig} />
       <Helmet>
         <title>{product.name} | Rocx Cakes</title>
         <meta property="og:title" content={product.name} />
@@ -347,53 +352,124 @@ export default function ProductDetailPage({
 
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-6">
         {/* Detail overview panel */}
-        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2">
+        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 ios-img-frame">
           {/* Column 1: Image container */}
-          <div className="relative bg-slate-100/40 p-3 sm:p-4 md:p-6 flex flex-col gap-3 md:gap-4 border-b md:border-b-0 md:border-r border-slate-100">
+          <div className="relative min-w-0 bg-slate-100/40 p-3 sm:p-4 md:p-6 flex flex-col gap-3 md:gap-4 border-b md:border-b-0 md:border-r border-slate-100">
             {/* Main Image Slider */}
-            <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-inner border border-slate-200/60 bg-white relative group">
+            <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-inner border border-slate-200/60 bg-white relative group ios-img-frame">
               <div
-                className="w-full h-full flex overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+                ref={sliderTrackRef}
+                className="absolute inset-0 flex overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory"
                 onScroll={(e) => {
-                  const target = e.target as HTMLDivElement;
-                  const slideWidth = target.offsetWidth;
-                  const index = Math.round(target.scrollLeft / slideWidth);
+                  const target = e.currentTarget;
+                  const slideWidth = target.clientWidth;
+                  if (!slideWidth) return;
+                  const index = Math.max(
+                    0,
+                    Math.min(
+                      productImages.length - 1,
+                      Math.round(target.scrollLeft / slideWidth),
+                    ),
+                  );
                   if (activeImageIndex !== index) setActiveImageIndex(index);
                 }}
               >
-                {[product.image, ...(product.images || [])].map((imgUrl, i) => (
+                {productImages.map((imgUrl, i) => (
                   <div
-                    key={i}
-                    className="min-w-full min-h-full snap-start snap-always shrink-0"
+                    key={`${product.id}-img-${i}`}
+                    className="relative w-full h-full snap-start snap-always shrink-0 bg-white flex items-center justify-center"
                   >
                     <img
                       src={imgUrl}
                       alt={`${product.name} - slide ${i + 1}`}
                       referrerPolicy="no-referrer"
+                      decoding="async"
+                      draggable={false}
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "/logo.png";
+                        const img = e.currentTarget;
+                        if (img.dataset.fallbackApplied) return;
+                        img.dataset.fallbackApplied = "1";
+                        img.src = "/logo.png";
                       }}
-                      className="w-full h-full object-contain bg-white object-center"
+                      className="w-full h-full object-contain bg-white object-center block select-none"
                     />
                   </div>
                 ))}
               </div>
 
+              {/* PC Prev / Next Image Arrows */}
+              {productImages.length > 1 && (
+                <>
+                  {activeImageIndex > 0 && (
+                    <button
+                      type="button"
+                      aria-label="Previous image"
+                      title="Previous Image"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const nextIdx = Math.max(0, activeImageIndex - 1);
+                        setActiveImageIndex(nextIdx);
+                        if (sliderTrackRef.current) {
+                          sliderTrackRef.current.scrollTo({
+                            left: nextIdx * sliderTrackRef.current.clientWidth,
+                            behavior: "smooth",
+                          });
+                        }
+                      }}
+                      className="hidden md:flex items-center justify-center w-7 h-7 rounded-full bg-white/95 hover:bg-pink-50 text-slate-700 hover:text-pink-600 border border-slate-200/90 shadow-md absolute left-2 top-1/2 -translate-y-1/2 z-10 transition-all active:scale-90 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                  )}
+                  {activeImageIndex < productImages.length - 1 && (
+                    <button
+                      type="button"
+                      aria-label="Next image"
+                      title="Next Image"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const nextIdx = Math.min(productImages.length - 1, activeImageIndex + 1);
+                        setActiveImageIndex(nextIdx);
+                        if (sliderTrackRef.current) {
+                          sliderTrackRef.current.scrollTo({
+                            left: nextIdx * sliderTrackRef.current.clientWidth,
+                            behavior: "smooth",
+                          });
+                        }
+                      }}
+                      className="hidden md:flex items-center justify-center w-7 h-7 rounded-full bg-white/95 hover:bg-pink-50 text-slate-700 hover:text-pink-600 border border-slate-200/90 shadow-md absolute right-2 top-1/2 -translate-y-1/2 z-10 transition-all active:scale-90 cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
+              )}
+
               {/* Dot Indicators */}
-              {product.images && product.images.length > 0 && (
-                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none">
-                  {[product.image, ...product.images].map((_, i) => (
-                    <div
+              {productImages.length > 1 && (
+                <div className="absolute bottom-3.5 left-0 right-0 flex justify-center gap-1.5 z-10">
+                  {productImages.map((_, i) => (
+                    <button
+                      type="button"
                       key={i}
-                      className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${activeImageIndex === i ? "w-4 bg-pink-500" : "w-1.5 bg-white/80"}`}
+                      aria-label={`View image ${i + 1}`}
+                      onClick={() => {
+                        setActiveImageIndex(i);
+                        if (sliderTrackRef.current) {
+                          sliderTrackRef.current.scrollTo({
+                            left: i * sliderTrackRef.current.clientWidth,
+                            behavior: "smooth",
+                          });
+                        }
+                      }}
+                      className={`h-1.5 rounded-full transition-all duration-300 shadow-sm cursor-pointer ${activeImageIndex === i ? "w-4 bg-pink-500" : "w-1.5 bg-slate-300/90"}`}
                     />
                   ))}
                 </div>
               )}
 
               {/* Floating rating badge */}
-              <div className="absolute top-3 left-3 bg-slate-900/90 text-white font-extrabold text-[10px] py-1 px-2.5 rounded-lg flex items-center gap-1 backdrop-blur-xs z-10 pointer-events-none">
+              <div className="absolute top-3 left-3 bg-slate-900/90 text-white font-extrabold text-[10px] py-1 px-2.5 rounded-lg flex items-center gap-1 z-10 pointer-events-none">
                 <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
                 <span>{product.rating} Star</span>
               </div>
@@ -402,7 +478,7 @@ export default function ProductDetailPage({
               {onToggleWishlist && (
                 <button
                   onClick={() => onToggleWishlist(product.id)}
-                  className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-white text-slate-800 rounded-full shadow-md backdrop-blur transition-all z-10"
+                  className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-md transition-all z-10"
                 >
                   <Heart
                     className={`w-5 h-5 ${wishlistIds.includes(product.id) ? "fill-pink-500 text-pink-500" : "text-slate-400 hover:text-pink-500"}`}
@@ -410,6 +486,9 @@ export default function ProductDetailPage({
                 </button>
               )}
             </div>
+            {productImages.length > 1 && (
+              <ScrollLeftHint className="-mt-1" />
+            )}
           </div>
 
           {/* Column 2: Customizer Details */}
@@ -787,16 +866,20 @@ export default function ProductDetailPage({
                   className="bg-white rounded-2xl p-2.5 border border-slate-100 hover:border-pink-300 hover:shadow-xs transition-all duration-300 cursor-pointer flex flex-col justify-between group active:scale-95 select-none"
                 >
                   <div className="space-y-1.5">
-                    <div className="aspect-square w-full rounded-xl overflow-hidden bg-slate-50 relative border border-slate-200/50">
+                    <div className="aspect-square w-full rounded-xl overflow-hidden bg-slate-50 relative border border-slate-200/50 ios-img-frame">
                       <img
-                        src={addon.image}
+                        src={addon.image || "/logo.png"}
                         alt={addon.name}
                         referrerPolicy="no-referrer"
+                        decoding="async"
+                        draggable={false}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "/logo.png";
+                          const img = e.currentTarget;
+                          if (img.dataset.fallbackApplied) return;
+                          img.dataset.fallbackApplied = "1";
+                          img.src = "/logo.png";
                         }}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform duration-300"
                       />
                       <span className="absolute top-1 right-1 bg-slate-900/85 text-[8.5px] font-black text-amber-500 px-1.5 py-0.5 rounded-md flex items-center">
                         ★ {addon.rating}

@@ -34,6 +34,7 @@ export interface Product {
   allowedWeights?: string[]; // E.g. ["0.5 Kg", "1.0 Kg"]
   addonProductIds?: string[]; // IDs of specific coupons or accessory items to recommend
   adminNote?: string; // Admin delivery note displayed in product catalog and checkout
+  isHidden?: boolean; // When true, product is unlisted/hidden from storefront
 }
 
 export interface CartItem {
@@ -592,6 +593,8 @@ export interface StoreConfig {
   fathersDayLayout?: "grid" | "slider";
   xmasDayLayout?: "grid" | "slider";
   homepageSectionsOrder?: string[];
+  manualClosed?: boolean;
+  customStoreClosedMessage?: string;
 }
 
 export interface DeliveryAgent {

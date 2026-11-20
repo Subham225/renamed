@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Check, Star, Truck, Zap, Moon, Sparkles, Upload } from 'lucide-react';
 import { Product, CartItem, getWeightPrice, getEgglessOffset, compressImageFile, isBentoCakeProduct, sortWeights } from '../types';
 import { ACCESSORY_ADDONS } from '../data';
+import HorizontalScrollRow from './HorizontalScrollRow';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -189,12 +190,20 @@ export default function ProductDetailModal({
           <div className="grid grid-cols-1 md:grid-cols-2">
             {/* Visual Column */}
             <div className="relative bg-slate-50 p-6 flex flex-col justify-center items-center">
-              <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-inner border border-slate-200">
+              <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-inner border border-slate-200 bg-white ios-img-frame">
                 <img
-                  src={product.image}
+                  src={product.image || "/logo.png"}
                   alt={product.name}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain bg-white object-center"
+                  decoding="async"
+                  draggable={false}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (img.dataset.fallbackApplied) return;
+                    img.dataset.fallbackApplied = "1";
+                    img.src = "/logo.png";
+                  }}
+                  className="absolute inset-0 w-full h-full object-contain bg-white object-center block"
                 />
               </div>
               <div className="w-full mt-4 bg-white/80 border border-slate-100 p-3 rounded-lg flex items-center justify-between">
@@ -408,7 +417,11 @@ export default function ProductDetailModal({
                       </span>
                     </div>
                     
-                    <div className="flex overflow-x-auto gap-3 pb-2 pt-1 -mx-2 px-2 scrollbar-thin snap-x snap-mandatory">
+                    <HorizontalScrollRow
+                      className="flex overflow-x-auto gap-3 pb-2 pt-1 -mx-2 px-2 scrollbar-thin snap-x snap-mandatory"
+                      hintClassName="mt-0"
+                      arrowSize="xs"
+                    >
                       {availableAddons.map((addon) => {
                         const isSelected = selectedAddonIds.includes(addon.id);
                         return (
@@ -427,11 +440,14 @@ export default function ProductDetailModal({
                                 : 'border-slate-200 bg-white hover:border-slate-300'
                             }`}
                           >
-                            <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-slate-50 mb-1.5 border border-slate-100">
+                            <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-slate-50 mb-1.5 border border-slate-100 ios-img-frame">
                               <img 
-                                src={addon.image} 
+                                src={addon.image || "/logo.png"} 
                                 alt={addon.name} 
-                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                                decoding="async"
+                                draggable={false}
+                                className="absolute inset-0 w-full h-full object-cover object-center block"
                               />
                               {isSelected && (
                                 <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
@@ -455,7 +471,7 @@ export default function ProductDetailModal({
                           </div>
                         );
                       })}
-                    </div>
+                    </HorizontalScrollRow>
                   </div>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import { Gift, Zap, Percent, Star, ChevronRight, User } from 'lucide-react';
 import { Product } from '../types';
+import HorizontalScrollRow from './HorizontalScrollRow';
 
 interface SpecialOffersProps {
   products: Product[];
@@ -42,10 +43,12 @@ export default function SpecialOffers({ products, onSelectProduct, onApplyPromoC
             <Percent className="w-4 h-4 text-pink-600 animate-pulse" />
             Active Gifting Offers & Promo Codes
           </h3>
-          <span className="text-[10px] text-pink-600 font-extrabold tracking-wider uppercase">Swipe Left</span>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-3 snap-x no-scrollbar">
+        <HorizontalScrollRow
+          className="flex gap-4 overflow-x-auto pb-3 snap-x no-scrollbar"
+          hintClassName="-mt-2"
+        >
           {offers.map((offer) => (
             <div
               key={offer.code}
@@ -78,7 +81,7 @@ export default function SpecialOffers({ products, onSelectProduct, onApplyPromoC
               </div>
             </div>
           ))}
-        </div>
+        </HorizontalScrollRow>
       </div>
 
       {/* 🎂 FATHER'S DAY CAKES & COMBOS CAROUSEL */}
@@ -99,7 +102,10 @@ export default function SpecialOffers({ products, onSelectProduct, onApplyPromoC
         </div>
 
         {/* Scroll cards container */}
-        <div className="flex gap-4 overflow-x-auto pb-4 snap-x no-scrollbar">
+        <HorizontalScrollRow
+          className="flex gap-4 overflow-x-auto pb-4 snap-x no-scrollbar"
+          hintClassName="-mt-2"
+        >
           {fathersDayProducts.map((p) => (
             <div
               id={`fathers-day-item-${p.id}`}
@@ -107,16 +113,25 @@ export default function SpecialOffers({ products, onSelectProduct, onApplyPromoC
               className="flex-shrink-0 w-[210px] sm:w-[245px] bg-white border border-slate-100 rounded-2.5xl overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 snap-start text-left flex flex-col justify-between"
             >
               {/* Product Visual wrapper */}
-              <div className="relative aspect-[4/3] bg-slate-50 overflow-hidden">
+              <div className="relative aspect-[4/3] w-full bg-slate-50 overflow-hidden ios-img-frame">
                 <span className="absolute top-2.5 left-2.5 z-10 bg-indigo-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm">
                   Father's Day Special
                 </span>
                 
                 <img
-                  src={p.image}
+                  src={p.image || "/logo.png"}
                   alt={p.name}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-500"
+                  decoding="async"
+                  draggable={false}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.dataset.fallbackApplied) {
+                      img.dataset.fallbackApplied = "1";
+                      img.src = "/logo.png";
+                    }
+                  }}
+                  className="absolute inset-0 w-full h-full object-cover object-center block md:hover:scale-105 transition-transform duration-500"
                 />
 
                 {/* Rating overlay */}
@@ -152,7 +167,7 @@ export default function SpecialOffers({ products, onSelectProduct, onApplyPromoC
                   <button
                     id={`fathers-day-btn-${p.id}`}
                     onClick={() => onSelectProduct(p)}
-                    className="w-full py-1.5 bg-indigo-900 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all hover:scale-102 active:scale-98 shadow-sm cursor-pointer text-center"
+                    className="w-full py-1.5 bg-indigo-900 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all md:hover:scale-102 active:scale-98 shadow-sm cursor-pointer text-center"
                   >
                     Personalise & Order
                   </button>
@@ -160,7 +175,7 @@ export default function SpecialOffers({ products, onSelectProduct, onApplyPromoC
               </div>
             </div>
           ))}
-        </div>
+        </HorizontalScrollRow>
       </div>
       
     </div>

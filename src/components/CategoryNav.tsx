@@ -1,5 +1,6 @@
 import { Gift, Cake, Flower, Leaf, Smile, Sparkles, Heart, Star, Award } from 'lucide-react';
 import { Category, CategoryID } from '../types';
+import HorizontalScrollRow from './HorizontalScrollRow';
 
 interface CategoryNavProps {
   categories: Category[];
@@ -45,53 +46,59 @@ export default function CategoryNav({
   onSelectCategory,
 }: CategoryNavProps) {
   return (
-    <div className="bg-white py-3.5 border-b border-slate-100 overflow-x-auto scrollbar-none">
-      <div className="max-w-7xl mx-auto px-4 flex items-center gap-3 md:justify-center min-w-max">
-        {/* All Products Tab */}
-        <button
-          id="category-tab-all"
-          onClick={() => onSelectCategory(null)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
-            selectedCategory === null
-              ? 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-100'
-              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <span>✨ All Offers</span>
-        </button>
+    <div className="bg-white py-3.5 border-b border-slate-100">
+      <HorizontalScrollRow
+        className="overflow-x-auto scrollbar-none"
+        hintClassName="max-w-7xl mx-auto px-4 pt-1.5 lg:hidden"
+        arrowSize="xs"
+      >
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-3 md:justify-center min-w-max">
+          {/* All Products Tab */}
+          <button
+            id="category-tab-all"
+            onClick={() => onSelectCategory(null)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+              selectedCategory === null
+                ? 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-100'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <span>✨ All Offers</span>
+          </button>
 
-        {/* 2 Hours Delivery Virtual Tab */}
-        <button
-          id="category-tab-two-hours"
-          onClick={() => onSelectCategory('two_hours_delivery')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
-            selectedCategory === 'two_hours_delivery'
-              ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100'
-              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <span>🚀 2 Hours Delivery</span>
-        </button>
+          {/* 2 Hours Delivery Virtual Tab */}
+          <button
+            id="category-tab-two-hours"
+            onClick={() => onSelectCategory('two_hours_delivery')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+              selectedCategory === 'two_hours_delivery'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <span>🚀 2 Hours Delivery</span>
+          </button>
 
-        {categories.map((cat) => {
-          const isSelected = selectedCategory === cat.id;
-          return (
-            <button
-              id={`category-tab-${cat.id}`}
-              key={cat.id}
-              onClick={() => onSelectCategory(cat.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
-                isSelected
-                  ? 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-100'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {getCategoryIcon(cat.id)}
-              <span>{cat.name}</span>
-            </button>
-          );
-        })}
-      </div>
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <button
+                id={`category-tab-${cat.id}`}
+                key={cat.id}
+                onClick={() => onSelectCategory(cat.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-100'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {getCategoryIcon(cat.id)}
+                <span>{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </HorizontalScrollRow>
     </div>
   );
 }

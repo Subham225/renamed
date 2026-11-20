@@ -1,38 +1,30 @@
-// Store Settings & Operating Hours (12:00 AM to 8:00 PM) with Admin Manual Override
+// Store Settings & Operating Hours (12:00 AM to 8:00 PM) with Admin Manual Override synced via Firestore
+import { StoreConfig } from "../types";
 
 export interface StoreSettings {
   manualClosed: boolean;
   customMessage?: string;
 }
 
-export function getStoreSettings(): StoreSettings {
-  try {
-    const manualClosed = localStorage.getItem('rocx_store_manual_closed') === 'true';
-    const customMessage = localStorage.getItem('rocx_store_custom_message') || '';
-    return { manualClosed, customMessage };
-  } catch (e) {
-    return { manualClosed: false };
+export function getStoreSettings(storeConfig?: StoreConfig | null): StoreSettings {
+  if (storeConfig) {
+    return {
+      manualClosed: !!storeConfig.manualClosed,
+      customMessage: storeConfig.customStoreClosedMessage || "",
+    };
   }
+  return { manualClosed: false, customMessage: "" };
 }
 
-export function setStoreSettings(manualClosed: boolean, customMessage?: string) {
-  try {
-    localStorage.setItem('rocx_store_manual_closed', manualClosed ? 'true' : 'false');
-    if (customMessage !== undefined) {
-      localStorage.setItem('rocx_store_custom_message', customMessage);
-    }
-  } catch (e) {
-    console.error("Error saving store settings:", e);
-  }
-}
+export function isStoreOpenNow(storeConfig?: StoreConfig | null): { isOpen: boolean; reason: string } {
+  const settings = getStoreSettings(storeConfig);
 
-export function isStoreOpenNow(): { isOpen: boolean; reason: string } {
-  const settings = getStoreSettings();
-  
   if (settings.manualClosed) {
-    return { 
-      isOpen: false, 
-      reason: settings.customMessage || 'Store is temporarily closed by Admin. Online ordering and payments are paused.' 
+    return {
+      isOpen: false,
+      reason:
+        settings.customMessage ||
+        "Store is temporarily closed by Admin. Online ordering and payments are paused.",
     };
   }
 
@@ -46,11 +38,12 @@ export function isStoreOpenNow(): { isOpen: boolean; reason: string } {
   const closeMinutes = 20 * 60; // 8:00 PM (20:00)
 
   if (totalMinutes >= openMinutes && totalMinutes < closeMinutes) {
-    return { isOpen: true, reason: 'Store is open (12:00 AM - 8:00 PM).' };
+    return { isOpen: true, reason: "Store is open (12:00 AM - 8:00 PM)." };
   } else {
-    return { 
-      isOpen: false, 
-      reason: 'Store is currently closed. Ordering and payments are available only between 12:00 AM and 8:00 PM.' 
+    return {
+      isOpen: false,
+      reason:
+        "Store is currently closed. Ordering and payments are available only between 12:00 AM and 8:00 PM.",
     };
   }
 }

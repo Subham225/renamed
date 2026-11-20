@@ -26,7 +26,7 @@ export function isEmailAlreadySent(orderId: string): boolean {
  */
 export async function sendOrderEmailNotification(order: {
   id: string;
-  items: { name: string; quantity: number; options?: string; productImage?: string; photoUrl?: string }[];
+  items: { id?: string; name: string; quantity: number; price?: number; unitPrice?: number; lineTotal?: number; options?: string; productImage?: string; photoUrl?: string }[];
   recipientName: string;
   recipientPhone: string;
   customerName?: string;
@@ -38,6 +38,12 @@ export async function sendOrderEmailNotification(order: {
   city?: string;
   paymentMode: string;
   paymentStatus?: string;
+  itemsSubtotal?: number;
+  deliveryFee?: number;
+  couponCode?: string;
+  couponDiscountType?: string;
+  couponDiscountValue?: number;
+  discountAmount?: number;
   total: number;
   date: string;
   status: string;

@@ -58,42 +58,52 @@ export default function CakeGallery() {
         {/* ROW 1: 2-COLUMN BIG FEATURED PICTURES (Equal width wide cards - now super compact height) */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           {/* Card 1 */}
-          <motion.div
-            whileHover={{ scale: 1.012, y: -1 }}
+          <div
             onClick={() => setSelectedIdx(0)}
-            className="group rounded-2xl border border-slate-100 bg-white p-1.5 cursor-pointer transition-all duration-300 shadow-3xs hover:shadow-sm overflow-hidden flex items-center justify-center"
+            className="group rounded-2xl border border-slate-100 bg-white p-1.5 cursor-pointer transition-all duration-300 shadow-3xs hover:shadow-sm md:hover:-translate-y-0.5 overflow-hidden flex items-center justify-center"
           >
-            <div className="relative h-[125px] xs:h-[160px] sm:h-[195px] md:h-[230px] w-full overflow-hidden rounded-xl bg-slate-50 border border-slate-100/50">
+            <div className="relative h-[125px] xs:h-[160px] sm:h-[195px] md:h-[230px] w-full overflow-hidden rounded-xl bg-slate-50 border border-slate-100/50 ios-img-frame">
               <img
-                src={gridPics[0]}
+                src={gridPics[0] || "/logo.png"}
                 alt="Lookbook 1"
                 referrerPolicy="no-referrer"
+                decoding="async"
+                draggable={false}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80';
+                  const img = e.currentTarget;
+                  if (!img.dataset.fallbackApplied) {
+                    img.dataset.fallbackApplied = '1';
+                    img.src = 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80';
+                  }
                 }}
-                className="w-full h-full object-cover group-hover:scale-103 duration-500 transition-transform"
+                className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-103 duration-500 transition-transform"
               />
             </div>
-          </motion.div>
+          </div>
 
           {/* Card 2 */}
-          <motion.div
-            whileHover={{ scale: 1.012, y: -1 }}
+          <div
             onClick={() => setSelectedIdx(1)}
-            className="group rounded-2xl border border-slate-100 bg-white p-1.5 cursor-pointer transition-all duration-300 shadow-3xs hover:shadow-sm overflow-hidden flex items-center justify-center"
+            className="group rounded-2xl border border-slate-100 bg-white p-1.5 cursor-pointer transition-all duration-300 shadow-3xs hover:shadow-sm md:hover:-translate-y-0.5 overflow-hidden flex items-center justify-center"
           >
-            <div className="relative h-[125px] xs:h-[160px] sm:h-[195px] md:h-[230px] w-full overflow-hidden rounded-xl bg-slate-50 border border-slate-100/50">
+            <div className="relative h-[125px] xs:h-[160px] sm:h-[195px] md:h-[230px] w-full overflow-hidden rounded-xl bg-slate-50 border border-slate-100/50 ios-img-frame">
               <img
-                src={gridPics[1]}
+                src={gridPics[1] || "/logo.png"}
                 alt="Lookbook 2"
                 referrerPolicy="no-referrer"
+                decoding="async"
+                draggable={false}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=600&q=80';
+                  const img = e.currentTarget;
+                  if (!img.dataset.fallbackApplied) {
+                    img.dataset.fallbackApplied = '1';
+                    img.src = 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=600&q=80';
+                  }
                 }}
-                className="w-full h-full object-cover group-hover:scale-103 duration-500 transition-transform"
+                className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-103 duration-500 transition-transform"
               />
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* ROW 2: 3-COLUMN MASONRY BENTO GRID FOR THE REMAINING 6 PICTURES (Tight sizes to fit single screen) */}
@@ -204,22 +214,27 @@ function BentoImageCard({ imageUrl, size, onClick }: BentoImageCardProps) {
   }[size];
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.015, y: -1 }}
+    <div
       onClick={onClick}
-      className="group rounded-2xl border border-slate-100 bg-white p-1.5 cursor-pointer transition-all duration-300 shadow-3xs hover:shadow-xs flex flex-col items-center justify-center"
+      className="group rounded-2xl border border-slate-100 bg-white p-1.5 cursor-pointer transition-all duration-300 shadow-3xs hover:shadow-xs md:hover:-translate-y-0.5 flex flex-col items-center justify-center"
     >
-      <div className={`relative ${heightClasses} w-full overflow-hidden rounded-xl bg-slate-50 border border-slate-100/50`}>
+      <div className={`relative ${heightClasses} w-full overflow-hidden rounded-xl bg-slate-50 border border-slate-100/50 ios-img-frame`}>
         <img
-          src={imageUrl}
+          src={imageUrl || "/logo.png"}
           alt="Curated lookbook gallery picture"
           referrerPolicy="no-referrer"
+          decoding="async"
+          draggable={false}
           onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1533782654613-826a072dd6f3?auto=format&fit=crop&w=600&q=80';
+            const img = e.currentTarget;
+            if (!img.dataset.fallbackApplied) {
+              img.dataset.fallbackApplied = '1';
+              img.src = 'https://images.unsplash.com/photo-1533782654613-826a072dd6f3?auto=format&fit=crop&w=600&q=80';
+            }
           }}
-          className="w-full h-full object-cover group-hover:scale-103 duration-500 transition-transform"
+          className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-103 duration-500 transition-transform"
         />
       </div>
-    </motion.div>
+    </div>
   );
 }

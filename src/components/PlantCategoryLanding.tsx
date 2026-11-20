@@ -225,11 +225,21 @@ export default function PlantCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer text-center group flex flex-col justify-between"
             >
-              <div className="w-full aspect-4/3 overflow-hidden bg-emerald-50/30 p-2">
+              <div className="relative w-full aspect-4/3 overflow-hidden bg-emerald-50/30 p-2 ios-img-frame">
                 <img
-                  src={item.image}
+                  src={item.image || "/logo.png"}
                   alt={item.name}
-                  className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.dataset.fallbackApplied) {
+                      img.dataset.fallbackApplied = "1";
+                      img.src = "/logo.png";
+                    }
+                  }}
+                  className="w-full h-full object-contain block md:group-hover:scale-108 transition-transform duration-300"
                 />
               </div>
               <div className="p-2.5 bg-white border-t border-slate-100">
@@ -303,11 +313,21 @@ export default function PlantCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="flex flex-col items-center text-center cursor-pointer group bg-white p-3 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all"
             >
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-slate-100 group-hover:border-emerald-500 transition-colors shadow-2xs bg-white">
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-slate-100 group-hover:border-emerald-500 transition-colors shadow-2xs bg-white ios-img-frame">
                 <img
-                  src={item.image}
+                  src={item.image || "/logo.png"}
                   alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.dataset.fallbackApplied) {
+                      img.dataset.fallbackApplied = "1";
+                      img.src = "/logo.png";
+                    }
+                  }}
+                  className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
               <span className="text-xs sm:text-sm font-black text-slate-800 mt-2.5 group-hover:text-emerald-700">
@@ -330,11 +350,21 @@ export default function PlantCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xs hover:shadow-md transition-all cursor-pointer text-center group flex flex-col justify-between"
             >
-              <div className="w-full aspect-4/3 overflow-hidden bg-slate-50 p-2">
+              <div className="relative w-full aspect-4/3 overflow-hidden bg-slate-50 p-2 ios-img-frame">
                 <img
-                  src={item.image}
+                  src={item.image || "/logo.png"}
                   alt={item.name}
-                  className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.dataset.fallbackApplied) {
+                      img.dataset.fallbackApplied = "1";
+                      img.src = "/logo.png";
+                    }
+                  }}
+                  className="w-full h-full object-contain block md:group-hover:scale-108 transition-transform duration-300"
                 />
               </div>
               <div className="p-3 bg-white border-t border-slate-100">
@@ -359,11 +389,21 @@ export default function PlantCategoryLanding({
               onClick={() => handleCategoryClick(item.id)}
               className="flex flex-col items-center text-center cursor-pointer group"
             >
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-slate-200 p-1 group-hover:border-emerald-500 transition-colors bg-white shadow-2xs">
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-slate-200 p-1 group-hover:border-emerald-500 transition-colors bg-white shadow-2xs ios-img-frame">
                 <img
-                  src={item.image}
+                  src={item.image || "/logo.png"}
                   alt={item.name}
-                  className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.dataset.fallbackApplied) {
+                      img.dataset.fallbackApplied = "1";
+                      img.src = "/logo.png";
+                    }
+                  }}
+                  className="w-full h-full object-cover rounded-full block md:group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
               <span className="text-xs font-extrabold text-slate-800 mt-2 group-hover:text-emerald-700 transition-colors">
@@ -419,16 +459,22 @@ export default function PlantCategoryLanding({
                   onClick={() => onSelectProduct(prod)}
                   className="bg-white rounded-2xl overflow-hidden border border-slate-200/90 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between cursor-pointer text-left"
                 >
-                  <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0">
+                  <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0 ios-img-frame">
                     <img
-                      src={prod.image}
+                      src={prod.image || "/logo.png"}
                       alt={prod.name}
                       referrerPolicy="no-referrer"
+                      decoding="async"
+                      draggable={false}
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80";
+                        const img = e.currentTarget;
+                        if (!img.dataset.fallbackApplied) {
+                          img.dataset.fallbackApplied = "1";
+                          img.src =
+                            "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&q=80";
+                        }
                       }}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
 

@@ -4,6 +4,7 @@ import CakeCategoryLanding from "./CakeCategoryLanding";
 import FlowerCategoryLanding from "./FlowerCategoryLanding";
 import BirthdayCategoryLanding from "./BirthdayCategoryLanding";
 import PlantCategoryLanding from "./PlantCategoryLanding";
+import HorizontalScrollRow from "./HorizontalScrollRow";
 import {
   Star,
   Zap,
@@ -450,15 +451,20 @@ export default function CategoryDetailPage({
         onClick={() => onSelectProduct(prod)}
         className="bg-white rounded-2xl overflow-hidden border border-slate-100/90 hover:border-slate-200 hover:shadow-md transition-all duration-300 group flex flex-col justify-between cursor-pointer text-left h-full"
       >
-        <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0">
+        <div className="relative aspect-square w-full overflow-hidden bg-slate-50 shrink-0 ios-img-frame">
           <img
-            src={prod.image}
+            src={prod.image || "/logo.png"}
             alt={prod.name}
             referrerPolicy="no-referrer"
+            decoding="async"
+            draggable={false}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "/logo.png";
+              const imgEl = e.target as HTMLImageElement;
+              if (imgEl.dataset.fallbackApplied) return;
+              imgEl.dataset.fallbackApplied = "1";
+              imgEl.src = "/logo.png";
             }}
-            className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-300"
+            className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-103 transition-transform duration-300"
           />
           {discount > 0 && (
             <span className="absolute top-2 left-2 bg-red-600 text-white text-[8px] sm:text-[10px] font-black tracking-wider px-2 py-0.5 rounded-md uppercase shadow-sm">
@@ -525,7 +531,10 @@ export default function CategoryDetailPage({
             {subtitle && <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">{subtitle}</p>}
           </div>
         </div>
-        <div className="overflow-x-auto pb-4 custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+        <HorizontalScrollRow
+          className="overflow-x-auto pb-2 custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0"
+          hintClassName="sm:hidden"
+        >
           <div className="flex gap-4 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-6 min-w-max sm:min-w-0">
             {items.slice(0, 8).map(prod => (
               <div key={prod.id} className="w-[200px] sm:w-auto h-full">
@@ -533,7 +542,7 @@ export default function CategoryDetailPage({
               </div>
             ))}
           </div>
-        </div>
+        </HorizontalScrollRow>
       </div>
     );
   };
@@ -561,7 +570,10 @@ export default function CategoryDetailPage({
         </div>
 
         {/* Products */}
-        <div className="overflow-x-auto pb-4 custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+        <HorizontalScrollRow
+          className="overflow-x-auto pb-2 custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0"
+          hintClassName="sm:hidden"
+        >
           <div className="flex gap-4 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-6 min-w-max sm:min-w-0">
             {items.slice(0, 8).map(prod => (
               <div key={prod.id} className="w-[200px] sm:w-auto h-full">
@@ -569,7 +581,7 @@ export default function CategoryDetailPage({
               </div>
             ))}
           </div>
-        </div>
+        </HorizontalScrollRow>
       </div>
     );
   };
@@ -696,12 +708,15 @@ export default function CategoryDetailPage({
                     onClick={() => onSelectCategory?.(sub.id as CategoryID)}
                     className="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col"
                   >
-                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-50 mb-3 relative">
+                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-50 mb-3 relative ios-img-frame">
                       {sub.image ? (
                         <img 
                           src={sub.image} 
                           alt={sub.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          referrerPolicy="no-referrer"
+                          decoding="async"
+                          draggable={false}
+                          className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-slate-100">
@@ -734,13 +749,15 @@ export default function CategoryDetailPage({
                 onClick={() => onSelectCategory?.(sub.id as CategoryID)}
                 className="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col"
               >
-                <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-50 mb-3 relative">
+                <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-50 mb-3 relative ios-img-frame">
                   {sub.image ? (
                     <img 
                       src={sub.image} 
                       alt={sub.name}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform duration-500"
                       referrerPolicy="no-referrer"
+                      decoding="async"
+                      draggable={false}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300">

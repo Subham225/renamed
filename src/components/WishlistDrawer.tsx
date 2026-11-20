@@ -53,8 +53,22 @@ export default function WishlistDrawer({ isOpen, onClose, products, wishlistIds,
             <div className="space-y-4">
               {wishlistedProducts.map(prod => (
                 <div key={prod.id} className="bg-white rounded-2xl p-3 flex gap-4 border border-slate-100 shadow-sm relative">
-                  <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-100">
-                    <img src={prod.image} className="w-full h-full object-cover" alt={prod.name} />
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-100 ios-img-frame">
+                    <img
+                      src={prod.image || "/logo.png"}
+                      referrerPolicy="no-referrer"
+                      decoding="async"
+                      draggable={false}
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        if (!img.dataset.fallbackApplied) {
+                          img.dataset.fallbackApplied = "1";
+                          img.src = "/logo.png";
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover object-center block"
+                      alt={prod.name}
+                    />
                   </div>
                   <div className="flex-1 flex flex-col justify-between py-1">
                     <div>

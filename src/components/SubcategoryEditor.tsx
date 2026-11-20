@@ -274,7 +274,7 @@ export default function SubcategoryEditor({
                           key={pId}
                           className="inline-flex items-center gap-1 text-[10px] bg-pink-100 text-pink-800 font-bold px-2 py-0.5 rounded-lg border border-pink-200"
                         >
-                          {pObj ? pObj.name : pId}
+                          {pObj ? `${pObj.name}${pObj.isHidden ? " (Hidden)" : ""}` : pId}
                           <button
                             type="button"
                             onClick={() => {
@@ -306,7 +306,14 @@ export default function SubcategoryEditor({
                           >
                             <div className="flex items-center gap-2 truncate">
                               <img src={p.image} className="w-6 h-6 object-cover rounded-md" alt="" />
-                              <span className="font-bold text-[11px] text-slate-800 truncate">{p.name}</span>
+                              <span className="font-bold text-[11px] text-slate-800 truncate">
+                                {p.name}
+                                {p.isHidden && (
+                                  <span className="ml-1 text-[9px] text-amber-700 font-black uppercase">
+                                    (Hidden)
+                                  </span>
+                                )}
+                              </span>
                             </div>
                             <input
                               type="checkbox"

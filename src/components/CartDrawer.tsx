@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import HorizontalScrollRow from "./HorizontalScrollRow";
 import {
   X,
   Trash2,
@@ -194,7 +195,12 @@ export default function CartDrawer({
             🛒 Running Total: ₹{finalTotalAmount}
           </span>
         </div>
-        <div className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-pink-600">
+        <HorizontalScrollRow
+          className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-pink-600"
+          tone="dark"
+          hintClassName="mt-0"
+          arrowSize="xs"
+        >
           {cartItems.map((item) => (
             <div
               key={item.id}
@@ -248,7 +254,7 @@ export default function CartDrawer({
               </div>
             </div>
           ))}
-        </div>
+        </HorizontalScrollRow>
         {cartItems.some((item) => item.product.adminNote) && (
           <div className="bg-pink-950/80 border border-pink-900 p-2.5 rounded-xl space-y-1 mt-1 text-pink-100 text-left">
             <span className="text-[8.5px] font-black uppercase tracking-wider block text-pink-300">
@@ -642,16 +648,23 @@ export default function CartDrawer({
     const finalOrderObject = {
       id: newOrderId,
       deliveryOtp: randomOtpStr,
-      items: cartItems.map((item) => ({
-        id: item.product.id,
-        name: item.product.name,
-        quantity: item.quantity,
-        price: calculateItemPrice(item),
-        photoUrl: item.uploadedPhotoUrl || undefined,
-        productImage: item.product.image || (item.product.images && item.product.images[0]) || "",
-        options:
-          `${item.selectedWeight ? item.selectedWeight : ""} ${item.isEggless ? "Eggless" : ""} ${item.selectedPot ? item.selectedPot : ""} ${item.customMessage ? "Msg: " + item.customMessage : ""} ${item.customName ? "Name: " + item.customName : ""} ${item.uploadedPhotoUrl ? "[Attached Photo]" : ""}`.trim(),
-      })),
+      items: cartItems.map((item) => {
+        const unitPrice = calculateItemPrice(item);
+        const qty = item.quantity || 1;
+        return {
+          id: item.product.id,
+          name: item.product.name,
+          quantity: qty,
+          price: unitPrice,
+          unitPrice: unitPrice,
+          lineTotal: unitPrice * qty,
+          originalPrice: item.product.originalPrice,
+          photoUrl: item.uploadedPhotoUrl || undefined,
+          productImage: item.product.image || (item.product.images && item.product.images[0]) || "",
+          options:
+            `${item.selectedWeight ? item.selectedWeight : ""} ${item.isEggless ? "Eggless" : ""} ${item.selectedPot ? item.selectedPot : ""} ${item.customMessage ? "Msg: " + item.customMessage : ""} ${item.customName ? "Name: " + item.customName : ""} ${item.uploadedPhotoUrl ? "[Attached Photo]" : ""}`.trim(),
+        };
+      }),
       customerName: formData.customerName,
       customerPhone: formData.customerPhone,
       customerEmail:
@@ -667,6 +680,10 @@ export default function CartDrawer({
       paymentMode: formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery" ? "COD" : (finalTotalAmount === 0 ? "Free Test Order" : "Online Payment"),
       paymentStatus: formData.paymentMode === "COD" || formData.paymentMode === "Cash on Delivery" ? "COD" : (finalTotalAmount === 0 || formData.paymentMode === "Online Payment" ? "Paid and Verified" : "COD"),
       itemsSubtotal: itemsSubtotal,
+      couponCode: isCouponApplied && activeCouponObject ? activeCouponObject.code : undefined,
+      couponDiscountType: isCouponApplied && activeCouponObject ? activeCouponObject.discountType : undefined,
+      couponDiscountValue: isCouponApplied && activeCouponObject ? activeCouponObject.discountValue : undefined,
+      discountAmount: discountAmount > 0 ? discountAmount : 0,
       total: finalTotalAmount,
       deliveryFee: deliverySubtotal,
       status: "Waiting For Approval From Admin",
@@ -955,12 +972,14 @@ export default function CartDrawer({
                               key={item.id}
                               className="flex gap-3 bg-slate-50 border border-slate-100 p-3 rounded-2xl relative"
                             >
-                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 relative">
+                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 relative ios-img-frame">
                                 <img
-                                  src={item.product.image}
+                                  src={item.product.image || "/logo.png"}
                                   alt={item.product.name}
                                   referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover object-center"
+                                  decoding="async"
+                                  draggable={false}
+                                  className="absolute inset-0 w-full h-full object-cover object-center block"
                                 />
                                 {item.uploadedPhotoUrl && (
                                   <div
@@ -1604,6 +1623,17 @@ export default function CartDrawer({
                         <span>Items Subtotal</span>
                         <span className="text-slate-800">₹{itemsSubtotal.toFixed(2)}</span>
                       </div>
+                      {discountAmount > 0 && (
+                        <div className="flex justify-between items-center text-[11px] text-emerald-700 font-bold">
+                          <span>
+                            Discount {activeCouponObject?.code ? `(${activeCouponObject.code})` : ""}
+                            {activeCouponObject
+                              ? ` • ${activeCouponObject.discountType === "percentage" ? `${activeCouponObject.discountValue}% Off` : `Flat ₹${activeCouponObject.discountValue} Off`}`
+                              : ""}
+                          </span>
+                          <span>- ₹{discountAmount.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center text-[11px] text-slate-500 font-bold">
                         <span>Delivery Fee</span>
                         <span className="text-slate-800">{deliverySubtotal === 0 ? "Free" : `₹${deliverySubtotal.toFixed(2)}`}</span>
@@ -1866,7 +1896,11 @@ export default function CartDrawer({
                           </span>
                         </div>
 
-                        <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin snap-x snap-mandatory">
+                        <HorizontalScrollRow
+                          className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin snap-x snap-mandatory"
+                          hintClassName="mt-0"
+                          arrowSize="xs"
+                        >
                           {recommendedAddons.map((addon) => (
                             <div
                               key={addon.id}
@@ -1909,7 +1943,7 @@ export default function CartDrawer({
                               </button>
                             </div>
                           ))}
-                        </div>
+                        </HorizontalScrollRow>
                       </div>
                     );
                   })()}
@@ -1966,7 +2000,11 @@ export default function CartDrawer({
                           <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider block font-sans">
                             Available Offers
                           </span>
-                          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin scroll-smooth pr-1">
+                          <HorizontalScrollRow
+                            className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin scroll-smooth pr-1"
+                            hintClassName="mt-0"
+                            arrowSize="xs"
+                          >
                             {coupons
                               .filter(
                                 (c) =>
@@ -2012,7 +2050,7 @@ export default function CartDrawer({
                                   </button>
                                 );
                               })}
-                          </div>
+                          </HorizontalScrollRow>
                         </div>
                       )}
                   </div>
@@ -2070,7 +2108,7 @@ export default function CartDrawer({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {!isStoreOpenNow().isOpen && (
+                      {!isStoreOpenNow(storeConfig).isOpen && (
                         <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 border-2 border-rose-300 rounded-2.5xl p-4 text-left space-y-2 shadow-xs">
                           <div className="flex items-center gap-2 text-rose-700">
                             <span className="text-lg">⚠️</span>
@@ -2079,18 +2117,20 @@ export default function CartDrawer({
                             </h4>
                           </div>
                           <p className="text-xs sm:text-sm font-extrabold text-slate-900 leading-relaxed font-sans">
-                            At this time ROCX Cakes & Gifts doesn't accept orders. Please try again between <span className="text-pink-600 font-black">12:00 AM and 8:00 PM</span>.
+                            {storeConfig?.manualClosed && storeConfig?.customStoreClosedMessage?.trim()
+                              ? storeConfig.customStoreClosedMessage
+                              : <>At this time ROCX Cakes &amp; Gifts doesn&apos;t accept orders. Please try again between <span className="text-pink-600 font-black">12:00 AM and 8:00 PM</span>.</>}
                           </p>
                         </div>
                       )}
-                      {!isStoreOpenNow().isOpen ? (
+                      {!isStoreOpenNow(storeConfig).isOpen ? (
                         <div className="w-full bg-slate-100 text-slate-400 font-black py-4 rounded-xl border border-slate-200 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-not-allowed">
                           🔒 Orders Currently Closed (12 AM - 8 PM)
                         </div>
                       ) : (
                         <button
                           onClick={() => {
-                            const storeCheck = isStoreOpenNow();
+                            const storeCheck = isStoreOpenNow(storeConfig);
                             if (!storeCheck.isOpen) {
                               return;
                             }

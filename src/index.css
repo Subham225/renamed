@@ -61,6 +61,30 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.overflow-x-auto {
+  touch-action: pan-x pan-y;
+}
+
+/* Prevent iOS Safari image flicker, rounded-corner unclipping, and sticky hover-scale glitches */
+.ios-img-frame {
+  isolation: isolate;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+img {
+  -webkit-touch-callout: none;
+}
+
+@media (hover: none) {
+  .group:hover img,
+  .group:active img {
+    transform: none !important;
+  }
+}
+
 /* Utility Classes */
 .pb-safe {
   padding-bottom: 0.5rem;
@@ -73,22 +97,27 @@ body {
 }
 
 /* Custom scrollbar hides */
-.scrollbar-none::-webkit-scrollbar {
+.scrollbar-none::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
   display: none;
 }
-.scrollbar-none {
+.scrollbar-none,
+.scrollbar-hide,
+.no-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
 
 /* Base custom interactive transitions */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-fade-in,
+.animate-fadeIn {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes slideInLeft {

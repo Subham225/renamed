@@ -27,7 +27,8 @@
         "weightPrices": { "type": "object" },
         "allowedWeights": { "type": "array", "items": { "type": "string" } },
         "addonProductIds": { "type": "array", "items": { "type": "string" } },
-        "adminNote": { "type": "string" }
+        "adminNote": { "type": "string" },
+        "isHidden": { "type": "boolean" }
       },
       "required": ["id", "name", "price", "category", "image", "description"]
     },
@@ -51,6 +52,10 @@
         "items": { "type": "array", "items": { "type": "object" } },
         "itemsSubtotal": { "type": "number" },
         "deliveryFee": { "type": "number" },
+        "couponCode": { "type": "string" },
+        "couponDiscountType": { "type": "string" },
+        "couponDiscountValue": { "type": "number" },
+        "discountAmount": { "type": "number" },
         "total": { "type": "number" },
         "deliveryOtp": { "type": "string" },
         "status": { "type": "string" },
@@ -118,7 +123,9 @@
         "deliveryZones": { "type": "array", "items": { "type": "object" } },
         "deliveryTimeSlots": { "type": "array", "items": { "type": "object" } },
         "aboutPoints": { "type": "array", "items": { "type": "string" } },
-        "aboutBgImage": { "type": "string" }
+        "aboutBgImage": { "type": "string" },
+        "manualClosed": { "type": "boolean" },
+        "customStoreClosedMessage": { "type": "string" }
       }
     }
   },

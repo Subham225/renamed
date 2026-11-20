@@ -49,8 +49,13 @@ import {
 } from "../services/dbService";
 
 interface OrderItem {
+  id?: string;
   name: string;
   quantity: number;
+  price?: number;
+  unitPrice?: number;
+  lineTotal?: number;
+  originalPrice?: number;
   options?: string;
   photoUrl?: string;
   productImage?: string;
@@ -68,7 +73,13 @@ interface Order {
   city?: string;
   landmark?: string;
   paymentMode: string;
-  paymentStatus?: "pending" | "completed";
+  paymentStatus?: "pending" | "completed" | "cod";
+  itemsSubtotal?: number;
+  deliveryFee?: number;
+  couponCode?: string;
+  couponDiscountType?: "flat" | "percentage";
+  couponDiscountValue?: number;
+  discountAmount?: number;
   total: number;
   status: string;
   estimatedDelivery?: string;
@@ -2696,6 +2707,7 @@ export default function AdminPanel({
   const [newProdAdminNote, setNewProdAdminNote] = useState("");
   const [newProdDeliveryFee, setNewProdDeliveryFee] = useState("");
   const [newProdTwoHourDelivery, setNewProdTwoHourDelivery] = useState(false);
+  const [newProdIsHidden, setNewProdIsHidden] = useState(false);
   const [newProdImgUrl, setNewProdImgUrl] = useState("");
   const [newProdGalleryUrls, setNewProdGalleryUrls] = useState("");
   const [newProdGalleryImages, setNewProdGalleryImages] = useState<string[]>(
@@ -2706,6 +2718,9 @@ export default function AdminPanel({
   );
   const [newProdAddonIds, setNewProdAddonIds] = useState<string[]>([]);
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogVisibilityFilter, setCatalogVisibilityFilter] = useState<
+    "all" | "visible" | "hidden"
+  >("all");
   const [editCustomWeightInput, setEditCustomWeightInput] = useState("");
 
   // Order search states and computed list
@@ -2879,14 +2894,35 @@ export default function AdminPanel({
     return Array.from(uniqueMap.values());
   }, [categories, storeConfig]);
 
+  // Helper to check if product is hidden
+  const isProductHiddenFlag = (p: Product) =>
+    p.isHidden === true ||
+    (p as any).hidden === true ||
+    (p as any).isVisible === false;
+
+  const catalogVisibilityCounts = useMemo(() => {
+    const hidden = products.filter((p) => isProductHiddenFlag(p)).length;
+    return {
+      all: products.length,
+      visible: products.length - hidden,
+      hidden,
+    };
+  }, [products]);
+
   // Catalog filtered view
   const filteredCatalog = useMemo(() => {
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-        p.category.toLowerCase().includes(catalogSearch.toLowerCase()),
-    );
-  }, [products, catalogSearch]);
+    const q = catalogSearch.toLowerCase();
+    return products.filter((p) => {
+      const hidden = isProductHiddenFlag(p);
+      if (catalogVisibilityFilter === "visible" && hidden) return false;
+      if (catalogVisibilityFilter === "hidden" && !hidden) return false;
+      if (!q) return true;
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.category || "").toLowerCase().includes(q)
+      );
+    });
+  }, [products, catalogSearch, catalogVisibilityFilter]);
 
   // Dynamic accessories selected/modified by the admin loaded directly from stock, including those with no main category
   const liveAccessories = useMemo(() => {
@@ -3019,14 +3055,15 @@ export default function AdminPanel({
         ? parseFloat(newProdDeliveryFee)
         : undefined,
       isTwoHourDelivery: newProdTwoHourDelivery,
-      image: newProdImgUrl || "",
+      isHidden: newProdIsHidden || undefined,
+      image: cleanImageUrl(newProdImgUrl || ""),
       images:
         newProdGalleryUrls || newProdGalleryImages.length > 0
           ? [
               ...(newProdGalleryUrls
                 ? newProdGalleryUrls
                     .split(",")
-                    .map((s) => s.trim())
+                    .map((s) => cleanImageUrl(s.trim()))
                     .filter(Boolean)
                 : []),
               ...newProdGalleryImages,
@@ -3076,6 +3113,7 @@ export default function AdminPanel({
     setNewProdAddonIds([]);
     setNewProdDeliveryFee("");
     setNewProdTwoHourDelivery(false);
+    setNewProdIsHidden(false);
     setNewProdImgUrl("");
     setNewProdGalleryUrls("");
     setNewProdGalleryImages([]);
@@ -3907,126 +3945,254 @@ export default function AdminPanel({
                               </div>
 
                               <div className="pt-2.5 border-t border-slate-100">
-                                <span className="text-[9px] text-slate-450 uppercase font-black block mb-1.5">
-                                  Purchased Cake / Combo Products
-                                </span>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[9px] text-slate-450 uppercase font-black block">
+                                    Purchased Cake / Combo Products ({order.items?.length || 0}{" "}
+                                    {(order.items?.length || 0) === 1 ? "Item" : "Items"})
+                                  </span>
+                                  {(() => {
+                                    const sumLine = (order.items || []).reduce((acc, itemRow) => {
+                                      const mp = products?.find(
+                                        (p) =>
+                                          (itemRow.id && p.id === itemRow.id) ||
+                                          p.name?.toLowerCase().trim() === itemRow.name?.toLowerCase().trim()
+                                      );
+                                      const q = Number(itemRow.quantity) || 1;
+                                      const u =
+                                        itemRow.unitPrice !== undefined
+                                          ? Number(itemRow.unitPrice)
+                                          : itemRow.price !== undefined
+                                          ? Number(itemRow.price)
+                                          : mp?.price !== undefined
+                                          ? Number(mp.price)
+                                          : 0;
+                                      const lt = itemRow.lineTotal !== undefined ? Number(itemRow.lineTotal) : u * q;
+                                      return acc + (isNaN(lt) ? 0 : lt);
+                                    }, 0);
+                                    if (sumLine <= 0) return null;
+                                    return (
+                                      <span className="text-[10px] font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                                        Items Sum: ₹{sumLine}
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                                 <div className="space-y-2">
-                                  {order.items.map((it, i) => (
-                                    <div
-                                      key={i}
-                                      className="bg-slate-50 border border-slate-150 p-2 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-slate-800 leading-snug"
-                                    >
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        {/* Catalog original picture with robust matching and fallback */}
-                                        {(() => {
-                                          const matchingProd = products?.find(
-                                            (p) =>
-                                              p.name?.toLowerCase().trim() === it.name?.toLowerCase().trim() ||
-                                              p.id === it.id
-                                          );
-                                          const displayImg =
-                                            it.productImage ||
-                                            matchingProd?.image ||
-                                            (matchingProd?.images && matchingProd.images[0]) ||
-                                            "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80";
+                                  {order.items.map((it, i) => {
+                                    const matchingProd = products?.find(
+                                      (p) =>
+                                        (it.id && p.id === it.id) ||
+                                        p.name?.toLowerCase().trim() === it.name?.toLowerCase().trim()
+                                    );
+                                    const displayImg =
+                                      it.productImage ||
+                                      matchingProd?.image ||
+                                      (matchingProd?.images && matchingProd.images[0]) ||
+                                      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80";
+                                    const qty = Number(it.quantity) || 1;
+                                    const unitPrice =
+                                      it.unitPrice !== undefined
+                                        ? Number(it.unitPrice)
+                                        : it.price !== undefined
+                                        ? Number(it.price)
+                                        : matchingProd?.price !== undefined
+                                        ? Number(matchingProd.price)
+                                        : null;
+                                    const lineTotal =
+                                      it.lineTotal !== undefined
+                                        ? Number(it.lineTotal)
+                                        : unitPrice !== null
+                                        ? unitPrice * qty
+                                        : null;
 
-                                          return (
-                                            <img
-                                              src={displayImg}
-                                              alt={it.name}
-                                              className="w-10 h-10 object-cover rounded-lg border border-slate-200 bg-white shrink-0 shadow-3xs"
-                                              onError={(e) => {
-                                                if (matchingProd?.image && (e.target as HTMLImageElement).src !== matchingProd.image) {
-                                                  (e.target as HTMLImageElement).src = matchingProd.image;
-                                                } else {
-                                                  (e.target as HTMLImageElement).src =
-                                                    "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80";
-                                                }
-                                              }}
-                                            />
-                                          );
-                                        })()}
-                                        <div className="min-w-0">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="font-mono text-[10px] bg-slate-900 text-white font-extrabold px-1.5 py-0.5 rounded">
-                                              x{it.quantity}
-                                            </span>
-                                            <strong className="text-slate-850 font-black truncate">
-                                              {it.name}
-                                            </strong>
+                                    return (
+                                      <div
+                                        key={i}
+                                        className="bg-slate-50 border border-slate-150 p-2.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-slate-800 leading-snug"
+                                      >
+                                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                          <img
+                                            src={displayImg}
+                                            alt={it.name}
+                                            className="w-10 h-10 object-cover rounded-lg border border-slate-200 bg-white shrink-0 shadow-3xs"
+                                            onError={(e) => {
+                                              const imgEl = e.target as HTMLImageElement;
+                                              if (imgEl.dataset.fallbackApplied) return;
+                                              if (matchingProd?.image && imgEl.src !== matchingProd.image) {
+                                                imgEl.src = matchingProd.image;
+                                              } else {
+                                                imgEl.dataset.fallbackApplied = "1";
+                                                imgEl.src =
+                                                  "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=150&q=80";
+                                              }
+                                            }}
+                                          />
+                                          <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-1.5">
+                                              <span className="font-mono text-[10px] bg-slate-900 text-white font-extrabold px-1.5 py-0.5 rounded shrink-0">
+                                                x{qty}
+                                              </span>
+                                              <strong className="text-slate-850 font-black truncate">
+                                                {it.name}
+                                              </strong>
+                                            </div>
+                                            {it.options && (
+                                              <p className="text-[9.5px] text-slate-500 font-mono mt-0.5 truncate max-w-sm">
+                                                ({it.options})
+                                              </p>
+                                            )}
                                           </div>
-                                          {it.options && (
-                                            <p className="text-[9.5px] text-slate-500 font-mono mt-0.5 truncate max-w-sm">
-                                              ({it.options})
-                                            </p>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 shrink-0 pl-1 sm:pl-0">
+                                          {/* Individual Product Price Breakdown */}
+                                          <div className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-right shadow-3xs">
+                                            {unitPrice !== null && lineTotal !== null ? (
+                                              <>
+                                                <div className="text-[12px] font-black text-slate-900 leading-tight">
+                                                  ₹{lineTotal}
+                                                </div>
+                                                <div className="text-[9px] font-bold text-slate-500 font-mono">
+                                                  ₹{unitPrice} × {qty}
+                                                </div>
+                                              </>
+                                            ) : (
+                                              <div className="text-[10px] font-bold text-slate-400">
+                                                Qty: {qty}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Customer custom photo attachment preview */}
+                                          {it.photoUrl && (
+                                            <div className="flex items-center gap-2 bg-pink-50 border border-pink-100 p-1.5 rounded-lg shrink-0 font-sans">
+                                              <div className="flex items-center gap-1.5">
+                                                <span className="text-[8px] font-black uppercase text-pink-700 tracking-wider">
+                                                  Customer Photo:
+                                                </span>
+                                                <img
+                                                  src={it.photoUrl}
+                                                  alt="Customer uploaded"
+                                                  className="w-8 h-8 object-cover rounded-md border border-pink-200 bg-white shrink-0 shadow-3xs"
+                                                  onError={(e) => {
+                                                    const imgEl = e.target as HTMLImageElement;
+                                                    if (imgEl.dataset.fallbackApplied) return;
+                                                    imgEl.dataset.fallbackApplied = "1";
+                                                    imgEl.src =
+                                                      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=150&q=80";
+                                                  }}
+                                                />
+                                              </div>
+                                              <a
+                                                href={it.photoUrl}
+                                                download={`order_${order.id}_photo.jpg`}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const a =
+                                                    document.createElement("a");
+                                                  a.href = it.photoUrl as string;
+                                                  a.download = `order_${order.id}_photo.jpg`;
+                                                  document.body.appendChild(a);
+                                                  a.click();
+                                                  document.body.removeChild(a);
+                                                }}
+                                                className="bg-white hover:bg-pink-100 text-pink-700 px-2 py-1 border border-pink-200 rounded text-[9px] font-black tracking-wide uppercase transition-colors shrink-0 shadow-xs"
+                                              >
+                                                Download
+                                              </a>
+                                            </div>
                                           )}
                                         </div>
                                       </div>
-
-                                      {/* Customer custom photo attachment preview */}
-                                      {it.photoUrl && (
-                                        <div className="flex items-center gap-2 bg-pink-50 border border-pink-100 p-1.5 rounded-lg shrink-0 font-sans ml-1 sm:ml-0 self-start sm:self-auto">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="text-[8px] font-black uppercase text-pink-700 tracking-wider">
-                                              Customer Photo:
-                                            </span>
-                                            <img
-                                              src={it.photoUrl}
-                                              alt="Customer uploaded"
-                                              className="w-8 h-8 object-cover rounded-md border border-pink-200 bg-white shrink-0 shadow-3xs"
-                                              onError={(e) => {
-                                                (
-                                                  e.target as HTMLImageElement
-                                                ).src =
-                                                  "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=150&q=80";
-                                              }}
-                                            />
-                                          </div>
-                                          <a
-                                            href={it.photoUrl}
-                                            download={`order_${order.id}_photo.jpg`}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              const a =
-                                                document.createElement("a");
-                                              a.href = it.photoUrl as string;
-                                              a.download = `order_${order.id}_photo.jpg`;
-                                              document.body.appendChild(a);
-                                              a.click();
-                                              document.body.removeChild(a);
-                                            }}
-                                            className="bg-white hover:bg-pink-100 text-pink-700 px-2 py-1 border border-pink-200 rounded text-[9px] font-black tracking-wide uppercase transition-colors shrink-0 shadow-xs"
-                                          >
-                                            Download
-                                          </a>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             </div>
 
-                            <div className="pt-3 sm:pt-0 md:w-[220px] border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-4 flex flex-col justify-between gap-3">
+                            <div className="pt-3 sm:pt-0 md:w-[250px] border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-4 flex flex-col justify-between gap-3">
                               <div className="flex flex-col gap-2">
                                 <div>
                                   <span className="text-[9px] text-slate-400 uppercase font-black block">
                                     Bill Payment ({order.paymentMode})
                                   </span>
-                                  <div className="flex flex-col gap-1 mt-1 text-xs">
-                                    <div className="flex justify-between text-slate-600">
-                                      <span>Product Price:</span>
-                                      <span className="font-semibold">₹{order.itemsSubtotal || (order.total - (order.deliveryFee || 0))}</span>
-                                    </div>
-                                    <div className="flex justify-between text-slate-600">
-                                      <span>Delivery Fee:</span>
-                                      <span className="font-semibold">₹{order.deliveryFee || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between text-slate-900 border-t border-slate-100 pt-1 mt-1">
-                                      <span className="font-black">Total Price:</span>
-                                      <span className="font-black text-base">₹{order.total}</span>
-                                    </div>
-                                  </div>
+                                  {(() => {
+                                    const itemsSumFromOrder = (order.items || []).reduce((sum, it) => {
+                                      const matchingProd = products?.find(
+                                        (p) =>
+                                          (it.id && p.id === it.id) ||
+                                          p.name?.toLowerCase().trim() === it.name?.toLowerCase().trim()
+                                      );
+                                      const q = Number(it.quantity) || 1;
+                                      const u =
+                                        it.unitPrice !== undefined
+                                          ? Number(it.unitPrice)
+                                          : it.price !== undefined
+                                          ? Number(it.price)
+                                          : matchingProd?.price !== undefined
+                                          ? Number(matchingProd.price)
+                                          : 0;
+                                      const lt = it.lineTotal !== undefined ? Number(it.lineTotal) : u * q;
+                                      return sum + (isNaN(lt) ? 0 : lt);
+                                    }, 0);
+                                    const deliveryFeeVal = Number(order.deliveryFee || 0);
+                                    const productSubtotalVal =
+                                      order.itemsSubtotal !== undefined && order.itemsSubtotal !== null
+                                        ? Number(order.itemsSubtotal)
+                                        : itemsSumFromOrder > 0
+                                        ? itemsSumFromOrder
+                                        : Math.max(0, Number(order.total || 0) - deliveryFeeVal);
+                                    const explicitDiscountVal = Number(order.discountAmount || 0);
+                                    const discountVal =
+                                      explicitDiscountVal > 0
+                                        ? explicitDiscountVal
+                                        : Math.max(0, productSubtotalVal + deliveryFeeVal - Number(order.total || 0));
+                                    const discountRuleLabel =
+                                      order.couponDiscountType === "percentage" && order.couponDiscountValue
+                                        ? `${order.couponDiscountValue}% OFF`
+                                        : order.couponDiscountType === "flat" && order.couponDiscountValue
+                                        ? `Flat ₹${order.couponDiscountValue} OFF`
+                                        : "";
+
+                                    return (
+                                      <div className="flex flex-col gap-1.5 mt-1.5 text-xs">
+                                        <div className="flex justify-between text-slate-600">
+                                          <span>Products Subtotal:</span>
+                                          <span className="font-bold text-slate-800">₹{productSubtotalVal}</span>
+                                        </div>
+
+                                        {discountVal > 0 || order.couponCode ? (
+                                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1.5 space-y-0.5">
+                                            <div className="flex justify-between items-center text-emerald-800 font-black">
+                                              <span className="text-[11px]">
+                                                Discount{order.couponCode ? ` (${order.couponCode})` : ""}
+                                              </span>
+                                              <span className="font-mono text-xs">- ₹{discountVal}</span>
+                                            </div>
+                                            {discountRuleLabel && (
+                                              <span className="text-[9px] font-bold text-emerald-700 uppercase block">
+                                                Applied Offer: {discountRuleLabel}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="flex justify-between text-slate-400 text-[11px]">
+                                            <span>Discount Applied:</span>
+                                            <span className="font-semibold">None (₹0)</span>
+                                          </div>
+                                        )}
+
+                                        <div className="flex justify-between text-slate-600">
+                                          <span>Delivery Fee:</span>
+                                          <span className="font-semibold">₹{deliveryFeeVal}</span>
+                                        </div>
+                                        <div className="flex justify-between text-slate-900 border-t border-slate-100 pt-1.5 mt-0.5">
+                                          <span className="font-black">Total Price:</span>
+                                          <span className="font-black text-base text-pink-600">₹{order.total}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                                 <div className="flex items-center mt-1">
                                   {(() => {
@@ -5270,6 +5436,25 @@ export default function AdminPanel({
                         </div>
                       </div>
 
+                      <label className="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-amber-50/50 cursor-pointer select-none">
+                        <div>
+                          <span className="font-extrabold text-slate-800 text-[10.5px] uppercase block">
+                            🚫 Hide from Website (Unlisted / Draft)
+                          </span>
+                          <span className="text-[9px] text-slate-500 font-semibold block">
+                            Save in catalog without listing on storefront until ready
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={newProdIsHidden}
+                          onChange={(e) =>
+                            setNewProdIsHidden(e.target.checked)
+                          }
+                          className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                        />
+                      </label>
+
                       <button
                         type="submit"
                         className="w-full py-3 px-4 bg-slate-900 hover:bg-black text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition duration-150 cursor-pointer shadow-sm text-center flex items-center justify-center gap-1.5"
@@ -5281,79 +5466,143 @@ export default function AdminPanel({
 
                   {/* Stock listings with pricing manager */}
                   <div className="lg:col-span-7 bg-white border border-slate-200 p-4.5 sm:p-5 rounded-2.5xl space-y-4">
-                    <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center justify-between border-b border-slate-105 pb-3">
-                      <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-1.5">
-                        <Database className="w-4 h-4 text-pink-600" />
-                        Stock Catalog Database ({filteredCatalog.length})
-                      </h4>
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <input
-                          type="text"
-                          placeholder="Search stock list..."
-                          value={catalogSearch}
-                          onChange={(e) => setCatalogSearch(e.target.value)}
-                          className="p-2 px-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500 w-full sm:max-w-[180px]"
-                        />
+                    <div className="flex flex-col gap-2.5 border-b border-slate-105 pb-3">
+                      <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center justify-between">
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-1.5">
+                          <Database className="w-4 h-4 text-pink-600" />
+                          Stock Catalog Database ({filteredCatalog.length})
+                        </h4>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <input
+                            type="text"
+                            placeholder="Search stock list..."
+                            value={catalogSearch}
+                            onChange={(e) => setCatalogSearch(e.target.value)}
+                            className="p-2 px-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500 w-full sm:max-w-[180px]"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(
+                          [
+                            { id: "all", label: `All (${catalogVisibilityCounts.all})` },
+                            { id: "visible", label: `Visible (${catalogVisibilityCounts.visible})` },
+                            { id: "hidden", label: `Hidden (${catalogVisibilityCounts.hidden})` },
+                          ] as const
+                        ).map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setCatalogVisibilityFilter(tab.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer ${
+                              catalogVisibilityFilter === tab.id
+                                ? tab.id === "hidden"
+                                  ? "bg-amber-600 text-white"
+                                  : "bg-slate-900 text-white"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
                     {/* Stock items scrolling container with beautiful visible scroll targets */}
                     <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
-                      {filteredCatalog.map((prod) => (
-                        <div
-                          key={prod.id}
-                          className="p-3 border border-slate-100 rounded-xl flex items-center justify-between gap-3 bg-slate-50/50"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <img
-                              src={prod.image}
-                              alt={prod.name}
-                              referrerPolicy="no-referrer"
-                              className="w-10 h-10 rounded-lg object-cover object-center border border-slate-200 shrink-0"
-                            />
-                            <div className="min-w-0 text-left">
-                              <h5
-                                className="text-xs font-bold text-slate-805 truncate"
-                                title={prod.name}
-                              >
-                                {prod.name}
-                              </h5>
-                              <span className="text-[8.5px] bg-slate-100 text-slate-700 font-extrabold uppercase px-1.5 py-0.5 rounded block w-fit mt-0.5">
-                                {prod.category}
+                      {filteredCatalog.map((prod) => {
+                        const isHiddenProd = isProductHiddenFlag(prod);
+                        return (
+                          <div
+                            key={prod.id}
+                            className={`p-3 border rounded-xl flex items-center justify-between gap-3 ${
+                              isHiddenProd
+                                ? "border-amber-200 bg-amber-50/40 opacity-85"
+                                : "border-slate-100 bg-slate-50/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <img
+                                src={prod.image}
+                                alt={prod.name}
+                                referrerPolicy="no-referrer"
+                                className="w-10 h-10 rounded-lg object-cover object-center border border-slate-200 shrink-0"
+                              />
+                              <div className="min-w-0 text-left">
+                                <h5
+                                  className="text-xs font-bold text-slate-805 truncate"
+                                  title={prod.name}
+                                >
+                                  {prod.name}
+                                </h5>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  <span className="text-[8.5px] bg-slate-100 text-slate-700 font-extrabold uppercase px-1.5 py-0.5 rounded block w-fit">
+                                    {prod.category || "unlisted"}
+                                  </span>
+                                  {isHiddenProd && (
+                                    <span className="text-[8.5px] bg-amber-100 text-amber-800 border border-amber-200 font-black uppercase px-1.5 py-0.5 rounded block w-fit">
+                                      ○ Hidden
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="font-mono text-xs font-black text-slate-950 mr-1">
+                                ₹{prod.price}
                               </span>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onUpdateProduct({
+                                    ...prod,
+                                    isHidden: !isHiddenProd,
+                                  })
+                                }
+                                className={`px-2 py-1 rounded-lg border text-[9.5px] font-black uppercase transition cursor-pointer shrink-0 ${
+                                  isHiddenProd
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                    : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                                }`}
+                                title={
+                                  isHiddenProd
+                                    ? "List this product on Website"
+                                    : "Hide this product from Website"
+                                }
+                              >
+                                {isHiddenProd ? "Show" : "Hide"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setEditingProduct(prod)}
+                                className="p-1 px-1.5 border border-indigo-100 text-indigo-650 hover:bg-indigo-50/60 rounded-lg transition duration-150 cursor-pointer text-[10px] font-black uppercase flex items-center gap-1 shrink-0"
+                                title="Full Edit Database Config"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" /> Full Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfirmModal({
+                                    isOpen: true,
+                                    title: "Delete Product",
+                                    message: `Are you absolutely sure you want to delete "${prod.name}" from the storefront database?`,
+                                    onConfirm: () => onDeleteProduct(prod.id),
+                                  });
+                                }}
+                                className="p-1.5 border border-red-105 text-red-500 hover:bg-red-50 hover:text-red-650 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Product"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono text-xs font-black text-slate-950">
-                              ₹{prod.price}
-                            </span>
-
-                            <button
-                              onClick={() => setEditingProduct(prod)}
-                              className="p-1 px-1.5 border border-indigo-100 text-indigo-650 hover:bg-indigo-50/60 rounded-lg transition duration-150 cursor-pointer text-[10px] font-black uppercase flex items-center gap-1 shrink-0"
-                              title="Full Edit Database Config"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" /> Full Edit
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setConfirmModal({
-                                  isOpen: true,
-                                  title: "Delete Product",
-                                  message: `Are you absolutely sure you want to delete "${prod.name}" from the storefront database?`,
-                                  onConfirm: () => onDeleteProduct(prod.id),
-                                });
-                              }}
-                              className="p-1.5 border border-red-105 text-red-500 hover:bg-red-50 hover:text-red-650 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Product"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -5469,9 +5718,16 @@ export default function AdminPanel({
                                 <span className="md:hidden text-[9px] text-slate-400 uppercase font-black">
                                   Settled Amount
                                 </span>
-                                <span className="text-sm font-black text-pink-600 font-mono tracking-wider">
-                                  ₹{order.total}
-                                </span>
+                                <div>
+                                  <span className="text-sm font-black text-pink-600 font-mono tracking-wider block">
+                                    ₹{order.total}
+                                  </span>
+                                  {Number(order.discountAmount || 0) > 0 && (
+                                    <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded inline-block mt-0.5">
+                                      -₹{order.discountAmount} {order.couponCode ? `(${order.couponCode})` : "OFF"}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -5764,10 +6020,11 @@ export default function AdminPanel({
                           onAddCategory({
                             id: generatedId,
                             name: newCatName.trim(),
-                            image: newCatImgUrl.trim(),
+                            image: cleanImageUrl(newCatImgUrl.trim()),
                             displayOrder: rank,
                             addonProductIds: newCatAddonIds,
                             isVisible: true,
+                            hidden: false,
                             showInGrid: false,
                           });
                           setNewCatName("");
@@ -6117,10 +6374,11 @@ export default function AdminPanel({
                                         if (!editingCatName.trim()) return;
                                         if (onUpdateCategory) {
                                           onUpdateCategory({
+                                            ...cat,
                                             id: cat.id,
                                             name: editingCatName.trim(),
                                             image:
-                                              editingCatImgUrl.trim() ||
+                                              cleanImageUrl(editingCatImgUrl.trim()) ||
                                               "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=300&q=80",
                                             displayOrder:
                                               Number(editingCatOrder),
@@ -6242,34 +6500,39 @@ export default function AdminPanel({
                                       <span className="text-[9px] font-mono text-slate-400 bg-slate-100 px-1 py-0.5 rounded uppercase inline-block">
                                         ID: {cat.id}
                                       </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (onUpdateCategory) {
-                                            onUpdateCategory({
-                                              ...cat,
-                                              isVisible:
-                                                cat.isVisible !== false
-                                                  ? false
-                                                  : true,
-                                            });
-                                          }
-                                        }}
-                                        className={`px-1.5 py-0.5 text-[8.5px] font-black rounded uppercase tracking-wider transition ${
-                                          cat.isVisible !== false
-                                            ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100/80 border border-emerald-200"
-                                            : "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200"
-                                        }`}
-                                        title={
-                                          cat.isVisible !== false
-                                            ? "Click to set category as hidden"
-                                            : "Click to set category as visible"
-                                        }
-                                      >
-                                        {cat.isVisible !== false
-                                          ? "● Visible"
-                                          : "○ Hidden"}
-                                      </button>
+                                      {(() => {
+                                        const isCatVisible =
+                                          cat.isVisible !== false &&
+                                          cat.hidden !== true;
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (onUpdateCategory) {
+                                                onUpdateCategory({
+                                                  ...cat,
+                                                  isVisible: !isCatVisible,
+                                                  hidden: isCatVisible,
+                                                });
+                                              }
+                                            }}
+                                            className={`px-1.5 py-0.5 text-[8.5px] font-black rounded uppercase tracking-wider transition ${
+                                              isCatVisible
+                                                ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100/80 border border-emerald-200"
+                                                : "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200"
+                                            }`}
+                                            title={
+                                              isCatVisible
+                                                ? "Click to set category as hidden"
+                                                : "Click to set category as visible"
+                                            }
+                                          >
+                                            {isCatVisible
+                                              ? "● Visible"
+                                              : "○ Hidden"}
+                                          </button>
+                                        );
+                                      })()}
                                     </div>
                                   </div>
                                 </div>
@@ -6292,26 +6555,34 @@ export default function AdminPanel({
                                   >
                                     <Edit3 className="w-3.5 h-3.5" />
                                   </button>
-                                  <button
-                                    onClick={() => {
-                                      if (onUpdateCategory) {
-                                        onUpdateCategory({
-                                          ...cat,
-                                          hidden: !cat.hidden,
-                                        });
-                                      }
-                                    }}
-                                    className={`p-1.5 border rounded-lg transition ${cat.hidden ? "border-slate-200 text-slate-400 hover:bg-slate-50" : "border-emerald-100 text-emerald-600 hover:bg-emerald-50"}`}
-                                    title={
-                                      cat.hidden
-                                        ? "Show Category"
-                                        : "Hide Category"
-                                    }
-                                  >
-                                    <div className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">
-                                      {cat.hidden ? "👁️‍🗨️" : "👁️"}
-                                    </div>
-                                  </button>
+                                  {(() => {
+                                    const isCatVisible =
+                                      cat.isVisible !== false &&
+                                      cat.hidden !== true;
+                                    return (
+                                      <button
+                                        onClick={() => {
+                                          if (onUpdateCategory) {
+                                            onUpdateCategory({
+                                              ...cat,
+                                              isVisible: !isCatVisible,
+                                              hidden: isCatVisible,
+                                            });
+                                          }
+                                        }}
+                                        className={`p-1.5 border rounded-lg transition ${!isCatVisible ? "border-slate-200 text-slate-400 hover:bg-slate-50" : "border-emerald-100 text-emerald-600 hover:bg-emerald-50"}`}
+                                        title={
+                                          !isCatVisible
+                                            ? "Show Category"
+                                            : "Hide Category"
+                                        }
+                                      >
+                                        <div className="w-3.5 h-3.5 flex items-center justify-center font-bold text-[10px]">
+                                          {!isCatVisible ? "👁️‍🗨️" : "👁️"}
+                                        </div>
+                                      </button>
+                                    );
+                                  })()}
                                   <button
                                     onClick={() => {
                                       setConfirmModal({
@@ -7021,30 +7292,69 @@ export default function AdminPanel({
                         </div>
                       </div>
                     </div>
-                    <div className="bg-white rounded-2xl p-4 border border-pink-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div>
-                        <span className="text-xs font-black text-slate-800 block">
-                          Manual Store Closure Switch
-                        </span>
-                        <p className="text-[10px] text-slate-500 font-semibold">
-                          When turned ON, store is closed immediately and customers cannot place orders or make payments.
-                        </p>
+                    <div className="bg-white rounded-2xl p-4 border border-pink-100 space-y-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                          <span className="text-xs font-black text-slate-800 block">
+                            Manual Store Closure Switch (Synced via Firestore)
+                          </span>
+                          <p className="text-[10px] text-slate-500 font-semibold">
+                            When turned ON, store is closed immediately across all devices and customers cannot place orders or make payments.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!localConfig) return;
+                              const nextClosed = !Boolean(localConfig.manualClosed);
+                              const updatedConfig = {
+                                ...localConfig,
+                                manualClosed: nextClosed,
+                              };
+                              setLocalConfig(updatedConfig);
+                              if (onUpdateStoreConfig) {
+                                onUpdateStoreConfig(updatedConfig);
+                              }
+                            }}
+                            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs ${
+                              localConfig?.manualClosed
+                                ? "bg-red-600 text-white hover:bg-red-700"
+                                : "bg-emerald-600 text-white hover:bg-emerald-700"
+                            }`}
+                          >
+                            {localConfig?.manualClosed
+                              ? "🔴 Store Closed (Manual)"
+                              : "🟢 Store Open (Accepting Orders)"}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="pt-2 border-t border-pink-50 flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          placeholder="Custom Store Closed Banner Message (optional)..."
+                          value={localConfig?.customStoreClosedMessage || ""}
+                          onChange={(e) => {
+                            if (localConfig) {
+                              setLocalConfig({
+                                ...localConfig,
+                                customStoreClosedMessage: e.target.value,
+                              });
+                            }
+                          }}
+                          className="flex-1 text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
+                        />
                         <button
                           type="button"
                           onClick={() => {
-                            const newState = !(localStorage.getItem('rocx_store_manual_closed') === 'true');
-                            localStorage.setItem('rocx_store_manual_closed', newState ? 'true' : 'false');
-                            window.location.reload();
+                            if (localConfig && onUpdateStoreConfig) {
+                              onUpdateStoreConfig(localConfig);
+                              alert("Store closure message saved to Firestore!");
+                            }
                           }}
-                          className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs ${
-                            localStorage.getItem('rocx_store_manual_closed') === 'true'
-                              ? "bg-red-600 text-white hover:bg-red-700"
-                              : "bg-emerald-600 text-white hover:bg-emerald-700"
-                          }`}
+                          className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase rounded-xl cursor-pointer shrink-0"
                         >
-                          {localStorage.getItem('rocx_store_manual_closed') === 'true' ? "🔴 Store Closed (Manual)" : "🟢 Store Open (Accepting Orders)"}
+                          Save Message
                         </button>
                       </div>
                     </div>
@@ -9404,6 +9714,28 @@ export default function AdminPanel({
                 />
               </div>
 
+              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center justify-between">
+                <div>
+                  <label className="text-[10px] text-amber-900 font-extrabold uppercase block mb-0.5">
+                    🚫 Hide Product from Website (Unlisted)
+                  </label>
+                  <span className="text-[9px] text-amber-700 font-bold block">
+                    Turn ON to completely hide this product from all website pages
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={!!editingProduct.isHidden}
+                  onChange={(e) => {
+                    setEditingProduct({
+                      ...editingProduct,
+                      isHidden: e.target.checked,
+                    });
+                  }}
+                  className="w-5 h-5 rounded border-amber-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+              </div>
+
               <div>
                 <label className="text-[10px] text-slate-400 font-extrabold uppercase block mb-1">
                   Primary Category (Optional)
@@ -9680,7 +10012,10 @@ export default function AdminPanel({
               </button>
               <button
                 onClick={() => {
-                  onUpdateProduct(editingProduct);
+                  onUpdateProduct({
+                    ...editingProduct,
+                    image: cleanImageUrl(editingProduct.image || ""),
+                  });
                   setEditingProduct(null);
                   alert("Product catalog successfully updated everywhere!");
                 }}

@@ -33,9 +33,7 @@ import {
   StoreConfig,
   isBentoCakeProduct,
   DeliveryAgent,
-  DELIVERY_AGENTS,
 } from "./types";
-import { CATEGORIES, PRODUCTS, CITIES } from "./data";
 
 import Header from "./components/Header";
 import CategoryNav from "./components/CategoryNav";
@@ -61,14 +59,13 @@ import SellerPanel from "./components/SellerPanel";
 import { TermsAndConditions, PrivacyPolicy, RefundPolicy, ShippingPolicy, ReturnPolicy } from "./components/Policies";
 
 import {
-  getProductsFromFirestore,
-  getOrdersFromFirestore,
-  getOrderFromFirestore,
   subscribeToOrdersFromFirestore,
   subscribeToProductsFromFirestore,
   subscribeToCouponsFromFirestore,
   subscribeToRidersFromFirestore,
-  saveRiderToFirestore,
+  subscribeToCategoriesFromFirestore,
+  saveCategoryToFirestore,
+  deleteCategoryFromFirestore,
   addProductToFirestore,
   deleteProductFromFirestore,
   updateProductInFirestore,
@@ -80,33 +77,27 @@ import {
   updateOrderPaymentStatusInFirestore,
   deleteOrderFromFirestore,
   clearAllOrdersFromFirestore,
-  getCouponsFromFirestore,
   addCouponToFirestore,
   deleteCouponFromFirestore,
   ensureDefaultProducts,
+  ensureDefaultCategories,
   ensureDefaultCoupons,
+  ensureDefaultSlides,
+  ensureDefaultGallery,
   subscribeToSlidesFromFirestore,
   addSlideToFirestore,
   deleteSlideFromFirestore,
   subscribeToGalleryFromFirestore,
+  addGalleryItemToFirestore,
+  deleteGalleryItemFromFirestore,
   subscribeToStoreConfigFromFirestore,
   updateStoreConfigInFirestore,
   deleteRiderFromFirestore,
   DEFAULT_STORE_CONFIG,
-  DEFAULT_SLIDES,
-  DEFAULT_GALLERY,
 } from "./services/dbService";
 
-import { auth, db } from "./firebase";
+import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import {
-  collection,
-  onSnapshot,
-  query,
-  doc,
-  setDoc,
-  deleteDoc,
-} from "firebase/firestore";
 
 export default function App() {
   // --- STATE ---
@@ -244,64 +235,12 @@ export default function App() {
     localStorage.removeItem("rocx_user_name");
   };
 
-  // --- DURABLE PRODUCTS CATALOG STATE ---
-  const [productsCatalog, setProductsCatalog] = useState<Product[]>(() => {
-    const saved = localStorage.getItem("rocx_products");
-    if (saved) {
-      try {
-        const loaded = JSON.parse(saved);
-        const mappedLoaded = loaded.map((prod: Product) => {
-          if (isBentoCakeProduct(prod)) {
-            return { ...prod, price: 299 };
-          }
-          return prod;
-        });
-
-        return mappedLoaded;
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return PRODUCTS.map((prod) => {
-      if (isBentoCakeProduct(prod)) {
-        return { ...prod, price: 299 };
-      }
-      return prod;
-    });
-  });
-
-  // Handle browser back/forward and initial load
-  useEffect(() => {
-    const handleLocationChange = () => {
-      const params = new URLSearchParams(window.location.search);
-      const urlProductId = params.get("product");
-      const urlCategory = params.get("category") as CategoryID;
-
-      if (urlProductId) {
-        const foundProd = productsCatalog.find((p) => p.id === urlProductId);
-        if (foundProd) setSelectedProduct(foundProd);
-      } else {
-        setSelectedProduct(null);
-      }
-
-      if (urlCategory) {
-        setSelectedCategory(urlCategory);
-      } else {
-        setSelectedCategory(null);
-      }
-    };
-
-    // Run on mount or when catalog changes
-    if (productsCatalog.length > 0) {
-      // Only run once on mount for deep linking, after that the existing popstate handles it
-      handleLocationChange();
-    }
-  }, [productsCatalog]);
+  // --- DURABLE PRODUCTS CATALOG STATE (FIRESTORE AUTHORITATIVE) ---
+  const [productsCatalog, setProductsCatalog] = useState<Product[]>([]);
+  const [isProductsLoaded, setIsProductsLoaded] = useState(false);
 
   const handleAddProduct = async (newProd: Product) => {
-    const updated = [newProd, ...productsCatalog];
-    setProductsCatalog(updated);
-    safeSetStorage("rocx_products", JSON.stringify(updated));
+    setProductsCatalog((prev) => [newProd, ...prev]);
     try {
       await addProductToFirestore(newProd);
     } catch (err) {
@@ -310,9 +249,7 @@ export default function App() {
   };
 
   const handleDeleteProduct = async (productId: string) => {
-    const updated = productsCatalog.filter((p) => p.id !== productId);
-    setProductsCatalog(updated);
-    safeSetStorage("rocx_products", JSON.stringify(updated));
+    setProductsCatalog((prev) => prev.filter((p) => p.id !== productId));
     try {
       await deleteProductFromFirestore(productId);
     } catch (err) {
@@ -321,11 +258,9 @@ export default function App() {
   };
 
   const handleUpdateProduct = async (product: Product) => {
-    setProductsCatalog((prev) => {
-      const updated = prev.map((p) => (p.id === product.id ? product : p));
-      safeSetStorage("rocx_products", JSON.stringify(updated));
-      return updated;
-    });
+    setProductsCatalog((prev) =>
+      prev.map((p) => (p.id === product.id ? product : p)),
+    );
     try {
       await updateProductInFirestore(product);
     } catch (err) {
@@ -333,7 +268,7 @@ export default function App() {
     }
   };
 
-    // --- DURABLE STORE SETTINGS STATE ---
+  // --- DURABLE STORE SETTINGS STATE (FIRESTORE AUTHORITATIVE) ---
   // Robust deep merge to preserve 100% of admin custom images and edits across deployments
   const deepMergeStoreConfig = (base: any, custom: any): any => {
     if (!custom) return base;
@@ -364,21 +299,12 @@ export default function App() {
     return deepMergeStoreConfig(DEFAULT_STORE_CONFIG, config);
   };
 
-  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => {
-    const saved = localStorage.getItem("rocx_store_config");
-    if (saved) {
-      try {
-        return sanitizeStoreConfig(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return sanitizeStoreConfig(DEFAULT_STORE_CONFIG);
-  });
+  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() =>
+    sanitizeStoreConfig(DEFAULT_STORE_CONFIG),
+  );
 
   const handleUpdateStoreConfig = async (newConfig: StoreConfig) => {
     setStoreConfig(newConfig);
-    safeSetStorage("rocx_store_config", JSON.stringify(newConfig));
     try {
       await updateStoreConfigInFirestore(newConfig);
     } catch (err) {
@@ -386,25 +312,8 @@ export default function App() {
     }
   };
 
-  // --- DURABLE CATEGORIES CATALOG STATE ---
-  const [categoriesCatalog, setCategoriesCatalog] = useState<Category[]>(() => {
-    const saved = localStorage.getItem("rocx_categories");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as Category[];
-        // Merge missing default categories like xmas, fathers_day, etc.
-        CATEGORIES.forEach((defaultCat) => {
-          if (!parsed.find((p) => p.id === defaultCat.id)) {
-            parsed.push(defaultCat);
-          }
-        });
-        return parsed;
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return CATEGORIES;
-  });
+  // --- DURABLE CATEGORIES CATALOG STATE (FIRESTORE AUTHORITATIVE) ---
+  const [categoriesCatalog, setCategoriesCatalog] = useState<Category[]>([]);
 
   const sortedCategoriesCatalog = useMemo(() => {
     return [...categoriesCatalog].sort((a, b) => {
@@ -430,30 +339,27 @@ export default function App() {
     );
   }, [sortedCategoriesCatalog]);
 
-  const handleAddCategory = async (newCat: any) => {
-    const updated = [...categoriesCatalog, newCat];
-    setCategoriesCatalog(updated);
-    safeSetStorage("rocx_categories", JSON.stringify(updated));
+  const handleAddCategory = async (newCat: Category) => {
+    setCategoriesCatalog((prev) => [...prev, newCat]);
     try {
-      await setDoc(doc(db, "categories", newCat.id), newCat);
+      await saveCategoryToFirestore(newCat);
     } catch (err) {
       console.error("Firestore saving category error:", err);
     }
   };
 
-  const handleUpdateCategory = async (updatedCat: any) => {
+  const handleUpdateCategory = async (updatedCat: Category | Category[]) => {
     const items = Array.isArray(updatedCat) ? updatedCat : [updatedCat];
     setCategoriesCatalog((prev) => {
       let updated = [...prev];
       items.forEach((item) => {
         updated = updated.map((c) => (c.id === item.id ? item : c));
       });
-      safeSetStorage("rocx_categories", JSON.stringify(updated));
       return updated;
     });
     try {
       for (const item of items) {
-        await setDoc(doc(db, "categories", item.id), item);
+        await saveCategoryToFirestore(item);
       }
     } catch (err) {
       console.error("Firestore updating category error:", err);
@@ -461,11 +367,9 @@ export default function App() {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    const updated = categoriesCatalog.filter((c) => c.id !== categoryId);
-    setCategoriesCatalog(updated);
-    safeSetStorage("rocx_categories", JSON.stringify(updated));
+    setCategoriesCatalog((prev) => prev.filter((c) => c.id !== categoryId));
     try {
-      await deleteDoc(doc(db, "categories", categoryId));
+      await deleteCategoryFromFirestore(categoryId);
     } catch (err) {
       console.error("Firestore deleting category error:", err);
     }
@@ -506,10 +410,8 @@ export default function App() {
     }
   };
 
-  // --- DURABLE FRONT HOME PAGE CAROUSEL SLIDES STATE ---
-  const [slides, setSlides] = useState<Slide[]>(() => {
-    return DEFAULT_SLIDES;
-  });
+  // --- DURABLE FRONT HOME PAGE CAROUSEL SLIDES STATE (FIRESTORE AUTHORITATIVE) ---
+  const [slides, setSlides] = useState<Slide[]>([]);
 
   const handleUpdateSlide = async (updatedSlide: Slide) => {
     try {
@@ -527,15 +429,11 @@ export default function App() {
     }
   };
 
-  // --- DURABLE FRONT HOME PAGE GALLERY STATE ---
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() => {
-    return DEFAULT_GALLERY;
-  });
+  // --- DURABLE FRONT HOME PAGE GALLERY STATE (FIRESTORE AUTHORITATIVE) ---
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
 
   const handleAddGalleryItem = async (newItem: GalleryItem) => {
     try {
-      const { addGalleryItemToFirestore } =
-        await import("./services/dbService");
       await addGalleryItemToFirestore(newItem);
     } catch (err) {
       console.error("Firestore adding gallery lookbook picture error:", err);
@@ -544,8 +442,6 @@ export default function App() {
 
   const handleDeleteGalleryItem = async (itemId: string) => {
     try {
-      const { deleteGalleryItemFromFirestore } =
-        await import("./services/dbService");
       await deleteGalleryItemFromFirestore(itemId);
     } catch (err) {
       console.error("Firestore deleting gallery lookbook picture error:", err);
@@ -569,29 +465,17 @@ export default function App() {
     }
   };
 
-  // --- DURABLE ORDERS TRANSACTIONAL DATABASE STATE ---
+  // --- DURABLE ORDERS TRANSACTIONAL DATABASE STATE (FIRESTORE AUTHORITATIVE) ---
   const [firebaseSyncError, setFirebaseSyncError] = useState<string | null>(
     null,
   );
   const [dismissSyncBanner, setDismissSyncBanner] = useState(false);
-  const [orders, setOrders] = useState<any[]>(() => {
-    const saved = localStorage.getItem("rocx_orders");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [];
-  });
+  const [orders, setOrders] = useState<any[]>([]);
 
   // No secure gateway logic anymore
 
   const handleOrderPlaced = async (newOrder: any) => {
-    const nextOrders = [newOrder, ...orders];
-    setOrders(nextOrders);
-    safeSetStorage("rocx_orders", JSON.stringify(nextOrders));
+    setOrders((prev) => [newOrder, ...prev]);
 
     // Save this order ID into the device-specific order list in localStorage
     try {
@@ -626,18 +510,18 @@ export default function App() {
     status: string,
     estimatedDelivery?: string,
   ) => {
-    const nextOrders = orders.map((o) => {
-      if (o.id === orderId) {
-        return {
-          ...o,
-          status,
-          ...(estimatedDelivery !== undefined ? { estimatedDelivery } : {}),
-        };
-      }
-      return o;
-    });
-    setOrders(nextOrders);
-    safeSetStorage("rocx_orders", JSON.stringify(nextOrders));
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id === orderId) {
+          return {
+            ...o,
+            status,
+            ...(estimatedDelivery !== undefined ? { estimatedDelivery } : {}),
+          };
+        }
+        return o;
+      }),
+    );
     try {
       await updateOrderStatusInFirestore(orderId, status, estimatedDelivery);
     } catch (err) {
@@ -649,14 +533,9 @@ export default function App() {
     orderId: string,
     deliveryAgentPicked: boolean,
   ) => {
-    const nextOrders = orders.map((o) => {
-      if (o.id === orderId) {
-        return { ...o, deliveryAgentPicked };
-      }
-      return o;
-    });
-    setOrders(nextOrders);
-    safeSetStorage("rocx_orders", JSON.stringify(nextOrders));
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, deliveryAgentPicked } : o)),
+    );
     try {
       await updateOrderPickupInFirestore(orderId, deliveryAgentPicked);
     } catch (err) {
@@ -665,14 +544,9 @@ export default function App() {
   };
 
   const handleUpdateOrderOtp = async (orderId: string, deliveryOtp: string) => {
-    const nextOrders = orders.map((o) => {
-      if (o.id === orderId) {
-        return { ...o, deliveryOtp };
-      }
-      return o;
-    });
-    setOrders(nextOrders);
-    safeSetStorage("rocx_orders", JSON.stringify(nextOrders));
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, deliveryOtp } : o)),
+    );
     try {
       await updateOrderOtpInFirestore(orderId, deliveryOtp);
     } catch (err) {
@@ -685,14 +559,13 @@ export default function App() {
     assignedRiderId: string,
     assignedRiderName: string,
   ) => {
-    const nextOrders = orders.map((o) => {
-      if (o.id === orderId) {
-        return { ...o, assignedRiderId, assignedRiderName };
-      }
-      return o;
-    });
-    setOrders(nextOrders);
-    safeSetStorage("rocx_orders", JSON.stringify(nextOrders));
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, assignedRiderId, assignedRiderName }
+          : o,
+      ),
+    );
     try {
       await assignOrderRiderInFirestore(
         orderId,
@@ -708,14 +581,9 @@ export default function App() {
     orderId: string,
     paymentStatus: "pending" | "completed",
   ) => {
-    const nextOrders = orders.map((o) => {
-      if (o.id === orderId) {
-        return { ...o, paymentStatus };
-      }
-      return o;
-    });
-    setOrders(nextOrders);
-    safeSetStorage("rocx_orders", JSON.stringify(nextOrders));
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, paymentStatus } : o)),
+    );
     try {
       await updateOrderPaymentStatusInFirestore(orderId, paymentStatus);
     } catch (err) {
@@ -724,9 +592,7 @@ export default function App() {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    const nextOrders = orders.filter((o) => o.id !== orderId);
-    setOrders(nextOrders);
-    safeSetStorage("rocx_orders", JSON.stringify(nextOrders));
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
     try {
       await deleteOrderFromFirestore(orderId);
     } catch (err) {
@@ -736,7 +602,6 @@ export default function App() {
 
   const handleClearAllOrders = async () => {
     setOrders([]);
-    safeSetStorage("rocx_orders", JSON.stringify([]));
     try {
       await clearAllOrdersFromFirestore();
     } catch (err) {
@@ -800,11 +665,14 @@ export default function App() {
 
   // --- PERSISTENCE & FIRESTORE SYNCHRONIZATION ---
   useEffect(() => {
-    // 0. Ensure default catalog and coupons are seeded in background in Firestore
+    // 0. Ensure default catalog, categories, coupons, slides, and gallery are seeded in Firestore
     ensureDefaultProducts().catch((e) => console.warn("Notice: ensureDefaultProducts sync:", e));
+    ensureDefaultCategories().catch((e) => console.warn("Notice: ensureDefaultCategories sync:", e));
     ensureDefaultCoupons().catch((e) => console.warn("Notice: ensureDefaultCoupons sync:", e));
+    ensureDefaultSlides().catch((e) => console.warn("Notice: ensureDefaultSlides sync:", e));
+    ensureDefaultGallery().catch((e) => console.warn("Notice: ensureDefaultGallery sync:", e));
 
-    // 1. Load initial cart and city if present
+    // 1. Load initial user cart and city if present (device-local session)
     const savedCart = localStorage.getItem("rocx_cart");
     if (savedCart) {
       try {
@@ -832,7 +700,7 @@ export default function App() {
       });
 
       setProductsCatalog(sanitized);
-      safeSetStorage("rocx_products", JSON.stringify(sanitized));
+      setIsProductsLoaded(true);
     });
 
     // 3. Setup real-time listener for orders database
@@ -840,7 +708,6 @@ export default function App() {
       (list) => {
         setOrders(list);
         setFirebaseSyncError(null);
-        safeSetStorage("rocx_orders", JSON.stringify(list));
       },
       (error) => {
         setFirebaseSyncError(
@@ -856,48 +723,10 @@ export default function App() {
       setCoupons(list);
     });
 
-    // 3.6 Setup real-time listener for categories database with fallback for initial seed
-    const unsubscribeCategories = onSnapshot(
-      collection(db, "categories"),
-      (snapshot) => {
-        const list: Category[] = [];
-        const keys = new Set<string>();
-        snapshot.forEach((docSnap) => {
-          const docData = docSnap.data() as Category;
-          list.push(docData);
-          keys.add(docData.id);
-        });
-
-        // Auto-merge missing default categories into local state so they are editable in Admin
-        // We do NOT call setDoc here automatically, to prevent overwriting user changes if the snapshot is initially empty from cache.
-        CATEGORIES.forEach((cat) => {
-          if (!keys.has(cat.id)) {
-            list.push(cat);
-          }
-        });
-
-        const sorted = list.sort((a, b) => {
-          const orderA =
-            a.displayOrder !== undefined && a.displayOrder !== null
-              ? Number(a.displayOrder)
-              : 999;
-          const orderB =
-            b.displayOrder !== undefined && b.displayOrder !== null
-              ? Number(b.displayOrder)
-              : 999;
-          return orderA - orderB;
-        });
-        setCategoriesCatalog(sorted);
-        safeSetStorage("rocx_categories", JSON.stringify(sorted));
-      },
-      (err) => {
-        console.warn(
-          "Firestore categories load error, utilizing local fallbacks: ",
-          err,
-        );
-        setCategoriesCatalog(CATEGORIES);
-      },
-    );
+    // 3.6 Setup real-time listener for categories database
+    const unsubscribeCategories = subscribeToCategoriesFromFirestore((sorted) => {
+      setCategoriesCatalog(sorted);
+    });
 
     // 3.7 Setup real-time listener for home promo slides carousel
     const unsubscribeSlides = subscribeToSlidesFromFirestore((list) => {
@@ -909,12 +738,11 @@ export default function App() {
       setGalleryItems(list);
     });
 
-    // 3.9 Setup real-time listener for dynamic store config (About section points, subcategories)
+    // 3.9 Setup real-time listener for dynamic store config (About section points, subcategories, settings)
     const unsubscribeStoreConfig = subscribeToStoreConfigFromFirestore(
       (config) => {
         const sanitized = sanitizeStoreConfig(config);
         setStoreConfig(sanitized);
-        safeSetStorage("rocx_store_config", JSON.stringify(sanitized));
       },
     );
 
@@ -1169,6 +997,115 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [selectedCategory, selectedProduct]);
 
+  // --- VISIBLE PRODUCTS CATALOG ---
+  const visibleProductsCatalog = useMemo(() => {
+    const hiddenCategoryIds = new Set(
+      categoriesCatalog
+        .filter((cat) => cat.isVisible === false || cat.hidden === true)
+        .map((cat) => cat.id)
+    );
+
+    // Also treat festival / special sections turned OFF in Store Settings as hidden
+    if (storeConfig?.showNewYear === false) hiddenCategoryIds.add("new_year");
+    if (storeConfig?.showRakhi === false) hiddenCategoryIds.add("rakhi");
+    if (storeConfig?.showDewali === false) hiddenCategoryIds.add("dewali");
+    if (storeConfig?.showHandCrafts === false) hiddenCategoryIds.add("hand_crafts");
+    if (storeConfig?.showPhotoToArt === false) hiddenCategoryIds.add("photo_to_art");
+    if (storeConfig?.showValentineDay === false) hiddenCategoryIds.add("valentine_day");
+    if (storeConfig?.showTeachersDay === false) hiddenCategoryIds.add("teachers_day");
+    if (storeConfig?.showMothersDay === false) hiddenCategoryIds.add("mothers_day");
+    if (storeConfig?.showFathersDay === false) hiddenCategoryIds.add("fathers_day");
+    if (storeConfig?.showXmasDay === false) hiddenCategoryIds.add("xmas");
+
+    // Collect product IDs explicitly picked by admin ONLY in active/visible subcategories & curations
+    const explicitlyAssignedProductIds = new Set<string>();
+    const checkSub = (items?: { productIds?: string[] }[]) => {
+      items?.forEach((item) =>
+        item.productIds?.forEach((id) => explicitlyAssignedProductIds.add(id)),
+      );
+    };
+    if (!hiddenCategoryIds.has("gifts") && !hiddenCategoryIds.has("combos")) {
+      checkSub(storeConfig?.giftSubcategories);
+    }
+    if (!hiddenCategoryIds.has("cakes")) {
+      checkSub(storeConfig?.cakeSubcategories);
+      checkSub(storeConfig?.tastePickSubcategories);
+      checkSub(storeConfig?.tastePickCategories);
+      checkSub(storeConfig?.quickCakeCategories);
+      checkSub(storeConfig?.iconicFlavors);
+    }
+    if (!hiddenCategoryIds.has("flowers")) {
+      checkSub(storeConfig?.flowerSubcategories);
+      if (storeConfig?.flowerCuration) {
+        const fc = storeConfig.flowerCuration;
+        checkSub(fc.trendingCategories);
+        checkSub(fc.byTypeCategories);
+        checkSub(fc.byColorCategories);
+        checkSub(fc.byCollectionCategories);
+        checkSub(fc.premiumFlowersCategories);
+        checkSub(fc.luxuryPairings);
+        checkSub(fc.byOccasionCategories);
+      }
+    }
+    if (!hiddenCategoryIds.has("plants")) {
+      checkSub(storeConfig?.plantSubcategories);
+      if (storeConfig?.plantCuration) {
+        const pc = storeConfig.plantCuration;
+        checkSub(pc.quickCategories);
+        checkSub(pc.plantsByTypeCategories);
+        checkSub(pc.plantsByLocationCategories);
+        checkSub(pc.explorePlantersCategories);
+      }
+    }
+    if (!hiddenCategoryIds.has("chocolates")) checkSub(storeConfig?.chocolateSubcategories);
+    if (!hiddenCategoryIds.has("anniversary")) checkSub(storeConfig?.anniversarySubcategories);
+    if (!hiddenCategoryIds.has("personalized_gifts")) checkSub(storeConfig?.personalizedSubcategories);
+    if (!hiddenCategoryIds.has("dewali")) checkSub(storeConfig?.dewaliSubcategories);
+    if (!hiddenCategoryIds.has("rakhi")) checkSub(storeConfig?.rakhiSubcategories);
+    if (!hiddenCategoryIds.has("photo_to_art")) checkSub(storeConfig?.photoToArtSubcategories);
+    if (!hiddenCategoryIds.has("hand_crafts")) checkSub(storeConfig?.handCraftSubcategories);
+    if (!hiddenCategoryIds.has("new_year")) checkSub(storeConfig?.newYearSubcategories);
+    if (!hiddenCategoryIds.has("birthday") && !hiddenCategoryIds.has("birthday_cakes")) {
+      if (storeConfig?.birthdayCuration) {
+        const bc = storeConfig.birthdayCuration;
+        checkSub(bc.quickCategories);
+        checkSub(bc.premiumCategories);
+        checkSub(bc.flowersByTypeCategories);
+        checkSub(bc.exploreGiftsCategories);
+      }
+    }
+
+    return productsCatalog.filter((prod) => {
+      // 1. Per-product explicit hide / unlist switch always hides it everywhere on website
+      if (
+        prod.isHidden === true ||
+        (prod as any).hidden === true ||
+        (prod as any).isVisible === false
+      ) {
+        return false;
+      }
+
+      // 2. Accessories are handled separately in add-on selectors (excluded from main storefront grids)
+      if (prod.category === "accessories") {
+        return true;
+      }
+
+      // 3. Explicitly picked in an active subcategory / curation
+      if (explicitlyAssignedProductIds.has(prod.id)) {
+        return true;
+      }
+
+      // 4. Products with no primary category ("None / Unlisted") only appear if they belong to a visible category or active subcategory
+      const hasVisiblePrimary =
+        Boolean(prod.category) && !hiddenCategoryIds.has(prod.category);
+      const hasVisibleSecondary = Boolean(
+        prod.categories?.some((c) => !hiddenCategoryIds.has(c)),
+      );
+
+      return hasVisiblePrimary || hasVisibleSecondary;
+    });
+  }, [productsCatalog, categoriesCatalog, storeConfig]);
+
   // Intercept browser back button action to return cleanly to previous views
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -1186,11 +1123,10 @@ export default function App() {
       if (state) {
         if (state.appState === "product") {
           setSelectedCategory(state.categoryId);
-          const found = productsCatalog.find((p) => p.id === state.productId);
+          const found = visibleProductsCatalog.find((p) => p.id === state.productId);
           if (found) {
             setSelectedProduct(found);
           }
-          // Close other drawers
           setIsCartOpen(false);
           setIsLocationOpen(false);
           setIsProfileOpen(false);
@@ -1202,7 +1138,6 @@ export default function App() {
         } else if (state.appState === "category") {
           setSelectedCategory(state.categoryId);
           setSelectedProduct(null);
-          // Close other drawers
           setIsCartOpen(false);
           setIsLocationOpen(false);
           setIsProfileOpen(false);
@@ -1214,7 +1149,7 @@ export default function App() {
         } else if (state.appState === "drawer") {
           setSelectedCategory(state.categoryId || null);
           const found = state.productId
-            ? productsCatalog.find((p) => p.id === state.productId)
+            ? visibleProductsCatalog.find((p) => p.id === state.productId) || null
             : null;
           setSelectedProduct(found);
           setIsCartOpen(state.drawer === "cart");
@@ -1226,7 +1161,6 @@ export default function App() {
           setIsDeliveryPanelOpen(state.drawer === "delivery");
           setIsSellerPanelOpen(state.drawer === "seller");
         } else {
-          // Home state or other
           setSelectedCategory(null);
           setSelectedProduct(null);
           setIsCartOpen(false);
@@ -1239,7 +1173,6 @@ export default function App() {
           setIsSellerPanelOpen(false);
         }
       } else {
-        // Fallback when state is null (initial load/home)
         setSelectedCategory(null);
         setSelectedProduct(null);
         setIsCartOpen(false);
@@ -1257,54 +1190,33 @@ export default function App() {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [productsCatalog]);
+  }, [visibleProductsCatalog]);
 
-  // --- VISIBLE PRODUCTS CATALOG ---
-  const visibleProductsCatalog = useMemo(() => {
-    const hiddenCategoryIds = new Set(
-      categoriesCatalog
-        .filter((cat) => cat.isVisible === false || cat.hidden === true)
-        .map((cat) => cat.id)
-    );
+  // Handle browser deep link on initial load
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlProductId = params.get("product");
+      const urlCategory = params.get("category") as CategoryID;
 
-    // Collect all product IDs explicitly configured by admin across any subcategory / curation
-    const explicitlyAssignedProductIds = new Set<string>();
-    const checkSub = (items?: { productIds?: string[] }[]) => {
-      items?.forEach((item) =>
-        item.productIds?.forEach((id) => explicitlyAssignedProductIds.add(id)),
-      );
-    };
-    checkSub(storeConfig?.giftSubcategories);
-    checkSub(storeConfig?.cakeSubcategories);
-    checkSub(storeConfig?.flowerSubcategories);
-    checkSub(storeConfig?.plantSubcategories);
-    checkSub(storeConfig?.chocolateSubcategories);
-    checkSub(storeConfig?.anniversarySubcategories);
-    checkSub(storeConfig?.personalizedSubcategories);
-    checkSub(storeConfig?.dewaliSubcategories);
-    checkSub(storeConfig?.rakhiSubcategories);
-    checkSub(storeConfig?.photoToArtSubcategories);
-    checkSub(storeConfig?.handCraftSubcategories);
-    checkSub(storeConfig?.newYearSubcategories);
-    checkSub(storeConfig?.tastePickSubcategories);
-    checkSub(storeConfig?.tastePickCategories);
-    checkSub(storeConfig?.quickCakeCategories);
-    checkSub(storeConfig?.iconicFlavors);
-
-    return productsCatalog.filter((prod) => {
-      // If product was explicitly picked by admin, always keep it visible!
-      if (explicitlyAssignedProductIds.has(prod.id)) return true;
-
-      // If product's primary category is hidden, only hide it if it does not belong to any visible category
-      if (hiddenCategoryIds.has(prod.category)) {
-        const hasVisibleCat = prod.categories?.some(
-          (c) => !hiddenCategoryIds.has(c),
-        );
-        if (!hasVisibleCat) return false;
+      if (urlProductId) {
+        const foundProd = visibleProductsCatalog.find((p) => p.id === urlProductId);
+        if (foundProd) setSelectedProduct(foundProd);
+      } else {
+        setSelectedProduct(null);
       }
-      return true;
-    });
-  }, [productsCatalog, categoriesCatalog, storeConfig]);
+
+      if (urlCategory) {
+        setSelectedCategory(urlCategory);
+      } else {
+        setSelectedCategory(null);
+      }
+    };
+
+    if (visibleProductsCatalog.length > 0) {
+      handleLocationChange();
+    }
+  }, [visibleProductsCatalog]);
 
   // --- FILTERED PRODUCTS ---
   const filteredProducts = useMemo(() => {
@@ -1475,7 +1387,7 @@ export default function App() {
       });
     }
     return list;
-  }, [selectedCategory, searchQuery, productsCatalog, appRandomOrderMap]);
+  }, [selectedCategory, searchQuery, visibleProductsCatalog, storeConfig, appRandomOrderMap]);
 
   const selectedCategoryName = useMemo(() => {
     if (searchQuery.trim()) return `Search Results for "${searchQuery}"`;
@@ -1887,7 +1799,7 @@ export default function App() {
       ) : selectedProduct ? (
         <ProductDetailPage
           product={selectedProduct}
-          allProducts={productsCatalog}
+          allProducts={visibleProductsCatalog}
           storeConfig={storeConfig}
           onBack={() => {
             setSelectedProduct(null);
@@ -1970,7 +1882,7 @@ export default function App() {
           <CategoryExplorePage
             categories={visibleCategories}
             storeConfig={storeConfig}
-            products={productsCatalog}
+            products={visibleProductsCatalog}
             onSelectCategory={handleSelectCategoryFromGrid}
             onSelectProduct={setSelectedProduct}
           />
@@ -2001,26 +1913,37 @@ export default function App() {
                   setSearchQuery("");
                 }}
               />
-              <ProductList
-                products={filteredProducts}
-                onSelectProduct={setSelectedProduct}
-                selectedCategoryName={selectedCategoryName}
-                storeConfig={storeConfig}
-                wishlistIds={wishlistProductIds}
-                onToggleWishlist={toggleWishlist}
-                onSelectCategory={(id) => {
-                  setCategorySource('nav');
-                  setSelectedCategory(id);
-                  setSearchQuery("");
-                  // Smooth scroll to product catalog anchor
-                  const anchor = document.getElementById(
-                    "product-catalog-anchor",
-                  );
-                  if (anchor) {
-                    anchor.scrollIntoView({ behavior: "smooth" });
-                  }
-                }}
-              />
+              {!isProductsLoaded && visibleProductsCatalog.length === 0 ? (
+                <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((n) => (
+                    <div
+                      key={n}
+                      className="h-60 rounded-2xl bg-slate-200/70 animate-pulse border border-slate-100"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <ProductList
+                  products={filteredProducts}
+                  onSelectProduct={setSelectedProduct}
+                  selectedCategoryName={selectedCategoryName}
+                  storeConfig={storeConfig}
+                  wishlistIds={wishlistProductIds}
+                  onToggleWishlist={toggleWishlist}
+                  onSelectCategory={(id) => {
+                    setCategorySource('nav');
+                    setSelectedCategory(id);
+                    setSearchQuery("");
+                    // Smooth scroll to product catalog anchor
+                    const anchor = document.getElementById(
+                      "product-catalog-anchor",
+                    );
+                    if (anchor) {
+                      anchor.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                />
+              )}
             </div>
 
             {/* MID-BANNER TRUST BULLETS */}

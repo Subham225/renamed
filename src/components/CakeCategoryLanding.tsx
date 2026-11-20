@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Star, ArrowRight, ShieldCheck, Clock, Cake as CakeIcon, Heart, Sparkles, Gift, Flame } from "lucide-react";
 import { Product, StoreConfig, CategoryID, getWeightPrice, getStartingWeight } from "../types";
+import HorizontalScrollRow from "./HorizontalScrollRow";
 
 interface CakeCategoryLandingProps {
   products: Product[];
@@ -107,11 +108,20 @@ export default function CakeCategoryLanding({
         onClick={() => onSelectProduct(p)}
         className="shrink-0 w-44 bg-white rounded-2xl border border-slate-100/90 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-all group"
       >
-        <div className="relative h-36 w-full overflow-hidden bg-slate-50">
+        <div className="relative aspect-square w-full overflow-hidden bg-slate-50 ios-img-frame">
           <img
-            src={p.image}
+            src={p.image || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80"}
             alt={p.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            referrerPolicy="no-referrer"
+            decoding="async"
+            draggable={false}
+            onError={(e) => {
+              const imgEl = e.target as HTMLImageElement;
+              if (imgEl.dataset.fallbackApplied) return;
+              imgEl.dataset.fallbackApplied = "1";
+              imgEl.src = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
+            }}
+            className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform duration-300"
           />
           {p.isTwoHourDelivery && (
             <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm">
@@ -210,15 +220,20 @@ export default function CakeCategoryLanding({
               }}
               className="flex flex-col items-center group cursor-pointer"
             >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-pink-200 group-hover:border-pink-600 shadow-sm transition-all p-0.5 bg-white">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-pink-200 group-hover:border-pink-600 shadow-sm transition-all p-0.5 bg-white ios-img-frame relative">
                 <img
                   src={cat.image}
                   alt={cat.name}
                   referrerPolicy="no-referrer"
+                  decoding="async"
+                  draggable={false}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
+                    const imgEl = e.target as HTMLImageElement;
+                    if (imgEl.dataset.fallbackApplied) return;
+                    imgEl.dataset.fallbackApplied = "1";
+                    imgEl.src = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
                   }}
-                  className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-300"
+                  className="w-full h-full object-cover rounded-full block md:group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
               <span className="text-[11px] font-extrabold text-slate-700 mt-1.5 text-center leading-tight group-hover:text-pink-600 transition-colors">
@@ -317,9 +332,9 @@ export default function CakeCategoryLanding({
         </div>
 
         {/* Carousel */}
-        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
+        <HorizontalScrollRow className="flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
           {(collectionTab === "bestsellers" ? bestSellers : signatureCakes).map(renderProductCard)}
-        </div>
+        </HorizontalScrollRow>
       </div>
 
       {/* 6. EXPERIENCE OUR ICONIC BAKE (Flavors Grid - Card style with label on photo) */}
@@ -332,12 +347,15 @@ export default function CakeCategoryLanding({
             <div
               key={item.id}
               onClick={() => onSelectCategory && onSelectCategory(item.id as CategoryID)}
-              className="relative h-36 sm:h-40 rounded-2xl overflow-hidden shadow-sm border border-amber-100 cursor-pointer group hover:shadow-md transition-all"
+              className="relative h-36 sm:h-40 rounded-2xl overflow-hidden shadow-sm border border-amber-100 cursor-pointer group hover:shadow-md transition-all ios-img-frame"
             >
               <img
                 src={item.image}
                 alt={item.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                referrerPolicy="no-referrer"
+                decoding="async"
+                draggable={false}
+                className="absolute inset-0 w-full h-full object-cover block md:group-hover:scale-105 transition-transform duration-300"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/25 to-transparent p-2.5 flex items-end justify-center text-center">
                 <span className="text-xs font-black text-white leading-tight drop-shadow-sm group-hover:text-pink-300 transition-colors">
@@ -438,9 +456,9 @@ export default function CakeCategoryLanding({
           </button>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
+        <HorizontalScrollRow className="flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
           {(sliceTab === "birthday" ? birthdayCakes : anniversaryCakes).map(renderProductCard)}
-        </div>
+        </HorizontalScrollRow>
       </div>
 
       {/* 9. YOUR TASTE, YOUR PICK GRID */}
@@ -464,17 +482,22 @@ export default function CakeCategoryLanding({
             <div
               key={idx}
               onClick={() => onSelectCategory && onSelectCategory(item.id as CategoryID)}
-              className="group relative h-36 sm:h-44 md:h-48 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border border-slate-200/80 cursor-pointer transition-all duration-300 transform hover:-translate-y-1 bg-slate-900"
+              className="group relative h-36 sm:h-44 md:h-48 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border border-slate-200/80 cursor-pointer transition-all duration-300 md:hover:-translate-y-1 bg-slate-900 ios-img-frame"
             >
               {/* Background Image with Zoom */}
               <img
                 src={item.image}
                 alt={item.name}
                 referrerPolicy="no-referrer"
+                decoding="async"
+                draggable={false}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
+                  const imgEl = e.target as HTMLImageElement;
+                  if (imgEl.dataset.fallbackApplied) return;
+                  imgEl.dataset.fallbackApplied = "1";
+                  imgEl.src = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
                 }}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out opacity-90 group-hover:opacity-100"
+                className="absolute inset-0 w-full h-full object-cover block md:group-hover:scale-110 transition-transform duration-500 ease-out opacity-90 group-hover:opacity-100"
               />
 
               {/* Gradient Scrim */}
@@ -560,9 +583,9 @@ export default function CakeCategoryLanding({
           </button>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
+        <HorizontalScrollRow className="flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-1">
           {(celebrationTab === "photo" ? photoCakes : designerCakes).map(renderProductCard)}
-        </div>
+        </HorizontalScrollRow>
       </div>
 
       {/* 13. BEST PICKS FOR CAKES (2-Column Product Grid) */}
@@ -589,11 +612,20 @@ export default function CakeCategoryLanding({
                 className="bg-white rounded-2xl border border-slate-100/90 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-all group flex flex-col justify-between"
               >
                 <div>
-                  <div className="relative h-40 w-full overflow-hidden bg-slate-50">
+                  <div className="relative aspect-square w-full overflow-hidden bg-slate-50 ios-img-frame">
                     <img
-                      src={p.image}
+                      src={p.image || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80"}
                       alt={p.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      referrerPolicy="no-referrer"
+                      decoding="async"
+                      draggable={false}
+                      onError={(e) => {
+                        const imgEl = e.target as HTMLImageElement;
+                        if (imgEl.dataset.fallbackApplied) return;
+                        imgEl.dataset.fallbackApplied = "1";
+                        imgEl.src = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80";
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover object-center block md:group-hover:scale-105 transition-transform duration-300"
                     />
                     <span className="absolute top-2 left-2 bg-emerald-700/90 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md backdrop-blur-xs">
                       Earliest Delivery: Today
