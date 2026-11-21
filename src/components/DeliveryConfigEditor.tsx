@@ -7,17 +7,55 @@ interface DeliveryConfigEditorProps {
   onUpdateStoreConfig: (config: StoreConfig) => void;
 }
 
+const normalizeSlots = (slots: DeliveryTimeSlot[]): DeliveryTimeSlot[] => {
+  const mapped = slots.map((ts) => {
+    const lower = (ts.label || '').toLowerCase();
+    const isStandard = ts.type === 'standard' || lower.includes('any time') || lower.includes('standard delivery');
+    if (isStandard) {
+      return { ...ts, type: 'standard' as const, surcharge: 0 };
+    }
+    return ts;
+  });
+  const hasStandard = mapped.some((ts) => ts.type === 'standard');
+  if (!hasStandard) {
+    mapped.unshift({
+      id: 'ts_standard',
+      label: 'Any Time On Specified Date',
+      surcharge: 0,
+      type: 'standard',
+    });
+  }
+  return mapped;
+};
+
 export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig }: DeliveryConfigEditorProps) {
   const [zones, setZones] = useState<DeliveryZone[]>(localConfig?.deliveryZones || []);
-  const [timeSlots, setTimeSlots] = useState<DeliveryTimeSlot[]>(localConfig?.deliveryTimeSlots || []);
+  const [timeSlots, setTimeSlots] = useState<DeliveryTimeSlot[]>(() =>
+    normalizeSlots(localConfig?.deliveryTimeSlots || [])
+  );
 
   if (!localConfig) return null;
 
   const saveConfig = () => {
+    const sanitizedZones = zones.map((z) => ({
+      ...z,
+      pincodes: z.pincodes
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .join(', '),
+      basePrice: Number(z.basePrice) || 0,
+    }));
+    const sanitizedSlots = normalizeSlots(timeSlots).map((ts) => ({
+      ...ts,
+      surcharge: ts.type === 'standard' ? 0 : Math.max(0, Number(ts.surcharge) || 0),
+    }));
+    setZones(sanitizedZones);
+    setTimeSlots(sanitizedSlots);
     onUpdateStoreConfig({
       ...localConfig,
-      deliveryZones: zones,
-      deliveryTimeSlots: timeSlots,
+      deliveryZones: sanitizedZones,
+      deliveryTimeSlots: sanitizedSlots,
     });
     alert('Delivery configuration saved successfully!');
   };
@@ -44,7 +82,13 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
 
   const updateTimeSlot = (index: number, updates: Partial<DeliveryTimeSlot>) => {
     const newSlots = [...timeSlots];
-    newSlots[index] = { ...newSlots[index], ...updates };
+    const nextSlot = { ...newSlots[index], ...updates };
+    const lower = (nextSlot.label || '').toLowerCase();
+    if (nextSlot.type === 'standard' || lower.includes('any time')) {
+      nextSlot.type = 'standard';
+      nextSlot.surcharge = 0;
+    }
+    newSlots[index] = nextSlot;
     setTimeSlots(newSlots);
   };
 
@@ -173,13 +217,21 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
                 </select>
               </div>
               <div className="col-span-12 md:col-span-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Surcharge (₹)</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
+                  Surcharge (₹)
+                </label>
                 <input
                   type="number"
-                  value={ts.surcharge}
+                  value={ts.type === 'standard' ? 0 : ts.surcharge}
+                  disabled={ts.type === 'standard'}
                   onChange={e => updateTimeSlot(idx, { surcharge: Number(e.target.value) })}
-                  className="w-full text-xs font-semibold p-2 border border-slate-300 rounded-lg focus:ring-1 focus:ring-indigo-500"
+                  className={`w-full text-xs font-semibold p-2 border border-slate-300 rounded-lg focus:ring-1 focus:ring-indigo-500 ${ts.type === 'standard' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
                 />
+                {ts.type === 'standard' && (
+                  <span className="text-[9px] text-emerald-700 font-bold block mt-1">
+                    Fixed ₹0 (Uses Zone Base Price for all pincodes)
+                  </span>
+                )}
               </div>
               <div className="col-span-12 md:col-span-1 flex items-center justify-end h-full pt-4">
                 <button type="button" onClick={() => removeTimeSlot(idx)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100">

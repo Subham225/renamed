@@ -27,8 +27,10 @@ import {
   Product,
   getWeightPrice,
   getEgglessOffset,
+  DeliveryTimeSlot,
 } from "../types";
 import { sendOrderEmailNotification } from "../services/notificationService";
+import { DEFAULT_STORE_CONFIG } from "../services/dbService";
 import { auth } from "../firebase";
 import { ACCESSORY_ADDONS } from "../data";
 import { isStoreOpenNow } from "../services/storeSettings";
@@ -299,6 +301,83 @@ export default function CartDrawer({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
+  const normalizedTimeSlots = useMemo<DeliveryTimeSlot[]>(() => {
+    const rawSlots =
+      storeConfig?.deliveryTimeSlots && storeConfig.deliveryTimeSlots.length > 0
+        ? storeConfig.deliveryTimeSlots
+        : DEFAULT_STORE_CONFIG.deliveryTimeSlots || [];
+
+    const mapped: DeliveryTimeSlot[] = rawSlots.map((ts) => {
+      const lowerLabel = (ts.label || "").toLowerCase();
+      const isStandard =
+        ts.type === "standard" ||
+        lowerLabel.includes("any time") ||
+        lowerLabel.includes("standard delivery");
+      if (isStandard) {
+        return {
+          ...ts,
+          label: ts.label || "Any Time On Specified Date",
+          type: "standard",
+          surcharge: 0,
+        };
+      }
+      return ts;
+    });
+
+    const standardSlots = mapped.filter((ts) => ts.type === "standard");
+    const nonStandardSlots = mapped.filter((ts) => ts.type !== "standard");
+    if (standardSlots.length === 0) {
+      standardSlots.push({
+        id: "ts_standard",
+        label: "Any Time On Specified Date",
+        surcharge: 0,
+        type: "standard",
+      });
+    }
+    return [...standardSlots, ...nonStandardSlots];
+  }, [storeConfig?.deliveryTimeSlots]);
+
+  const defaultStandardSlotLabel =
+    normalizedTimeSlots.find((ts) => ts.type === "standard")?.label ||
+    "Any Time On Specified Date";
+
+  const activeZoneDetails = useMemo(() => {
+    const activePin = (formData.pincode || deliveryPincode || "").trim();
+    const zones =
+      storeConfig?.deliveryZones && storeConfig.deliveryZones.length > 0
+        ? storeConfig.deliveryZones
+        : DEFAULT_STORE_CONFIG.deliveryZones || [];
+
+    const matchedZone = zones.find((z) => {
+      if (z.pincodes.trim() === "*") return false;
+      const pins = z.pincodes.split(",").map((p) => p.trim());
+      return activePin !== "" && pins.includes(activePin);
+    });
+
+    if (matchedZone) {
+      return {
+        zoneName: matchedZone.name || "Area Zone",
+        basePrice: Number(matchedZone.basePrice) || 0,
+        allowExpress: !!matchedZone.allowExpress,
+      };
+    }
+
+    const defaultZone = zones.find((z) => z.pincodes.trim() === "*");
+    if (defaultZone) {
+      return {
+        zoneName: defaultZone.name || "Other Areas",
+        basePrice: Number(defaultZone.basePrice) || 0,
+        allowExpress: !!defaultZone.allowExpress,
+      };
+    }
+
+    return {
+      zoneName: "Other Areas",
+      basePrice: 250,
+      allowExpress: false,
+    };
+  }, [formData.pincode, deliveryPincode, storeConfig?.deliveryZones]);
+
   React.useEffect(() => {
     if (isOpen) {
       const savedName =
@@ -306,30 +385,36 @@ export default function CartDrawer({
         localStorage.getItem("rocx_user_email") ||
         "";
       const savedPhone = localStorage.getItem("rocx_user_phone") || "";
-      const isTwoHour = cartItems.some(
-        (item) =>
-          item.product.isTwoHourDelivery ||
-          item.product.category === "two_hours_delivery" ||
-          item.product.categories?.includes("two_hours_delivery"),
-      );
       setFormData((prev) => ({
         ...prev,
         customerName: prev.customerName || savedName,
         customerPhone: prev.customerPhone || savedPhone,
         pincode: prev.pincode || deliveryPincode || "",
         city: prev.city || deliveryCity || "Kharagpur",
-        deliveryTimeSlot: prev.deliveryTimeSlot
-          ? (prev.deliveryTimeSlot === "2 Hours Express Delivery" && !isTwoHour
-              ? prev.deliveryTimeSlot
-              : isTwoHour
-              ? "2 Hours Express Delivery"
-              : prev.deliveryTimeSlot)
-          : isTwoHour
-          ? "2 Hours Express Delivery"
-          : "Any Time On Specified Date",
+        deliveryTimeSlot: prev.deliveryTimeSlot || defaultStandardSlotLabel,
       }));
     }
-  }, [isOpen, deliveryCity, deliveryPincode, cartItems]);
+  }, [isOpen, deliveryCity, deliveryPincode, defaultStandardSlotLabel]);
+
+  React.useEffect(() => {
+    const visibleSlots = normalizedTimeSlots.filter(
+      (ts) => ts.type !== "express" || activeZoneDetails.allowExpress,
+    );
+    const isCurrentVisible = visibleSlots.some(
+      (ts) => ts.label === formData.deliveryTimeSlot,
+    );
+    if (!isCurrentVisible && formData.deliveryTimeSlot !== defaultStandardSlotLabel) {
+      setFormData((prev) => ({
+        ...prev,
+        deliveryTimeSlot: defaultStandardSlotLabel,
+      }));
+    }
+  }, [
+    activeZoneDetails.allowExpress,
+    normalizedTimeSlots,
+    formData.deliveryTimeSlot,
+    defaultStandardSlotLabel,
+  ]);
 
   if (!isOpen) return null;
 
@@ -358,91 +443,39 @@ export default function CartDrawer({
     return acc + calculateItemPrice(item) * item.quantity;
   }, 0);
 
+  let zoneBasePrice = 0;
+  let slotSurcharge = 0;
   let deliverySubtotal = 0;
   if (cartItems.length > 0) {
-    // 1. Determine zone base price
-    let basePrice = 250;
-    const activePincode = formData.pincode || deliveryPincode || "";
-    
-    if (storeConfig?.deliveryZones && storeConfig.deliveryZones.length > 0) {
-      const matchedZone = storeConfig.deliveryZones.find(z => {
-        if (z.pincodes === "*") return false;
-        const pins = z.pincodes.split(',').map(p => p.trim());
-        return pins.includes(activePincode);
-      });
-      
-      if (matchedZone) {
-        basePrice = matchedZone.basePrice;
-      } else {
-        const defaultZone = storeConfig.deliveryZones.find(z => z.pincodes === "*");
-        if (defaultZone) basePrice = defaultZone.basePrice;
-      }
-    } else {
-      // Hardcoded fallback according to rules if config is missing
-      const zone1 = ['721301', '721302', '721306', '721305'];
-      const zone2 = ['721101', '721102', '721303', '721145'];
-      if (zone1.includes(activePincode)) basePrice = 100;
-      else if (zone2.includes(activePincode)) basePrice = 200;
-      else basePrice = 250;
-    }
+    zoneBasePrice = activeZoneDetails.basePrice;
 
-    // 2. Determine time slot surcharge
-    let surcharge = 0;
-    const selectedSlotLabel = formData.deliveryTimeSlot;
-    
-    // Auto-select 2 hour express if any cart item demands it and user selected "Any Time"
-    const hasTwoHourProduct = cartItems.some(
-      (item) =>
-        item.product.isTwoHourDelivery ||
-        item.product.category === "two_hours_delivery" ||
-        item.product.categories?.includes("two_hours_delivery"),
+    const selectedSlotLabel = formData.deliveryTimeSlot || defaultStandardSlotLabel;
+    const matchedSlot = normalizedTimeSlots.find(
+      (ts) => ts.label === selectedSlotLabel,
     );
-    
-    // Check if active zone allows express
-    let zoneAllowsExpress = true;
-    if (storeConfig?.deliveryZones && storeConfig.deliveryZones.length > 0) {
-      const matchedZone = storeConfig.deliveryZones.find(z => {
-        if (z.pincodes === "*") return false;
-        return z.pincodes.split(',').map(p => p.trim()).includes(activePincode);
-      });
-      if (matchedZone) {
-        zoneAllowsExpress = matchedZone.allowExpress;
-      } else {
-        const defaultZone = storeConfig.deliveryZones.find(z => z.pincodes === "*");
-        if (defaultZone) zoneAllowsExpress = defaultZone.allowExpress;
-      }
-    }
 
-    let effectiveSlotLabel = (hasTwoHourProduct && selectedSlotLabel === "Any Time On Specified Date") 
-      ? "2 Hours Express Delivery" 
-      : selectedSlotLabel;
-      
-    if (effectiveSlotLabel === "2 Hours Express Delivery" && (!zoneAllowsExpress || !hasTwoHourProduct)) {
-        if (!hasTwoHourProduct) {
-            // User manually selected it? If so, we only allow it if hasTwoHourProduct is true? No, the rule is anyone can choose it.
-            // Oh wait, can anyone choose express? "If someone choose 2 hours express delivery ₹ 50 will be added... (only Available in Kharagpur ,midnapur,salua,kalaikunda)"
-            // So yes, anyone can choose it if zone allows.
-        }
-        if (!zoneAllowsExpress) {
-            effectiveSlotLabel = "Any Time On Specified Date"; // fallback
-        }
-    }
+    const isExpressChoice =
+      matchedSlot?.type === "express" ||
+      selectedSlotLabel.toLowerCase().includes("2 hour");
 
-    if (storeConfig?.deliveryTimeSlots && storeConfig.deliveryTimeSlots.length > 0) {
-      const matchedSlot = storeConfig.deliveryTimeSlots.find(ts => ts.label === effectiveSlotLabel);
-      if (matchedSlot) {
-        surcharge = matchedSlot.surcharge;
-      }
+    if (isExpressChoice && !activeZoneDetails.allowExpress) {
+      slotSurcharge = 0;
+    } else if (
+      matchedSlot?.type === "standard" ||
+      selectedSlotLabel.toLowerCase().includes("any time")
+    ) {
+      slotSurcharge = 0;
+    } else if (matchedSlot) {
+      slotSurcharge = Number(matchedSlot.surcharge) || 0;
     } else {
-      // Hardcoded fallback
-      if (effectiveSlotLabel === "2 Hours Express Delivery") surcharge = 50;
-      else if (effectiveSlotLabel === "Midnight Delivery (11:30 PM - 12:00 AM)") surcharge = 100;
-      else if (effectiveSlotLabel !== "Any Time On Specified Date") surcharge = 100; // Fixed time slots
+      slotSurcharge = 100;
     }
 
-    deliverySubtotal = basePrice + surcharge;
+    deliverySubtotal = zoneBasePrice + slotSurcharge;
   }
   if (cartItems.some(item => item.product.id === 'free_test_item')) {
+    zoneBasePrice = 0;
+    slotSurcharge = 0;
     deliverySubtotal = 0;
   }
 
@@ -582,24 +615,8 @@ export default function CartDrawer({
     setStep("checkout_payment");
   };
 
-  // Determine if active zone allows express delivery
-  const activePincodeForExpress = formData.pincode || deliveryPincode || "";
-  let activeZoneAllowsExpress = true; // Default fallback if no config
-  if (storeConfig?.deliveryZones && storeConfig.deliveryZones.length > 0) {
-    const matchedZone = storeConfig.deliveryZones.find(z => {
-      if (z.pincodes === "*") return false;
-      const pins = z.pincodes.split(',').map(p => p.trim());
-      return pins.includes(activePincodeForExpress);
-    });
-    if (matchedZone) {
-      activeZoneAllowsExpress = matchedZone.allowExpress;
-    } else {
-      const defaultZone = storeConfig.deliveryZones.find(z => z.pincodes === "*");
-      if (defaultZone) activeZoneAllowsExpress = defaultZone.allowExpress;
-    }
-  }
-
-  const isTwoHourDeliveryAvailable = activeZoneAllowsExpress;
+  // Express availability comes directly from the matched delivery zone
+  const isTwoHourDeliveryAvailable = activeZoneDetails.allowExpress;
 
   const hasCakeInCart = cartItems.some((item) => {
     const cat = (item.product.category || "").toLowerCase();
@@ -1528,43 +1545,34 @@ export default function CartDrawer({
                         }
                         className="w-full text-xs font-black p-3 border border-pink-200 bg-white rounded-xl focus:ring-1 focus:ring-pink-500 cursor-pointer"
                       >
-                        {storeConfig?.deliveryTimeSlots ? (
-                          storeConfig.deliveryTimeSlots.map(ts => {
-                            if (ts.type === "express" && !isTwoHourDeliveryAvailable) return null;
-                            return (
-                              <option key={ts.id} value={ts.label}>
-                                {ts.label} {ts.surcharge > 0 ? `(+₹${ts.surcharge})` : ''}
-                              </option>
-                            );
-                          })
-                        ) : (
-                          <>
-                            {isTwoHourDeliveryAvailable && (
-                              <option value="2 Hours Express Delivery">
-                                🚀 2 Hours Express Delivery - Only Available in Kharagpur, Midnapore, Salua, Kalaikunda
-                              </option>
-                            )}
-                            <option value="Any Time On Specified Date">Standard Delivery (Any Time)</option>
-                            <option value="Fixed Time: 10 AM to 11 AM">Fixed Time: 10 AM to 11 AM</option>
-                            <option value="Fixed Time: 11 AM to 12 PM">Fixed Time: 11 AM to 12 PM</option>
-                            <option value="Fixed Time: 12 PM to 1 PM">Fixed Time: 12 PM to 1 PM</option>
-                            <option value="Fixed Time: 1 PM to 2 PM">Fixed Time: 1 PM to 2 PM</option>
-                            <option value="Fixed Time: 2 PM to 3 PM">Fixed Time: 2 PM to 3 PM</option>
-                            <option value="Fixed Time: 3 PM to 4 PM">Fixed Time: 3 PM to 4 PM</option>
-                            <option value="Fixed Time: 4 PM to 5 PM">Fixed Time: 4 PM to 5 PM</option>
-                            <option value="Fixed Time: 5 PM to 6 PM">Fixed Time: 5 PM to 6 PM</option>
-                            <option value="Fixed Time: 6 PM to 7 PM">Fixed Time: 6 PM to 7 PM</option>
-                            <option value="Fixed Time: 7 PM to 8 PM">Fixed Time: 7 PM to 8 PM</option>
-                            <option value="Fixed Time: 8 PM to 9 PM">Fixed Time: 8 PM to 9 PM</option>
-                            <option value="Fixed Time: 10 PM to 11 PM">Fixed Time: 10 PM to 11 PM</option>
-                            <option value="Midnight Delivery (11:30 PM - 12:00 AM)">Midnight Delivery (11:30 PM - 12:00 AM)</option>
-                          </>
-                        )}
+                        {normalizedTimeSlots.map((ts) => {
+                          if (ts.type === "express" && !isTwoHourDeliveryAvailable) {
+                            return null;
+                          }
+                          return (
+                            <option key={ts.id} value={ts.label}>
+                              {ts.label}
+                              {ts.type !== "standard" && ts.surcharge > 0
+                                ? ` (+₹${ts.surcharge})`
+                                : ""}
+                            </option>
+                          );
+                        })}
                       </select>
                         <p className="text-[10px] text-pink-600 font-black italic mt-0.5">
                           Selected slot will be baked & shipped according to
                           schedule!
                         </p>
+                        <div className="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200/80 rounded-lg px-2.5 py-1.5 mt-1 flex flex-wrap items-center justify-between gap-1">
+                          <span>
+                            Area Charge: <strong className="text-slate-900">₹{zoneBasePrice}</strong>
+                            {" · "}
+                            Slot Extra: <strong className="text-slate-900">{slotSurcharge > 0 ? `+₹${slotSurcharge}` : "₹0"}</strong>
+                          </span>
+                          <span className="text-pink-700 font-black">
+                            Total Delivery: {deliverySubtotal === 0 ? "FREE" : `₹${deliverySubtotal}`}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="space-y-1.5 pt-2">
@@ -1635,7 +1643,12 @@ export default function CartDrawer({
                         </div>
                       )}
                       <div className="flex justify-between items-center text-[11px] text-slate-500 font-bold">
-                        <span>Delivery Fee</span>
+                        <span>
+                          Delivery Fee
+                          {deliverySubtotal > 0
+                            ? ` (Area ₹${zoneBasePrice}${slotSurcharge > 0 ? ` + Slot ₹${slotSurcharge}` : ""})`
+                            : ""}
+                        </span>
                         <span className="text-slate-800">{deliverySubtotal === 0 ? "Free" : `₹${deliverySubtotal.toFixed(2)}`}</span>
                       </div>
                       <div className="border-t border-dashed border-slate-200 pt-2 flex justify-between items-center mt-2">
@@ -2069,7 +2082,13 @@ export default function CartDrawer({
                     </div>
                   )}
                   <div className="flex justify-between font-semibold">
-                    <span>Flat Delivery Fee:</span>
+                    <span>
+                      Delivery Fee
+                      {deliverySubtotal > 0 && slotSurcharge > 0
+                        ? ` (₹${zoneBasePrice} + ₹${slotSurcharge})`
+                        : ""}
+                      :
+                    </span>
                     <strong className="text-slate-800">
                       {deliverySubtotal === 0 ? "FREE" : `₹${deliverySubtotal}`}
                     </strong>
