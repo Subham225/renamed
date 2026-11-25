@@ -127,12 +127,86 @@
         "manualClosed": { "type": "boolean" },
         "customStoreClosedMessage": { "type": "string" }
       }
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Store category metadata, display order, and visibility flags",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "image": { "type": "string" },
+        "displayOrder": { "type": "number" },
+        "isVisible": { "type": "boolean" },
+        "hidden": { "type": "boolean" },
+        "addonProductIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "name"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Promo discount code configuration",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "discountType": { "type": "string" },
+        "discountValue": { "type": "number" },
+        "minOrderAmount": { "type": "number" },
+        "description": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "showInCart": { "type": "boolean" }
+      },
+      "required": ["code", "discountType", "discountValue", "isActive"]
+    },
+    "MediaAsset": {
+      "title": "MediaAsset",
+      "description": "Content-addressed compressed image data externalized from Firestore documents to bypass the 1 MiB document size limit",
+      "type": "object",
+      "properties": {
+        "dataUrl": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["dataUrl", "updatedAt"]
+    },
+    "SellerApplication": {
+      "title": "SellerApplication",
+      "description": "Partner seller registration records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shopName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "pincode": { "type": "string" }
+      }
+    },
+    "DeliveryAudit": {
+      "title": "DeliveryAudit",
+      "description": "Delivery run audit records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "timestamp": { "type": "number" }
+      }
     }
   },
   "firestore": {
     "/products/{productId}": {
       "schema": "Product",
       "description": "Exhaustive product list synced across devices"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Store categories directory, ordering, and visibility toggles"
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Active discount coupons synchronized with checkout"
+    },
+    "/media_assets/{mediaId}": {
+      "schema": "MediaAsset",
+      "description": "Content-addressed uploaded images referenced by products, categories, slides, gallery, and store_config"
     },
     "/orders/{orderId}": {
       "schema": "Order",
@@ -150,9 +224,17 @@
       "schema": "DeliveryAgent",
       "description": "Dynamically registered active deliverers"
     },
+    "/seller_applications/{sellerId}": {
+      "schema": "SellerApplication",
+      "description": "Seller applications submitted for admin review"
+    },
+    "/delivery_audits/{auditId}": {
+      "schema": "DeliveryAudit",
+      "description": "Delivery run audit trail logs"
+    },
     "/store_config/{configId}": {
       "schema": "StoreConfig",
-      "description": "Global store settings, subcategories, and curation structures"
+      "description": "Global store settings, subcategories, curations, and seeding metadata"
     }
   }
 }

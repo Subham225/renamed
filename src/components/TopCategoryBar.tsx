@@ -4,11 +4,14 @@ import { Category, CategoryID } from '../types';
 
 interface TopCategoryBarProps {
   categories?: Category[];
+  hiddenCategoryIds?: string[];
   selectedCategory: CategoryID | null;
   onSelectCategory: (id: CategoryID | null) => void;
 }
 
 export default function TopCategoryBar({
+  categories = [],
+  hiddenCategoryIds = [],
   selectedCategory,
   onSelectCategory,
 }: TopCategoryBarProps) {
@@ -18,6 +21,16 @@ export default function TopCategoryBar({
   // 3. Flowers
   // 4. Birthday
   // 5. Plants
+
+  const hiddenSet = React.useMemo(() => {
+    const s = new Set<string>(hiddenCategoryIds);
+    categories.forEach((cat) => {
+      if (cat.isVisible === false || cat.hidden === true) {
+        s.add(cat.id);
+      }
+    });
+    return s;
+  }, [categories, hiddenCategoryIds]);
 
   const topItems: { id: CategoryID | null; name: string; icon: React.ReactNode }[] = [
     {
@@ -45,7 +58,7 @@ export default function TopCategoryBar({
       name: 'Plants',
       icon: <Leaf className="w-4 h-4 text-emerald-500" />,
     },
-  ];
+  ].filter((item) => item.id === null || !hiddenSet.has(item.id));
 
   return (
     <div className="bg-pink-50/40 border-b border-pink-100/30 py-2 overflow-x-auto scrollbar-none w-full touch-pan-x">

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { X, ChevronDown, Facebook, Instagram, Twitter, Mail } from 'lucide-react';
+import { Category } from '../types';
 
 interface SidebarMenuDrawerProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface SidebarMenuDrawerProps {
   onOpenTrack: () => void;
   onOpenCustomer: () => void;
   onSelectCategory?: (id: string) => void;
+  categories?: Category[];
+  hiddenCategoryIds?: string[];
 }
 
 const MENU_ITEMS = [
@@ -73,8 +76,36 @@ const MENU_ITEMS = [
   }
 ];
 
-export default function SidebarMenuDrawer({ isOpen, onClose, onNavigate, onOpenProfile, onOpenTrack, onOpenCustomer, onSelectCategory }: SidebarMenuDrawerProps) {
+export default function SidebarMenuDrawer({
+  isOpen,
+  onClose,
+  onNavigate,
+  onOpenProfile,
+  onOpenTrack,
+  onOpenCustomer,
+  onSelectCategory,
+  categories = [],
+  hiddenCategoryIds = [],
+}: SidebarMenuDrawerProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+
+  const visibleMenuItems = useMemo(() => {
+    const hiddenSet = new Set<string>(hiddenCategoryIds);
+    categories.forEach((cat) => {
+      if (cat.isVisible === false || cat.hidden === true) {
+        hiddenSet.add(cat.id);
+      }
+    });
+
+    return MENU_ITEMS
+      .filter((item) => !hiddenSet.has(item.id))
+      .map((item) => {
+        if (!item.subCategories) return item;
+        const filteredSubs = item.subCategories.filter((sub) => !hiddenSet.has(sub.id));
+        return { ...item, subCategories: filteredSubs };
+      })
+      .filter((item) => !item.subCategories || item.subCategories.length > 0);
+  }, [categories, hiddenCategoryIds]);
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => 
@@ -115,7 +146,7 @@ export default function SidebarMenuDrawer({ isOpen, onClose, onNavigate, onOpenP
         <div className="flex-1 overflow-y-auto scrollbar-none">
           <div className="flex flex-col">
             
-            {MENU_ITEMS.map((item) => (
+            {visibleMenuItems.map((item) => (
               <div key={item.id} className="border-b border-[#f5ecec]">
                 {item.subCategories ? (
                   <>

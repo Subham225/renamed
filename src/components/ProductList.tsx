@@ -27,6 +27,7 @@ interface ProductListProps {
   selectedCategoryName: string;
   onSelectCategory?: (id: string | null) => void;
   storeConfig?: StoreConfig;
+  hiddenCategoryIds?: string[];
   wishlistIds?: string[];
   onToggleWishlist?: (productId: string) => void;
 }
@@ -227,39 +228,50 @@ export default function ProductList({
   selectedCategoryName,
   onSelectCategory,
   storeConfig,
+  hiddenCategoryIds = [],
   wishlistIds = [],
   onToggleWishlist,
 }: ProductListProps) {
+  const hiddenSet = useMemo(() => new Set(hiddenCategoryIds), [hiddenCategoryIds]);
+
   // Check if we are showing the default multi-section landing view
   const isDefaultLanding =
     selectedCategoryName === "⚡ Premium Best Sellers" ||
     selectedCategoryName === "All" ||
     !selectedCategoryName;
 
-  const displayedCakeSubcategories =
-    storeConfig?.cakeSubcategories || CAKE_SUBCATEGORIES;
+  const displayedCakeSubcategories = (
+    storeConfig?.cakeSubcategories || CAKE_SUBCATEGORIES
+  ).filter((cat) => !hiddenSet.has(cat.id));
   const displayedGiftSubcategories = (
     storeConfig?.giftSubcategories || GIFT_SUBCATEGORIES
-  ).map((cat, idx) => ({
-    ...GIFT_SUBCATEGORIES[idx],
-    ...cat,
-    id: cat.id || GIFT_SUBCATEGORIES[idx]?.id,
-  }));
-  const displayedDewaliSubcategories =
-    storeConfig?.dewaliSubcategories || DEWALI_SUBCATEGORIES;
-  const displayedRakhiSubcategories =
-    storeConfig?.rakhiSubcategories || RAKHI_SUBCATEGORIES;
-  const displayedPhotoToArtSubcategories =
-    storeConfig?.photoToArtSubcategories || PHOTO_TO_ART_SUBCATEGORIES;
-  const displayedHandCraftSubcategories =
-    storeConfig?.handCraftSubcategories || HAND_CRAFT_SUBCATEGORIES;
-  const displayedNewYearSubcategories =
+  )
+    .map((cat, idx) => ({
+      ...GIFT_SUBCATEGORIES[idx],
+      ...cat,
+      id: cat.id || GIFT_SUBCATEGORIES[idx]?.id,
+    }))
+    .filter((cat) => !hiddenSet.has(cat.id));
+  const displayedDewaliSubcategories = (
+    storeConfig?.dewaliSubcategories || DEWALI_SUBCATEGORIES
+  ).filter((cat) => !hiddenSet.has(cat.id));
+  const displayedRakhiSubcategories = (
+    storeConfig?.rakhiSubcategories || RAKHI_SUBCATEGORIES
+  ).filter((cat) => !hiddenSet.has(cat.id));
+  const displayedPhotoToArtSubcategories = (
+    storeConfig?.photoToArtSubcategories || PHOTO_TO_ART_SUBCATEGORIES
+  ).filter((cat) => !hiddenSet.has(cat.id));
+  const displayedHandCraftSubcategories = (
+    storeConfig?.handCraftSubcategories || HAND_CRAFT_SUBCATEGORIES
+  ).filter((cat) => !hiddenSet.has(cat.id));
+  const displayedNewYearSubcategories = (
     storeConfig?.newYearSubcategories || [
       { id: "new_year_cakes", name: "New Year Cakes", image: "https://images.unsplash.com/photo-1546272989-40c92939c6c2?auto=format&fit=crop&w=400&q=80", tag: "Midnight Surprises" },
       { id: "new_year_flowers", name: "Festive Flowers", image: "https://images.unsplash.com/photo-1482355348030-c3d6232d3bfa?auto=format&fit=crop&w=400&q=80", tag: "Fresh Starts" },
       { id: "new_year_combos", name: "Party Combos", image: "https://images.unsplash.com/photo-1512413914619-2166eb8ce429?auto=format&fit=crop&w=400&q=80", tag: "Joyful Kits" },
       { id: "new_year_gifts", name: "Special Gifts", image: "https://images.unsplash.com/photo-1511268559489-34b624eaf815?auto=format&fit=crop&w=400&q=80", tag: "Memorable Presents" }
-    ];
+    ]
+  ).filter((cat) => !hiddenSet.has(cat.id));
 
   const [randomOrderMap] = useState(() => new Map<string, number>());
 
@@ -484,7 +496,7 @@ export default function ProductList({
             p.category === "valentine_day" ||
             p.categories?.includes("valentine_day"),
         ),
-      ),
+      ).slice(0, 8),
     [products, randomOrderMap],
   );
   const teachersDayProducts = useMemo(
@@ -644,7 +656,8 @@ export default function ProductList({
             switch (sectionId) {
               case "new_year":
                 return (
-                  storeConfig?.showNewYear !== false && (
+                  storeConfig?.showNewYear !== false &&
+                  !hiddenSet.has("new_year") && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-amber-50 pb-2">
@@ -688,7 +701,8 @@ export default function ProductList({
                 );
               case "rakhi":
                 return (
-                  storeConfig?.showRakhi !== false && (
+                  storeConfig?.showRakhi !== false &&
+                  !hiddenSet.has("rakhi") && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-orange-50 pb-2">
@@ -732,7 +746,8 @@ export default function ProductList({
                 );
               case "dewali":
                 return (
-                  storeConfig?.showDewali !== false && (
+                  storeConfig?.showDewali !== false &&
+                  !hiddenSet.has("dewali") && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-amber-50 pb-2">
@@ -776,7 +791,8 @@ export default function ProductList({
                 );
               case "hand_crafts":
                 return (
-                  storeConfig?.showHandCrafts !== false && (
+                  storeConfig?.showHandCrafts !== false &&
+                  !hiddenSet.has("hand_crafts") && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-rose-50 pb-2">
@@ -820,7 +836,8 @@ export default function ProductList({
                 );
               case "photo_to_art":
                 return (
-                  storeConfig?.showPhotoToArt !== false && (
+                  storeConfig?.showPhotoToArt !== false &&
+                  !hiddenSet.has("photo_to_art") && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-sky-50 pb-2">
@@ -865,6 +882,7 @@ export default function ProductList({
               case "valentine_day":
                 return (
                   storeConfig?.showValentineDay !== false &&
+                  !hiddenSet.has("valentine_day") &&
                   valentineProducts.length > 0 && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
@@ -872,10 +890,14 @@ export default function ProductList({
                           <h2 className="text-xl font-black text-rose-900 tracking-tight text-left flex items-center gap-1.5">
                             <span>💝</span> Valentine Day Special
                           </h2>
+                          <span className="text-[10px] font-bold text-rose-700 bg-rose-50 py-1 px-3 rounded-full uppercase tracking-wider">
+                            {valentineProducts.length}{" "}
+                            {valentineProducts.length === 1 ? "Item" : "Items"}
+                          </span>
                         </div>
                         {renderSectionLayout(
                           valentineProducts,
-                          storeConfig?.valentineDayLayout,
+                          storeConfig?.valentineDayLayout || "slider",
                         )}
                       </div>
                     </ScrollReveal>
@@ -884,6 +906,7 @@ export default function ProductList({
               case "teachers_day":
                 return (
                   storeConfig?.showTeachersDay !== false &&
+                  !hiddenSet.has("teachers_day") &&
                   teachersDayProducts.length > 0 && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
@@ -903,6 +926,7 @@ export default function ProductList({
               case "mothers_day":
                 return (
                   storeConfig?.showMothersDay !== false &&
+                  !hiddenSet.has("mothers_day") &&
                   mothersDayProducts.length > 0 && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
@@ -922,6 +946,7 @@ export default function ProductList({
               case "fathers_day":
                 return (
                   storeConfig?.showFathersDay !== false &&
+                  !hiddenSet.has("fathers_day") &&
                   fathersDayProducts.length > 0 && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
@@ -941,6 +966,7 @@ export default function ProductList({
               case "xmas":
                 return (
                   storeConfig?.showXmasDay !== false &&
+                  !hiddenSet.has("xmas") &&
                   xmasProducts.length > 0 && (
                     <ScrollReveal variant="slide-up">
                       <div className="space-y-4">
@@ -1002,7 +1028,9 @@ export default function ProductList({
 
               case "custom_cake_categories":
                 return (
-                  storeConfig?.showCustomCakeCategories !== false && (
+                  storeConfig?.showCustomCakeCategories !== false &&
+                  !hiddenSet.has("cakes") &&
+                  displayedCakeSubcategories.length > 0 && (
                     <ScrollReveal variant="slide-left">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-pink-50 pb-2">
@@ -1203,7 +1231,8 @@ export default function ProductList({
                 );
               case "cakes":
                 return (
-                  storeConfig?.showCakesSection !== false && (
+                  storeConfig?.showCakesSection !== false &&
+                  !hiddenSet.has("cakes") && (
                     <ScrollReveal variant="slide-right">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-pink-50 pb-2">
@@ -1244,7 +1273,8 @@ export default function ProductList({
 
               case "flowers":
                 return (
-                  storeConfig?.showFlowersSection !== false && (
+                  storeConfig?.showFlowersSection !== false &&
+                  !hiddenSet.has("flowers") && (
                     <ScrollReveal variant="slide-left">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-pink-50 pb-2">
@@ -1274,7 +1304,10 @@ export default function ProductList({
 
               case "gifts":
                 return (
-                  storeConfig?.showGiftsSection !== false && (
+                  storeConfig?.showGiftsSection !== false &&
+                  !hiddenSet.has("gifts") &&
+                  !hiddenSet.has("combos") &&
+                  displayedGiftSubcategories.length > 0 && (
                     <ScrollReveal variant="slide-left">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-pink-50 pb-2">
@@ -1325,7 +1358,8 @@ export default function ProductList({
 
               case "plants":
                 return (
-                  storeConfig?.showPlantsSection !== false && (
+                  storeConfig?.showPlantsSection !== false &&
+                  !hiddenSet.has("plants") && (
                     <ScrollReveal variant="slide-right">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-pink-50 pb-2">

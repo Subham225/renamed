@@ -1,17 +1,18 @@
 import { 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   getDocFromServer,
+  getDocsFromServer,
   setDoc, 
   deleteDoc, 
   updateDoc,
   query,
-  orderBy,
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Product, Coupon, Slide, GalleryItem, StoreConfig, Category, compressStoreConfigImages, cleanImageUrl } from '../types';
+import { Product, Coupon, Slide, GalleryItem, StoreConfig, Category, compressBase64String, cleanImageUrl } from '../types';
 import { PRODUCTS, CATEGORIES } from '../data';
 
 enum OperationType {
@@ -81,6 +82,164 @@ export function cleanUndefined<T>(obj: T): T {
   return cleanObj as T;
 }
 
+// --- MEDIA EXTERNALIZATION SYSTEM (Prevents 1MB Firestore Doc Size Limit Failures) ---
+const MEDIA_PREFIX = '__fs_media__:';
+const mediaCache = new Map<string, string>();
+const uploadedMediaIds = new Set<string>();
+const pendingMediaReads = new Map<string, Promise<string | null>>();
+
+function hashDataUrl(input: string): string {
+  let h1 = 0x811c9dc5;
+  let h2 = 5381;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input.charCodeAt(i);
+    h1 ^= ch;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 = ((h2 << 5) + h2) ^ ch;
+  }
+  return `img_${(h1 >>> 0).toString(16)}_${(h2 >>> 0).toString(16)}_${input.length}`;
+}
+
+async function storeDataUrlAsMediaAsset(rawDataUrl: string): Promise<string> {
+  if (!rawDataUrl || typeof rawDataUrl !== 'string' || !rawDataUrl.startsWith('data:image/')) {
+    return rawDataUrl;
+  }
+  let normalized = await compressBase64String(rawDataUrl, 960, 0.72, 20000);
+  if (normalized.length > 620000) {
+    normalized = await compressBase64String(normalized, 680, 0.58, 0);
+  }
+  if (normalized.length > 680000) {
+    normalized = await compressBase64String(normalized, 480, 0.45, 0);
+  }
+  const mediaId = hashDataUrl(normalized);
+  mediaCache.set(mediaId, normalized);
+  if (!uploadedMediaIds.has(mediaId)) {
+    await setDoc(doc(db, 'media_assets', mediaId), {
+      id: mediaId,
+      dataUrl: normalized,
+      updatedAt: Date.now(),
+    });
+    uploadedMediaIds.add(mediaId);
+  }
+  return `${MEDIA_PREFIX}${mediaId}`;
+}
+
+async function externalizeMediaInObject<T>(obj: T): Promise<T> {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    if (obj.startsWith('data:image/')) {
+      return (await storeDataUrlAsMediaAsset(obj)) as unknown as T;
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    const mapped = await Promise.all(obj.map((item) => externalizeMediaInObject(item)));
+    return mapped as unknown as T;
+  }
+  if (typeof obj === 'object') {
+    const entries = await Promise.all(
+      Object.keys(obj as any).map(async (k) => [k, await externalizeMediaInObject((obj as any)[k])] as const)
+    );
+    const out: any = {};
+    for (const [k, v] of entries) {
+      out[k] = v;
+    }
+    return out as T;
+  }
+  return obj;
+}
+
+function collectMediaIds(obj: any, found: Set<string>) {
+  if (obj === null || obj === undefined) return;
+  if (typeof obj === 'string') {
+    if (obj.startsWith(MEDIA_PREFIX)) {
+      const id = obj.slice(MEDIA_PREFIX.length);
+      if (id) found.add(id);
+    }
+    return;
+  }
+  if (Array.isArray(obj)) {
+    for (const item of obj) collectMediaIds(item, found);
+    return;
+  }
+  if (typeof obj === 'object') {
+    for (const key of Object.keys(obj)) collectMediaIds(obj[key], found);
+  }
+}
+
+async function fetchMediaAssetById(mediaId: string): Promise<string | null> {
+  if (mediaCache.has(mediaId)) {
+    return mediaCache.get(mediaId) || null;
+  }
+  const existingPromise = pendingMediaReads.get(mediaId);
+  if (existingPromise) return existingPromise;
+
+  const task = (async () => {
+    try {
+      const ref = doc(db, 'media_assets', mediaId);
+      let snap = await getDoc(ref).catch(() => null);
+      if (!snap || !snap.exists()) {
+        snap = await getDocFromServer(ref).catch(() => null);
+      }
+      if (snap && snap.exists()) {
+        const dataUrl = snap.data()?.dataUrl;
+        if (typeof dataUrl === 'string' && dataUrl) {
+          mediaCache.set(mediaId, dataUrl);
+          uploadedMediaIds.add(mediaId);
+          return dataUrl;
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed resolving media asset ${mediaId}:`, err);
+    } finally {
+      pendingMediaReads.delete(mediaId);
+    }
+    return null;
+  })();
+
+  pendingMediaReads.set(mediaId, task);
+  return task;
+}
+
+function replaceMediaRefsInObject<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    if (obj.startsWith(MEDIA_PREFIX)) {
+      const id = obj.slice(MEDIA_PREFIX.length);
+      return (mediaCache.get(id) || '') as unknown as T;
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => replaceMediaRefsInObject(item)) as unknown as T;
+  }
+  if (typeof obj === 'object') {
+    const out: any = {};
+    for (const key of Object.keys(obj as any)) {
+      out[key] = replaceMediaRefsInObject((obj as any)[key]);
+    }
+    return out as T;
+  }
+  return obj;
+}
+
+async function resolveMediaInObject<T>(obj: T): Promise<T> {
+  const ids = new Set<string>();
+  collectMediaIds(obj, ids);
+  const missing = Array.from(ids).filter((id) => !mediaCache.has(id));
+  if (missing.length > 0) {
+    await Promise.all(missing.map((id) => fetchMediaAssetById(id)));
+  }
+  return replaceMediaRefsInObject(obj);
+}
+
+function assertDocUnderLimit(payload: any, label: string): void {
+  const bytes = new Blob([JSON.stringify(payload)]).size;
+  if (bytes > 950000) {
+    throw new Error(`${label} payload (${bytes} bytes) exceeds Firestore safe document size limit.`);
+  }
+}
+
 // 1. PRODUCTS DB METHODS
 export async function getProductsFromFirestore(): Promise<Product[]> {
   const path = 'products';
@@ -101,13 +260,9 @@ export async function getProductsFromFirestore(): Promise<Product[]> {
     });
 
     if (list.length === 0) {
-      console.log("No products found in Firestore. Seeding default products catalog...");
-      for (const prod of PRODUCTS) {
-        await setDoc(doc(db, path, prod.id), prod);
-      }
       return PRODUCTS;
     }
-    return list;
+    return await resolveMediaInObject(list);
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
     return PRODUCTS;
@@ -158,9 +313,12 @@ export async function unmarkProductAsDeleted(productId: string): Promise<void> {
 export function subscribeToProductsFromFirestore(onUpdate: (products: Product[]) => void): () => void {
   const path = 'products';
   let latestSnapshot: any = null;
+  let productsSeeded = false;
+  let productsMetaLoaded = false;
+  let emitSeq = 0;
 
   const emitProducts = () => {
-    if (!latestSnapshot || !deletedIdsLoaded) return;
+    if (!latestSnapshot || !deletedIdsLoaded || !productsMetaLoaded) return;
     const firestoreMap = new Map<string, Product>();
     latestSnapshot.forEach((docSnap: any) => {
       const p = docSnap.data() as Product;
@@ -182,16 +340,35 @@ export function subscribeToProductsFromFirestore(onUpdate: (products: Product[])
       addedIds.add(prod.id);
     });
 
-    // 2. Merge default PRODUCTS that are not yet in Firestore and have not been deleted
-    PRODUCTS.forEach((defaultProd) => {
-      if (!addedIds.has(defaultProd.id) && !cachedDeletedIds.has(defaultProd.id)) {
-        list.push(defaultProd);
-        addedIds.add(defaultProd.id);
-      }
-    });
+    // 2. Only merge default PRODUCTS before initial server seeding completes
+    if (!productsSeeded) {
+      PRODUCTS.forEach((defaultProd) => {
+        if (!addedIds.has(defaultProd.id) && !cachedDeletedIds.has(defaultProd.id)) {
+          list.push(defaultProd);
+          addedIds.add(defaultProd.id);
+        }
+      });
+    }
 
-    onUpdate(list);
+    const seq = ++emitSeq;
+    resolveMediaInObject(list).then((resolved) => {
+      if (seq === emitSeq) {
+        onUpdate(resolved);
+      }
+    }).catch((err) => {
+      console.warn("Product media resolution warning:", err);
+      if (seq === emitSeq) onUpdate(list);
+    });
   };
+
+  const unsubMeta = onSnapshot(doc(db, 'store_config', 'products_meta'), (snap) => {
+    productsSeeded = !!(snap.exists() && snap.data()?.seeded);
+    productsMetaLoaded = true;
+    emitProducts();
+  }, () => {
+    productsMetaLoaded = true;
+    emitProducts();
+  });
 
   // Subscribe to deleted_products so deleted defaults never flash or resurrect across sessions
   const unsubDeleted = onSnapshot(doc(db, 'store_config', 'deleted_products'), (docSnap) => {
@@ -205,7 +382,6 @@ export function subscribeToProductsFromFirestore(onUpdate: (products: Product[])
     emitProducts();
   });
 
-  // Prime from server in parallel in case cache wasn't populated
   getDeletedProductIds().then(() => emitProducts()).catch(() => {});
 
   const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
@@ -218,36 +394,53 @@ export function subscribeToProductsFromFirestore(onUpdate: (products: Product[])
   return () => {
     unsubscribe();
     unsubDeleted();
+    unsubMeta();
   };
 }
 
 export async function ensureDefaultProducts(): Promise<void> {
   const path = 'products';
   try {
-    const deletedIds = await getDeletedProductIds();
-    const q = query(collection(db, path));
-    const snapshot = await getDocs(q);
-    
+    const metaRef = doc(db, 'store_config', 'products_meta');
+    const metaSnap = await getDocFromServer(metaRef);
+    if (metaSnap.exists() && metaSnap.data()?.seeded) {
+      return;
+    }
+
+    const [deletedSnap, serverSnapshot] = await Promise.all([
+      getDocFromServer(doc(db, 'store_config', 'deleted_products')),
+      getDocsFromServer(collection(db, path)),
+    ]);
+
+    const deletedIds = new Set<string>(
+      deletedSnap.exists() && Array.isArray(deletedSnap.data()?.ids)
+        ? deletedSnap.data()!.ids
+        : []
+    );
+    cachedDeletedIds = deletedIds;
+    deletedIdsLoaded = true;
+
     const existingIds = new Set<string>();
-    snapshot.forEach((docSnap) => {
+    serverSnapshot.forEach((docSnap) => {
       existingIds.add(docSnap.id);
     });
 
     let seededCount = 0;
     for (const prod of PRODUCTS) {
       if (!existingIds.has(prod.id) && !deletedIds.has(prod.id)) {
-        await setDoc(doc(db, path, prod.id), cleanUndefined(prod));
+        const prepared = await externalizeMediaInObject(cleanUndefined(prod));
+        await setDoc(doc(db, path, prod.id), prepared);
         seededCount++;
       }
     }
 
+    await setDoc(metaRef, { seeded: true, seededAt: Date.now() }, { merge: true });
     if (seededCount > 0) {
-      console.log(`[Firestore Sync] Seeded ${seededCount} missing products to Firestore successfully!`);
-    } else {
-      console.log("[Firestore Sync] All products in sync with Firestore.");
+      console.log(`[Firestore Sync] Seeded ${seededCount} initial products to Firestore.`);
     }
   } catch (err) {
-    console.error("Error ensuring default products:", err);
+    // Offline or transient error: abort without modifying Firestore!
+    console.warn("Skipped ensureDefaultProducts (waiting for server connectivity):", err);
   }
 }
 
@@ -295,27 +488,51 @@ export async function unmarkCategoryAsDeleted(categoryId: string): Promise<void>
 export async function ensureDefaultCategories(): Promise<void> {
   const path = 'categories';
   try {
-    const deletedCatIds = await getDeletedCategoryIds();
-    const snapshot = await getDocs(collection(db, path));
+    const metaRef = doc(db, 'store_config', 'categories_meta');
+    const metaSnap = await getDocFromServer(metaRef);
+    if (metaSnap.exists() && metaSnap.data()?.seeded) {
+      return;
+    }
+
+    const [deletedSnap, serverSnapshot] = await Promise.all([
+      getDocFromServer(doc(db, 'store_config', 'deleted_categories')),
+      getDocsFromServer(collection(db, path)),
+    ]);
+
+    const deletedCatIds = new Set<string>(
+      deletedSnap.exists() && Array.isArray(deletedSnap.data()?.ids)
+        ? deletedSnap.data()!.ids
+        : []
+    );
+    cachedDeletedCategoryIds = deletedCatIds;
+    deletedCategoryIdsLoaded = true;
+
     const existingIds = new Set<string>();
-    snapshot.forEach((d) => existingIds.add(d.id));
+    serverSnapshot.forEach((d) => existingIds.add(d.id));
 
     for (const cat of CATEGORIES) {
       if (!existingIds.has(cat.id) && !deletedCatIds.has(cat.id)) {
-        await setDoc(doc(db, path, cat.id), cleanUndefined(cat));
+        const prepared = await externalizeMediaInObject(cleanUndefined(cat));
+        await setDoc(doc(db, path, cat.id), prepared);
       }
     }
+
+    await setDoc(metaRef, { seeded: true, seededAt: Date.now() }, { merge: true });
   } catch (err) {
-    console.error("Error ensuring default categories:", err);
+    // Offline or transient error: abort without modifying Firestore!
+    console.warn("Skipped ensureDefaultCategories (waiting for server connectivity):", err);
   }
 }
 
 export function subscribeToCategoriesFromFirestore(onUpdate: (categories: Category[]) => void): () => void {
   const path = 'categories';
   let latestSnapshot: any = null;
+  let categoriesSeeded = false;
+  let categoriesMetaLoaded = false;
+  let emitSeq = 0;
 
   const emitCategories = () => {
-    if (!latestSnapshot || !deletedCategoryIdsLoaded) return;
+    if (!latestSnapshot || !deletedCategoryIdsLoaded || !categoriesMetaLoaded) return;
     const list: Category[] = [];
     const keys = new Set<string>();
     latestSnapshot.forEach((docSnap: any) => {
@@ -324,11 +541,13 @@ export function subscribeToCategoriesFromFirestore(onUpdate: (categories: Catego
       keys.add(docData.id);
     });
 
-    CATEGORIES.forEach((cat) => {
-      if (!keys.has(cat.id) && !cachedDeletedCategoryIds.has(cat.id)) {
-        list.push(cat);
-      }
-    });
+    if (!categoriesSeeded) {
+      CATEGORIES.forEach((cat) => {
+        if (!keys.has(cat.id) && !cachedDeletedCategoryIds.has(cat.id)) {
+          list.push(cat);
+        }
+      });
+    }
 
     const sorted = list.sort((a, b) => {
       const orderA =
@@ -342,8 +561,25 @@ export function subscribeToCategoriesFromFirestore(onUpdate: (categories: Catego
       return orderA - orderB;
     });
 
-    onUpdate(sorted);
+    const seq = ++emitSeq;
+    resolveMediaInObject(sorted).then((resolved) => {
+      if (seq === emitSeq) {
+        onUpdate(resolved);
+      }
+    }).catch((err) => {
+      console.warn("Category media resolution warning:", err);
+      if (seq === emitSeq) onUpdate(sorted);
+    });
   };
+
+  const unsubMeta = onSnapshot(doc(db, 'store_config', 'categories_meta'), (snap) => {
+    categoriesSeeded = !!(snap.exists() && snap.data()?.seeded);
+    categoriesMetaLoaded = true;
+    emitCategories();
+  }, () => {
+    categoriesMetaLoaded = true;
+    emitCategories();
+  });
 
   const unsubDeleted = onSnapshot(doc(db, 'store_config', 'deleted_categories'), (docSnap) => {
     if (docSnap.exists() && Array.isArray(docSnap.data()?.ids)) {
@@ -363,12 +599,12 @@ export function subscribeToCategoriesFromFirestore(onUpdate: (categories: Catego
     emitCategories();
   }, (err) => {
     console.warn("Firestore categories load error:", err);
-    onUpdate(CATEGORIES);
   });
 
   return () => {
     unsubscribe();
     unsubDeleted();
+    unsubMeta();
   };
 }
 
@@ -381,8 +617,9 @@ export async function saveCategoryToFirestore(category: Category): Promise<void>
       image: cleanImageUrl(category.image || ''),
     };
     const cleaned = cleanUndefined(sanitized);
-    const compressed = await compressStoreConfigImages(cleaned, 600, 0.65);
-    await setDoc(doc(db, 'categories', category.id), compressed);
+    const prepared = await externalizeMediaInObject(cleaned);
+    assertDocUnderLimit(prepared, `Category ${category.id}`);
+    await setDoc(doc(db, 'categories', category.id), prepared);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -416,15 +653,12 @@ export async function ensureDefaultCoupons(): Promise<void> {
   const path = 'coupons';
   try {
     const metaRef = doc(db, 'store_config', 'coupons_meta');
-    const metaSnap = await getDocFromServer(metaRef).catch(() => null);
-    if (metaSnap && metaSnap.exists() && metaSnap.data()?.seeded) {
-      console.log("Coupons already seeded in the past. Skipping auto-seeding.");
+    const metaSnap = await getDocFromServer(metaRef);
+    if (metaSnap.exists() && metaSnap.data()?.seeded) {
       return;
     }
 
-    const q = query(collection(db, path));
-    const snapshot = await getDocs(q);
-    
+    const snapshot = await getDocsFromServer(collection(db, path));
     const existingCodes = new Set<string>();
     snapshot.forEach((docSnap) => {
       existingCodes.add(docSnap.id);
@@ -436,23 +670,15 @@ export async function ensureDefaultCoupons(): Promise<void> {
       { code: 'WELCOME50', discountType: 'flat', discountValue: 50, minOrderAmount: 399, description: 'FLAT ₹50 OFF on your inaugural order!', isActive: true, showInCart: true },
     ];
 
-    let seededCount = 0;
     for (const c of defaultCoupons) {
       if (!existingCodes.has(c.code)) {
         await setDoc(doc(db, path, c.code), cleanUndefined(c));
-        seededCount++;
       }
     }
 
     await setDoc(metaRef, { seeded: true }, { merge: true });
-
-    if (seededCount > 0) {
-      console.log(`Seeded ${seededCount} missing coupons successfully!`);
-    } else {
-      console.log("All default coupons already exist in Firestore.");
-    }
   } catch (err) {
-    console.error("Error ensuring default coupons:", err);
+    console.warn("Skipped ensureDefaultCoupons (waiting for server connectivity):", err);
   }
 }
 
@@ -466,11 +692,9 @@ export async function addProductToFirestore(product: Product): Promise<void> {
       images: product.images ? product.images.map((u) => cleanImageUrl(u)).filter(Boolean) : undefined,
     };
     const cleaned = cleanUndefined(sanitized);
-    let compressed = await compressStoreConfigImages(cleaned, 600, 0.65);
-    if (new Blob([JSON.stringify(compressed)]).size > 750000) {
-      compressed = await compressStoreConfigImages(compressed, 420, 0.45);
-    }
-    await setDoc(doc(db, 'products', product.id), compressed);
+    const prepared = await externalizeMediaInObject(cleaned);
+    assertDocUnderLimit(prepared, `Product ${product.id}`);
+    await setDoc(doc(db, 'products', product.id), prepared);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -505,11 +729,9 @@ export async function updateProductInFirestore(product: Product): Promise<void> 
       images: product.images ? product.images.map((u) => cleanImageUrl(u)).filter(Boolean) : undefined,
     };
     const cleaned = cleanUndefined(sanitized);
-    let compressed = await compressStoreConfigImages(cleaned, 600, 0.65);
-    if (new Blob([JSON.stringify(compressed)]).size > 750000) {
-      compressed = await compressStoreConfigImages(compressed, 420, 0.45);
-    }
-    await setDoc(doc(db, 'products', product.id), compressed);
+    const prepared = await externalizeMediaInObject(cleaned);
+    assertDocUnderLimit(prepared, `Product ${product.id}`);
+    await setDoc(doc(db, 'products', product.id), prepared);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -718,54 +940,70 @@ export const DEFAULT_SLIDES: Slide[] = [
 
 export function subscribeToSlidesFromFirestore(onUpdate: (slides: Slide[]) => void): () => void {
   const path = 'slides';
+  let latestSnapshot: any = null;
   let slidesSeeded = false;
-  getDocFromServer(doc(db, 'store_config', 'slides_meta'))
-    .then((snap) => {
-      if (snap.exists() && snap.data()?.seeded) {
-        slidesSeeded = true;
-      }
-    })
-    .catch(() => {});
+  let metaLoaded = false;
+  let emitSeq = 0;
 
-  const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+  const emitSlides = () => {
+    if (!latestSnapshot) return;
     const list: Slide[] = [];
-    snapshot.forEach((docSnap) => {
+    latestSnapshot.forEach((docSnap: any) => {
       list.push(docSnap.data() as Slide);
     });
-    
-    if (list.length > 0 || slidesSeeded) {
+
+    if (list.length > 0 || (metaLoaded && slidesSeeded)) {
       list.sort((a, b) => a.id.localeCompare(b.id));
-      onUpdate(list);
+      const seq = ++emitSeq;
+      resolveMediaInObject(list).then((resolved) => {
+        if (seq === emitSeq) onUpdate(resolved);
+      }).catch(() => {
+        if (seq === emitSeq) onUpdate(list);
+      });
     }
+  };
+
+  const unsubMeta = onSnapshot(doc(db, 'store_config', 'slides_meta'), (snap) => {
+    slidesSeeded = !!(snap.exists() && snap.data()?.seeded);
+    metaLoaded = true;
+    emitSlides();
+  }, () => {
+    metaLoaded = true;
+    emitSlides();
+  });
+
+  const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+    latestSnapshot = snapshot;
+    emitSlides();
   }, (err) => {
     console.error("Error subscribing to slides collection:", err);
   });
-  return unsubscribe;
+
+  return () => {
+    unsubscribe();
+    unsubMeta();
+  };
 }
 
 export async function ensureDefaultSlides(): Promise<void> {
   const path = 'slides';
   try {
     const metaRef = doc(db, 'store_config', 'slides_meta');
-    const metaSnap = await getDocFromServer(metaRef).catch(() => null);
-    if (metaSnap && metaSnap.exists() && metaSnap.data()?.seeded) {
-      console.log("Slides already seeded in the past. Skipping auto-seeding.");
+    const metaSnap = await getDocFromServer(metaRef);
+    if (metaSnap.exists() && metaSnap.data()?.seeded) {
       return;
     }
 
-    const q = query(collection(db, path));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocsFromServer(collection(db, path));
     if (snapshot.empty) {
-      console.log("Seeding default slides to Firestore...");
       for (const slide of DEFAULT_SLIDES) {
         await setDoc(doc(db, path, slide.id), cleanUndefined(slide));
       }
-      console.log("Slides seeding finalized successfully!");
     }
 
     await setDoc(metaRef, { seeded: true }, { merge: true });
   } catch (err) {
-    console.error("Error ensuring default slides:", err);
+    console.warn("Skipped ensureDefaultSlides (waiting for server connectivity):", err);
   }
 }
 
@@ -777,11 +1015,9 @@ export async function addSlideToFirestore(slide: Slide): Promise<void> {
       image: cleanImageUrl(slide.image || ''),
     };
     const cleaned = cleanUndefined(sanitized);
-    let compressed = await compressStoreConfigImages(cleaned, 900, 0.65);
-    if (new Blob([JSON.stringify(compressed)]).size > 750000) {
-      compressed = await compressStoreConfigImages(compressed, 650, 0.45);
-    }
-    await setDoc(doc(db, 'slides', slide.id), compressed);
+    const prepared = await externalizeMediaInObject(cleaned);
+    assertDocUnderLimit(prepared, `Slide ${slide.id}`);
+    await setDoc(doc(db, 'slides', slide.id), prepared);
     await setDoc(doc(db, 'store_config', 'slides_meta'), { seeded: true }, { merge: true }).catch(() => {});
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -836,54 +1072,70 @@ export const DEFAULT_GALLERY: GalleryItem[] = [
 
 export function subscribeToGalleryFromFirestore(onUpdate: (gallery: GalleryItem[]) => void): () => void {
   const path = 'gallery';
+  let latestSnapshot: any = null;
   let gallerySeeded = false;
-  getDocFromServer(doc(db, 'store_config', 'gallery_meta'))
-    .then((snap) => {
-      if (snap.exists() && snap.data()?.seeded) {
-        gallerySeeded = true;
-      }
-    })
-    .catch(() => {});
+  let metaLoaded = false;
+  let emitSeq = 0;
 
-  const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+  const emitGallery = () => {
+    if (!latestSnapshot) return;
     const list: GalleryItem[] = [];
-    snapshot.forEach((docSnap) => {
+    latestSnapshot.forEach((docSnap: any) => {
       list.push(docSnap.data() as GalleryItem);
     });
-    
-    if (list.length > 0 || gallerySeeded) {
+
+    if (list.length > 0 || (metaLoaded && gallerySeeded)) {
       list.sort((a, b) => a.id.localeCompare(b.id));
-      onUpdate(list);
+      const seq = ++emitSeq;
+      resolveMediaInObject(list).then((resolved) => {
+        if (seq === emitSeq) onUpdate(resolved);
+      }).catch(() => {
+        if (seq === emitSeq) onUpdate(list);
+      });
     }
+  };
+
+  const unsubMeta = onSnapshot(doc(db, 'store_config', 'gallery_meta'), (snap) => {
+    gallerySeeded = !!(snap.exists() && snap.data()?.seeded);
+    metaLoaded = true;
+    emitGallery();
+  }, () => {
+    metaLoaded = true;
+    emitGallery();
+  });
+
+  const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+    latestSnapshot = snapshot;
+    emitGallery();
   }, (err) => {
     console.error("Error subscribing to gallery collection:", err);
   });
-  return unsubscribe;
+
+  return () => {
+    unsubscribe();
+    unsubMeta();
+  };
 }
 
 export async function ensureDefaultGallery(): Promise<void> {
   const path = 'gallery';
   try {
     const metaRef = doc(db, 'store_config', 'gallery_meta');
-    const metaSnap = await getDocFromServer(metaRef).catch(() => null);
-    if (metaSnap && metaSnap.exists() && metaSnap.data()?.seeded) {
-      console.log("Gallery already seeded in the past. Skipping auto-seeding.");
+    const metaSnap = await getDocFromServer(metaRef);
+    if (metaSnap.exists() && metaSnap.data()?.seeded) {
       return;
     }
 
-    const q = query(collection(db, path));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocsFromServer(collection(db, path));
     if (snapshot.empty) {
-      console.log("Seeding default gallery pictures to Firestore...");
       for (const item of DEFAULT_GALLERY) {
         await setDoc(doc(db, path, item.id), cleanUndefined(item));
       }
-      console.log("Gallery pictures seeding finalized successfully!");
     }
 
     await setDoc(metaRef, { seeded: true }, { merge: true });
   } catch (err) {
-    console.error("Error ensuring default gallery slides:", err);
+    console.warn("Skipped ensureDefaultGallery (waiting for server connectivity):", err);
   }
 }
 
@@ -895,11 +1147,9 @@ export async function addGalleryItemToFirestore(item: GalleryItem): Promise<void
       image: cleanImageUrl(item.image || ''),
     };
     const cleaned = cleanUndefined(sanitized);
-    let compressed = await compressStoreConfigImages(cleaned, 700, 0.65);
-    if (new Blob([JSON.stringify(compressed)]).size > 750000) {
-      compressed = await compressStoreConfigImages(compressed, 500, 0.45);
-    }
-    await setDoc(doc(db, 'gallery', item.id), compressed);
+    const prepared = await externalizeMediaInObject(cleaned);
+    assertDocUnderLimit(prepared, `Gallery ${item.id}`);
+    await setDoc(doc(db, 'gallery', item.id), prepared);
     await setDoc(doc(db, 'store_config', 'gallery_meta'), { seeded: true }, { merge: true }).catch(() => {});
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -1135,6 +1385,7 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
   showGiftsSection: true,
   showPlantsSection: true,
   showAboutSection: true,
+  valentineDayLayout: 'slider',
   manualClosed: false,
   customStoreClosedMessage: ''
 };
@@ -1165,7 +1416,9 @@ const STORE_CURATION_KEYS: (keyof StoreConfig)[] = [
   'plantCuration',
 ];
 
-export function subscribeToStoreConfigFromFirestore(onUpdate: (config: StoreConfig) => void): () => void {
+export function subscribeToStoreConfigFromFirestore(
+  onUpdate: (config: StoreConfig, isLoaded?: boolean) => void
+): () => void {
   const docRef = doc(db, 'store_config', 'settings');
   const subcatsRef = doc(db, 'store_config', 'subcategories');
   const curationsRef = doc(db, 'store_config', 'curations');
@@ -1173,14 +1426,19 @@ export function subscribeToStoreConfigFromFirestore(onUpdate: (config: StoreConf
   let currentSettings: any = null;
   let currentSubcats: any = null;
   let currentCurations: any = null;
+  let settingsSettled = false;
+  let subcatsSettled = false;
+  let curationsSettled = false;
+  let isDisposed = false;
+  let emitSeq = 0;
 
-  const emitMerged = () => {
+  const buildMergedConfig = (): StoreConfig => {
     const rawData = {
       ...(currentSettings || {}),
       ...(currentSubcats || {}),
       ...(currentCurations || {}),
     };
-    const mergedConfig: StoreConfig = {
+    return {
       ...DEFAULT_STORE_CONFIG,
       ...rawData,
       flowerSubcategories: rawData.flowerSubcategories ?? DEFAULT_STORE_CONFIG.flowerSubcategories,
@@ -1195,59 +1453,79 @@ export function subscribeToStoreConfigFromFirestore(onUpdate: (config: StoreConf
       cakeSubcategories: rawData.cakeSubcategories ?? DEFAULT_STORE_CONFIG.cakeSubcategories,
       giftSubcategories: rawData.giftSubcategories ?? DEFAULT_STORE_CONFIG.giftSubcategories,
     };
-    onUpdate(mergedConfig);
   };
+
+  const emitIfReady = () => {
+    if (isDisposed || !settingsSettled || !subcatsSettled || !curationsSettled) return;
+    const mergedConfig = buildMergedConfig();
+    const seq = ++emitSeq;
+    resolveMediaInObject(mergedConfig).then((resolved) => {
+      if (!isDisposed && seq === emitSeq) {
+        onUpdate(resolved, true);
+      }
+    }).catch((err) => {
+      console.warn("StoreConfig media resolution warning:", err);
+      if (!isDisposed && seq === emitSeq) {
+        onUpdate(mergedConfig, true);
+      }
+    });
+  };
+
+  // Seed initial store_config/settings ONLY if confirmed absent on Firestore server
+  (async () => {
+    try {
+      const serverSnap = await getDocFromServer(docRef);
+      if (!serverSnap.exists()) {
+        const initialSettings: any = { ...DEFAULT_STORE_CONFIG };
+        STORE_SUBCATEGORY_KEYS.forEach((k) => delete initialSettings[k]);
+        STORE_CURATION_KEYS.forEach((k) => delete initialSettings[k]);
+        await setDoc(docRef, cleanUndefined(initialSettings), { merge: true });
+      }
+    } catch {
+      // Offline or transient network issue: never overwrite Firestore with defaults
+    }
+  })();
 
   const unsub1 = onSnapshot(docRef, (docSnap) => {
     if (docSnap.exists()) {
       currentSettings = docSnap.data();
-      emitMerged();
-    } else {
-      const initialSettings: any = { ...DEFAULT_STORE_CONFIG };
-      STORE_SUBCATEGORY_KEYS.forEach((k) => delete initialSettings[k]);
-      STORE_CURATION_KEYS.forEach((k) => delete initialSettings[k]);
-      setDoc(docRef, cleanUndefined(initialSettings)).catch(() => {});
-      currentSettings = initialSettings;
-      emitMerged();
     }
+    settingsSettled = true;
+    emitIfReady();
   }, (err) => {
     console.warn("Notice: settings doc subscription:", err);
+    settingsSettled = true;
+    emitIfReady();
   });
 
   const unsub2 = onSnapshot(subcatsRef, (docSnap) => {
     if (docSnap.exists()) {
       currentSubcats = docSnap.data();
-      emitMerged();
     }
+    subcatsSettled = true;
+    emitIfReady();
   }, () => {
-    // optional secondary doc
+    subcatsSettled = true;
+    emitIfReady();
   });
 
   const unsub3 = onSnapshot(curationsRef, (docSnap) => {
     if (docSnap.exists()) {
       currentCurations = docSnap.data();
-      emitMerged();
     }
+    curationsSettled = true;
+    emitIfReady();
   }, () => {
-    // optional curations doc
+    curationsSettled = true;
+    emitIfReady();
   });
 
   return () => {
+    isDisposed = true;
     unsub1();
     unsub2();
     unsub3();
   };
-}
-
-async function compressPayloadIfOversized(payload: any, fallbackMaxDim: number, fallbackQuality: number): Promise<any> {
-  const cleaned = cleanUndefined(payload);
-  let compressed = await compressStoreConfigImages(cleaned, 380, 0.5);
-  const sizeInBytes = new Blob([JSON.stringify(compressed)]).size;
-  if (sizeInBytes > 750000) {
-    console.warn(`[Store Config] Doc payload (${sizeInBytes} bytes) is large. Applying tighter compression...`);
-    compressed = await compressStoreConfigImages(compressed, fallbackMaxDim, fallbackQuality);
-  }
-  return compressed;
 }
 
 export async function updateStoreConfigInFirestore(config: StoreConfig): Promise<void> {
@@ -1259,7 +1537,7 @@ export async function updateStoreConfigInFirestore(config: StoreConfig): Promise
   try {
     const cleanedConfig = cleanUndefined(config) as any;
 
-    const settingsPayload: any = { ...cleanedConfig };
+    const settingsPayload: any = { ...cleanedConfig, updatedAt: Date.now() };
     const subcatsPayload: any = { updatedAt: Date.now() };
     const curationsPayload: any = { updatedAt: Date.now() };
 
@@ -1278,17 +1556,21 @@ export async function updateStoreConfigInFirestore(config: StoreConfig): Promise
     });
 
     const [finalSettings, finalSubcats, finalCurations] = await Promise.all([
-      compressPayloadIfOversized(settingsPayload, 280, 0.4),
-      compressPayloadIfOversized(subcatsPayload, 260, 0.35),
-      compressPayloadIfOversized(curationsPayload, 260, 0.35),
+      externalizeMediaInObject(settingsPayload),
+      externalizeMediaInObject(subcatsPayload),
+      externalizeMediaInObject(curationsPayload),
     ]);
+
+    assertDocUnderLimit(finalSettings, 'store_config/settings');
+    assertDocUnderLimit(finalSubcats, 'store_config/subcategories');
+    assertDocUnderLimit(finalCurations, 'store_config/curations');
 
     await Promise.all([
       setDoc(docRef, finalSettings),
       setDoc(subcatsDocRef, finalSubcats),
       setDoc(curationsDocRef, finalCurations),
     ]);
-    console.log("[Store Config] Saved store config, subcategories & curations cleanly to Firestore!");
+    console.log("[Store Config] Saved store config, subcategories & curations permanently to Firestore!");
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }

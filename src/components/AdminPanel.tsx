@@ -109,39 +109,44 @@ interface AdminPanelProps {
   onClearAllOrders?: () => void;
   riders?: DeliveryAgent[];
   products: Product[];
-  onAddProduct: (product: Product) => void;
-  onDeleteProduct: (productId: string) => void;
-  onUpdateProduct: (product: Product) => void;
+  onAddProduct: (product: Product) => Promise<void> | void;
+  onDeleteProduct: (productId: string) => Promise<void> | void;
+  onUpdateProduct: (product: Product) => Promise<void> | void;
   onRestoreProducts?: () => Promise<void>;
   coupons: Coupon[];
-  onAddCoupon: (coupon: Coupon) => void;
-  onDeleteCoupon: (code: string) => void;
-  onUpdateCoupon?: (coupon: Coupon) => void;
+  onAddCoupon: (coupon: Coupon) => Promise<void> | void;
+  onDeleteCoupon: (code: string) => Promise<void> | void;
+  onUpdateCoupon?: (coupon: Coupon) => Promise<void> | void;
   firebaseSyncError?: string | null;
   categories: Category[];
-  onAddCategory: (category: Category) => void;
-  onDeleteCategory: (categoryId: string) => void;
-  onUpdateCategory?: (category: Category | Category[]) => void;
+  onAddCategory: (category: Category) => Promise<void> | void;
+  onDeleteCategory: (categoryId: string) => Promise<void> | void;
+  onUpdateCategory?: (category: Category | Category[]) => Promise<void> | void;
   slides?: Slide[];
-  onUpdateSlide?: (slide: Slide) => void;
-  onDeleteSlide?: (slideId: string) => void;
+  onUpdateSlide?: (slide: Slide) => Promise<void> | void;
+  onDeleteSlide?: (slideId: string) => Promise<void> | void;
   galleryItems?: GalleryItem[];
-  onAddGalleryItem?: (item: GalleryItem) => void;
-  onDeleteGalleryItem?: (itemId: string) => void;
+  onAddGalleryItem?: (item: GalleryItem) => Promise<void> | void;
+  onDeleteGalleryItem?: (itemId: string) => Promise<void> | void;
   storeConfig?: StoreConfig;
-  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  isStoreConfigLoaded?: boolean;
+  onUpdateStoreConfig?: (config: StoreConfig) => Promise<void> | void;
   onDeleteRider?: (id: string) => void;
 }
+
+type SaveBannerType = "saving" | "success" | "error";
 
 function TastePickCurationTab({
   localConfig,
   setLocalConfig,
   onUpdateStoreConfig,
+  onNotify,
   products,
 }: {
   localConfig: StoreConfig | null;
   setLocalConfig: (config: StoreConfig) => void;
-  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => Promise<void> | void;
+  onNotify?: (type: SaveBannerType, text: string) => void;
   products: Product[];
 }) {
   const defaultTastePickItems: TastePickItem[] = [
@@ -188,7 +193,7 @@ function TastePickCurationTab({
     setLocalConfig(newConfig);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!localConfig) return;
     const cleanCats = currentCategories.map((c) => ({
       ...c,
@@ -206,8 +211,9 @@ function TastePickCurationTab({
       tastePickSubcategories: updatedSubcategories,
     };
     setLocalConfig(newConfig);
-    if (onUpdateStoreConfig) onUpdateStoreConfig(newConfig);
-    alert("Taste Pick categories updated successfully!");
+    if (onUpdateStoreConfig) {
+      await onUpdateStoreConfig(newConfig);
+    }
   };
 
   const filteredProducts = products.filter((p) =>
@@ -332,7 +338,8 @@ function TastePickCurationTab({
                           const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
                           updateCategory(activeCategory.id, { image: base64 });
                         } catch (err) {
-                          alert("Image upload failed.");
+                          console.error("Image upload failed:", err);
+                          onNotify?.("error", "Image upload failed. Try a smaller photo.");
                         }
                       }
                     }}
@@ -451,11 +458,13 @@ function CakesCurationTab({
   localConfig,
   setLocalConfig,
   onUpdateStoreConfig,
+  onNotify,
   products = [],
 }: {
   localConfig: StoreConfig | null;
   setLocalConfig: (config: StoreConfig) => void;
-  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => Promise<void> | void;
+  onNotify?: (type: SaveBannerType, text: string) => void;
   products?: Product[];
 }) {
   const [activeSubTab, setActiveSubTab] = useState<"quick_circles" | "iconic_bake">("quick_circles");
@@ -549,7 +558,7 @@ function CakesCurationTab({
     setLocalConfig({ ...localConfig, iconicFlavors: list });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!localConfig) return;
     const cleanQuick = currentQuickCats.map((c) => ({
       ...c,
@@ -565,8 +574,9 @@ function CakesCurationTab({
       iconicFlavors: cleanIconic,
     };
     setLocalConfig(newConfig);
-    if (onUpdateStoreConfig) onUpdateStoreConfig(newConfig);
-    alert("Cake Landing Curation updated successfully!");
+    if (onUpdateStoreConfig) {
+      await onUpdateStoreConfig(newConfig);
+    }
   };
 
   return (
@@ -714,7 +724,8 @@ function CakesCurationTab({
                             const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
                             updateQuickCat(idx, { image: base64 });
                           } catch (err) {
-                            alert("Image compression failed.");
+                            console.error("Image compression failed:", err);
+                            onNotify?.("error", "Image compression failed. Try a smaller photo.");
                           } finally {
                             setUploadingIdx(null);
                           }
@@ -882,7 +893,8 @@ function CakesCurationTab({
                             const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
                             updateIconicFlavor(idx, { image: base64 });
                           } catch (err) {
-                            alert("Image compression failed.");
+                            console.error("Image compression failed:", err);
+                            onNotify?.("error", "Image compression failed. Try a smaller photo.");
                           } finally {
                             setUploadingIdx(null);
                           }
@@ -969,11 +981,13 @@ function FlowersCurationTab({
   localConfig,
   setLocalConfig,
   onUpdateStoreConfig,
+  onNotify,
   products = [],
 }: {
   localConfig: StoreConfig | null;
   setLocalConfig: (config: StoreConfig) => void;
-  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => Promise<void> | void;
+  onNotify?: (type: SaveBannerType, text: string) => void;
   products?: Product[];
 }) {
   const fc = localConfig?.flowerCuration || {};
@@ -989,10 +1003,11 @@ function FlowersCurationTab({
     setLocalConfig({ ...localConfig, flowerCuration: newFC });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!localConfig) return;
-    if (onUpdateStoreConfig) onUpdateStoreConfig(localConfig);
-    alert("Flowers Curation saved successfully!");
+    if (onUpdateStoreConfig) {
+      await onUpdateStoreConfig(localConfig);
+    }
   };
 
   const handleFileUpload = async (
@@ -1005,7 +1020,8 @@ function FlowersCurationTab({
       const base64 = await compressImageFile(file, 800, 0.6);
       onSuccess(base64);
     } catch (err) {
-      alert("Image upload failed.");
+      console.error("Flowers image upload failed:", err);
+      onNotify?.("error", "Image upload failed. Try a smaller JPG/PNG photo.");
     } finally {
       setUploadingKey(null);
     }
@@ -1722,14 +1738,16 @@ function BirthdayCurationTab({
   localConfig,
   setLocalConfig,
   onUpdateStoreConfig,
+  onNotify,
   products,
   onUpdateProduct,
 }: {
   localConfig: StoreConfig | null;
   setLocalConfig: (config: StoreConfig) => void;
-  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => Promise<void> | void;
+  onNotify?: (type: SaveBannerType, text: string) => void;
   products?: Product[];
-  onUpdateProduct?: (product: Product) => void;
+  onUpdateProduct?: (product: Product) => Promise<void> | void;
 }) {
   const bc = localConfig?.birthdayCuration || {};
   const [activeSubTab, setActiveSubTab] = useState<
@@ -1744,10 +1762,11 @@ function BirthdayCurationTab({
     setLocalConfig({ ...localConfig, birthdayCuration: newBC });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!localConfig) return;
-    if (onUpdateStoreConfig) onUpdateStoreConfig(localConfig);
-    alert("Birthday Curation saved successfully!");
+    if (onUpdateStoreConfig) {
+      await onUpdateStoreConfig(localConfig);
+    }
   };
 
   const handleFileUpload = async (
@@ -1760,7 +1779,8 @@ function BirthdayCurationTab({
       const base64 = await compressImageFile(file, 800, 0.6);
       onSuccess(base64);
     } catch (err) {
-      alert("Image upload failed.");
+      console.error("Birthday image upload failed:", err);
+      onNotify?.("error", "Image upload failed. Try a smaller JPG/PNG photo.");
     } finally {
       setUploadingKey(null);
     }
@@ -2185,35 +2205,38 @@ function PlantCurationTab({
   localConfig,
   setLocalConfig,
   onUpdateStoreConfig,
+  onNotify,
   products,
   onUpdateProduct,
 }: {
-  localConfig: StoreConfig;
-  setLocalConfig: React.Dispatch<React.SetStateAction<StoreConfig>>;
-  onUpdateStoreConfig?: (config: StoreConfig) => void;
+  localConfig: StoreConfig | null;
+  setLocalConfig: (config: StoreConfig) => void;
+  onUpdateStoreConfig?: (config: StoreConfig) => Promise<void> | void;
+  onNotify?: (type: SaveBannerType, text: string) => void;
   products?: Product[];
-  onUpdateProduct?: (product: Product) => void;
+  onUpdateProduct?: (product: Product) => Promise<void> | void;
 }) {
   const [activeSubTab, setActiveSubTab] = useState<
     "hero" | "quick" | "feature_banners" | "plant_types" | "locations" | "planters" | "products"
   >("hero");
 
-  const pc = localConfig.plantCuration || {};
+  const pc = localConfig?.plantCuration || {};
 
   const updatePC = (patch: Partial<PlantCurationConfig>) => {
-    setLocalConfig((prev) => ({
-      ...prev,
+    if (!localConfig) return;
+    setLocalConfig({
+      ...localConfig,
       plantCuration: {
-        ...prev.plantCuration,
+        ...localConfig.plantCuration,
         ...patch,
       },
-    }));
+    });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!localConfig) return;
     if (onUpdateStoreConfig) {
-      onUpdateStoreConfig(localConfig);
-      alert("Plant Curation config saved successfully!");
+      await onUpdateStoreConfig(localConfig);
     }
   };
 
@@ -2226,11 +2249,11 @@ function PlantCurationTab({
   ) => {
     try {
       setUploadingKey(key);
-      const compressed = await compressImageFile(file, 1200, 0.8);
+      const compressed = await compressImageFile(file, 800, 0.65);
       onSuccess(compressed);
     } catch (err) {
       console.error("Image upload failed", err);
-      alert("Failed to process image. Please try another image.");
+      onNotify?.("error", "Failed to process image. Please try another image.");
     } finally {
       setUploadingKey(null);
     }
@@ -2599,6 +2622,7 @@ export default function AdminPanel({
   onAddGalleryItem,
   onDeleteGalleryItem,
   storeConfig,
+  isStoreConfigLoaded = false,
   onUpdateStoreConfig,
   onDeleteRider,
 }: AdminPanelProps) {
@@ -2739,6 +2763,7 @@ export default function AdminPanel({
   const [newCatId, setNewCatId] = useState("");
   const [newCatOrder, setNewCatOrder] = useState<string>("");
   const [newCatAddonIds, setNewCatAddonIds] = useState<string[]>([]);
+  const [newCatShowInGrid, setNewCatShowInGrid] = useState<boolean>(true);
 
   // Category editing states
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -2746,6 +2771,7 @@ export default function AdminPanel({
   const [editingCatImgUrl, setEditingCatImgUrl] = useState("");
   const [editingCatOrder, setEditingCatOrder] = useState<number>(0);
   const [editingCatAddonIds, setEditingCatAddonIds] = useState<string[]>([]);
+  const [editingCatShowInGrid, setEditingCatShowInGrid] = useState<boolean>(true);
 
   // Banner slide editing states
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
@@ -2770,13 +2796,139 @@ export default function AdminPanel({
   // Full product edit state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const [localConfig, setLocalConfig] = useState<StoreConfig | null>(null);
+  const [localConfig, setRawLocalConfig] = useState<StoreConfig | null>(null);
+  const isLocalConfigDirtyRef = React.useRef(false);
+  const hasHydratedServerConfigRef = React.useRef(false);
+  const bannerTimerRef = React.useRef<number | null>(null);
+
+  const [saveBanner, setSaveBanner] = useState<{
+    type: SaveBannerType;
+    text: string;
+  } | null>(null);
+
+  const notifyAdmin = React.useCallback((type: SaveBannerType, text: string) => {
+    if (bannerTimerRef.current) {
+      window.clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = null;
+    }
+    setSaveBanner({ type, text });
+    if (type === "success") {
+      bannerTimerRef.current = window.setTimeout(() => {
+        setSaveBanner(null);
+      }, 4500);
+    }
+  }, []);
+
+  const setLocalConfig = React.useCallback(
+    (
+      value:
+        | StoreConfig
+        | null
+        | ((prev: StoreConfig | null) => StoreConfig | null),
+    ) => {
+      isLocalConfigDirtyRef.current = true;
+      setRawLocalConfig(value);
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (storeConfig) {
-      setLocalConfig(storeConfig);
+    if (!storeConfig) return;
+    if (isStoreConfigLoaded && !hasHydratedServerConfigRef.current) {
+      hasHydratedServerConfigRef.current = true;
+      isLocalConfigDirtyRef.current = false;
+      setRawLocalConfig(storeConfig);
+      return;
     }
-  }, [storeConfig]);
+    if (!isLocalConfigDirtyRef.current) {
+      setRawLocalConfig(storeConfig);
+    }
+  }, [storeConfig, isStoreConfigLoaded]);
+
+  useEffect(() => {
+    if (!isOpen && storeConfig && isStoreConfigLoaded) {
+      isLocalConfigDirtyRef.current = false;
+      setRawLocalConfig(storeConfig);
+    }
+  }, [isOpen, storeConfig, isStoreConfigLoaded]);
+
+  const CATEGORY_TO_SECTION_FLAG: Record<string, keyof StoreConfig> = {
+    new_year: "showNewYear",
+    rakhi: "showRakhi",
+    dewali: "showDewali",
+    hand_crafts: "showHandCrafts",
+    photo_to_art: "showPhotoToArt",
+    valentine_day: "showValentineDay",
+    teachers_day: "showTeachersDay",
+    mothers_day: "showMothersDay",
+    fathers_day: "showFathersDay",
+    xmas: "showXmasDay",
+    cakes: "showCakesSection",
+    flowers: "showFlowersSection",
+    gifts: "showGiftsSection",
+    plants: "showPlantsSection",
+  };
+
+  const SECTION_FLAG_TO_CATEGORY: Record<string, string> = {
+    showNewYear: "new_year",
+    showRakhi: "rakhi",
+    showDewali: "dewali",
+    showHandCrafts: "hand_crafts",
+    showPhotoToArt: "photo_to_art",
+    showValentineDay: "valentine_day",
+    showTeachersDay: "teachers_day",
+    showMothersDay: "mothers_day",
+    showFathersDay: "fathers_day",
+    showXmasDay: "xmas",
+    showCakesSection: "cakes",
+    showFlowersSection: "flowers",
+    showGiftsSection: "gifts",
+    showPlantsSection: "plants",
+  };
+
+  const saveStoreConfigSafely = async (
+    configToSave: StoreConfig,
+    successText = "Saved permanently to Firebase!",
+  ) => {
+    if (!onUpdateStoreConfig) return;
+    if (!isStoreConfigLoaded) {
+      notifyAdmin(
+        "error",
+        "Still loading saved settings from Firebase — please wait 1-2 seconds and try saving again.",
+      );
+      return;
+    }
+    notifyAdmin("saving", "Uploading images & saving settings to Firebase...");
+    try {
+      await onUpdateStoreConfig(configToSave);
+      isLocalConfigDirtyRef.current = false;
+      notifyAdmin("success", successText);
+    } catch (err: any) {
+      notifyAdmin(
+        "error",
+        err?.message || "Failed to save settings to Firebase. Please retry.",
+      );
+    }
+  };
+
+  const runAsyncSave = async (
+    savingText: string,
+    fn: () => Promise<void> | void,
+    successText: string,
+  ): Promise<boolean> => {
+    notifyAdmin("saving", savingText);
+    try {
+      await fn();
+      notifyAdmin("success", successText);
+      return true;
+    } catch (err: any) {
+      notifyAdmin(
+        "error",
+        err?.message || "Failed to save to Firebase. Please check your connection and try again.",
+      );
+      return false;
+    }
+  };
 
   // Coupon creation states
   const [newCouponCode, setNewCouponCode] = useState("");
@@ -3014,16 +3166,16 @@ export default function AdminPanel({
 
   if (!isOpen) return null;
 
-  const handleAddNewProduct = (e: React.FormEvent) => {
+  const handleAddNewProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProdName || !newProdPrice) {
-      alert("Provide at least a name and price for the new product.");
+      notifyAdmin("error", "Provide at least a name and price for the new product.");
       return;
     }
 
     const priceNum = parseFloat(newProdPrice);
     if (isNaN(priceNum) || priceNum <= 0) {
-      alert("Enter a valid numeric price.");
+      notifyAdmin("error", "Enter a valid numeric price.");
       return;
     }
 
@@ -3091,7 +3243,12 @@ export default function AdminPanel({
       addonProductIds: newProdAddonIds.length > 0 ? newProdAddonIds : undefined,
     };
 
-    onAddProduct(newProduct);
+    const ok = await runAsyncSave(
+      "Uploading images & saving product to Firebase...",
+      () => onAddProduct(newProduct),
+      `Product "${newProdName}" saved permanently in Firebase!`,
+    );
+    if (!ok) return;
 
     // Reset parameters
     setNewProdName("");
@@ -3117,18 +3274,17 @@ export default function AdminPanel({
     setNewProdImgUrl("");
     setNewProdGalleryUrls("");
     setNewProdGalleryImages([]);
-    alert("Product successfully added!");
   };
 
-  const handleCreateCouponSubmit = (e: React.FormEvent) => {
+  const handleCreateCouponSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCouponCode || !newCouponValue) {
-      alert("Provide at least a coupon code and discount value.");
+      notifyAdmin("error", "Provide at least a coupon code and discount value.");
       return;
     }
     const valRatio = parseFloat(newCouponValue);
     if (isNaN(valRatio) || valRatio <= 0) {
-      alert("Valid value is required.");
+      notifyAdmin("error", "Valid discount value is required.");
       return;
     }
     const capCode = newCouponCode.trim().toUpperCase();
@@ -3143,13 +3299,17 @@ export default function AdminPanel({
       isActive: true,
       showInCart: newCouponShowInCart,
     };
-    onAddCoupon(newCoup);
+    const ok = await runAsyncSave(
+      `Saving coupon ${capCode} to Firebase...`,
+      () => onAddCoupon(newCoup),
+      `Coupon code ${capCode} is now active and saved in Firebase!`,
+    );
+    if (!ok) return;
     setNewCouponCode("");
     setNewCouponValue("");
     setNewCouponMinOrder("");
     setNewCouponDesc("");
     setNewCouponShowInCart(true);
-    alert(`Coupon code ${capCode} is now active and synchronized!`);
   };
 
   const orderStatuses = [
@@ -3584,6 +3744,43 @@ export default function AdminPanel({
                 <span>🏬 Sellers ({sellers.length})</span>
               </button>
             </div>
+
+            {/* Inline Save Status & Firebase Sync Readiness Banner */}
+            {(saveBanner || !isStoreConfigLoaded) && (
+              <div
+                className={`px-5 py-2.5 text-xs font-extrabold flex items-center justify-between gap-3 shrink-0 border-b ${
+                  saveBanner?.type === "error"
+                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                    : saveBanner?.type === "success"
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      : "bg-amber-50 text-amber-800 border-amber-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>
+                    {saveBanner?.type === "error"
+                      ? "⚠️"
+                      : saveBanner?.type === "success"
+                        ? "✅"
+                        : "⏳"}
+                  </span>
+                  <span>
+                    {saveBanner
+                      ? saveBanner.text
+                      : "Loading saved store settings & photos from Firebase..."}
+                  </span>
+                </div>
+                {saveBanner && saveBanner.type !== "saving" && (
+                  <button
+                    type="button"
+                    onClick={() => setSaveBanner(null)}
+                    className="text-current opacity-70 hover:opacity-100 font-black px-2 py-0.5 rounded cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Scrolling panel dashboard content - WITH GENERATIVE MOBILE SIZE PRECAUTIONS */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 text-left">
@@ -4359,15 +4556,17 @@ export default function AdminPanel({
                                 </div>
 
                                 <button
-                                  onClick={() => {
-                                    onUpdateProduct({
-                                      ...prod,
-                                      isPersonalisedBestSeller: false,
-                                    });
-                                    alert(
+                                  onClick={() =>
+                                    runAsyncSave(
+                                      "Updating best sellers...",
+                                      () =>
+                                        onUpdateProduct({
+                                          ...prod,
+                                          isPersonalisedBestSeller: false,
+                                        }),
                                       "Removed from Personalized Best Sellers list.",
-                                    );
-                                  }}
+                                    )
+                                  }
                                   className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition duration-150 cursor-pointer"
                                   title="Remove Best Seller"
                                 >
@@ -4438,16 +4637,18 @@ export default function AdminPanel({
                                 </div>
 
                                 <button
-                                  onClick={() => {
-                                    onUpdateProduct({
-                                      ...prod,
-                                      isPersonalisedBestSeller: true,
-                                      personalisedBestSellerOrder: 1, // default at the front list!
-                                    });
-                                    alert(
-                                      `"${prod.name}" successfully promoted! Featured at the beginning.`,
-                                    );
-                                  }}
+                                  onClick={() =>
+                                    runAsyncSave(
+                                      `Promoting "${prod.name}"...`,
+                                      () =>
+                                        onUpdateProduct({
+                                          ...prod,
+                                          isPersonalisedBestSeller: true,
+                                          personalisedBestSellerOrder: 1, // default at the front list!
+                                        }),
+                                      `"${prod.name}" promoted to Best Sellers and saved!`,
+                                    )
+                                  }
                                   className="px-2.5 py-1.5 text-[9.5px] font-black uppercase text-pink-700 bg-pink-50 hover:bg-pink-100 rounded-lg shrink-0 cursor-pointer transition"
                                 >
                                   Feature
@@ -4736,7 +4937,11 @@ export default function AdminPanel({
                   <FlowersCurationTab
                     localConfig={localConfig}
                     setLocalConfig={setLocalConfig}
-                    onUpdateStoreConfig={onUpdateStoreConfig}
+                    onUpdateStoreConfig={(cfg) =>
+                      saveStoreConfigSafely(cfg, "Flowers Curation saved permanently to Firebase!")
+                    }
+                    onNotify={notifyAdmin}
+                    products={products}
                   />
 
                   <div className="bg-white rounded-3xl p-5 border border-pink-100 shadow-sm text-left">
@@ -4822,29 +5027,7 @@ export default function AdminPanel({
                 </div>
               )}
 
-              {activeTab === "birthday_curation" && (
-                <div className="space-y-6">
-                  <BirthdayCurationTab
-                    localConfig={localConfig}
-                    setLocalConfig={setLocalConfig}
-                    onUpdateStoreConfig={onUpdateStoreConfig}
-                    products={products}
-                    onUpdateProduct={onUpdateProduct}
-                  />
-                </div>
-              )}
-
-              {activeTab === "plants_curation" && (
-                <div className="space-y-6">
-                  <PlantCurationTab
-                    localConfig={localConfig}
-                    setLocalConfig={setLocalConfig}
-                    onUpdateStoreConfig={onUpdateStoreConfig}
-                    products={products}
-                    onUpdateProduct={onUpdateProduct}
-                  />
-                </div>
-              )}
+              {/* Note: birthday_curation & plants_curation render below in the unified curation block */}
 
               {/* TAB 2: CATALOG STOCK MANAGER */}
               {activeTab === "catalog" && (
@@ -5234,7 +5417,8 @@ export default function AdminPanel({
                                     "Product image compression failed:",
                                     err,
                                   );
-                                  alert(
+                                  notifyAdmin(
+                                    "error",
                                     "Image upload failed. The photo might be too large or unsupported (HEIC). Please try another photo.",
                                   );
                                 }
@@ -5556,10 +5740,19 @@ export default function AdminPanel({
                               <button
                                 type="button"
                                 onClick={() =>
-                                  onUpdateProduct({
-                                    ...prod,
-                                    isHidden: !isHiddenProd,
-                                  })
+                                  runAsyncSave(
+                                    isHiddenProd
+                                      ? `Listing "${prod.name}" on website...`
+                                      : `Hiding "${prod.name}" from website...`,
+                                    () =>
+                                      onUpdateProduct({
+                                        ...prod,
+                                        isHidden: !isHiddenProd,
+                                      }),
+                                    isHiddenProd
+                                      ? `"${prod.name}" is now visible on website!`
+                                      : `"${prod.name}" is now hidden from website!`,
+                                  )
                                 }
                                 className={`px-2 py-1 rounded-lg border text-[9.5px] font-black uppercase transition cursor-pointer shrink-0 ${
                                   isHiddenProd
@@ -6006,7 +6199,7 @@ export default function AdminPanel({
                       </div>
 
                       <form
-                        onSubmit={(e) => {
+                        onSubmit={async (e) => {
                           e.preventDefault();
                           if (!newCatName.trim()) return;
                           const generatedId =
@@ -6017,21 +6210,28 @@ export default function AdminPanel({
                           const rank = newCatOrder.trim()
                             ? Number(newCatOrder)
                             : categories.length + 1;
-                          onAddCategory({
-                            id: generatedId,
-                            name: newCatName.trim(),
-                            image: cleanImageUrl(newCatImgUrl.trim()),
-                            displayOrder: rank,
-                            addonProductIds: newCatAddonIds,
-                            isVisible: true,
-                            hidden: false,
-                            showInGrid: false,
-                          });
+                          const ok = await runAsyncSave(
+                            `Saving category "${newCatName.trim()}"...`,
+                            () =>
+                              onAddCategory({
+                                id: generatedId,
+                                name: newCatName.trim(),
+                                image: cleanImageUrl(newCatImgUrl.trim()),
+                                displayOrder: rank,
+                                addonProductIds: newCatAddonIds,
+                                isVisible: true,
+                                hidden: false,
+                                showInGrid: newCatShowInGrid,
+                              }),
+                            `Category "${newCatName.trim()}" saved permanently in Firebase!`,
+                          );
+                          if (!ok) return;
                           setNewCatName("");
                           setNewCatImgUrl("");
                           setNewCatId("");
                           setNewCatOrder("");
                           setNewCatAddonIds([]);
+                          setNewCatShowInGrid(true);
                         }}
                         className="space-y-3 text-xs"
                       >
@@ -6111,7 +6311,8 @@ export default function AdminPanel({
                                       "Category image upload failed:",
                                       err,
                                     );
-                                    alert(
+                                    notifyAdmin(
+                                      "error",
                                       "Image upload failed. The photo might be too large or unsupported (HEIC). Please try another photo.",
                                     );
                                   }
@@ -6179,6 +6380,23 @@ export default function AdminPanel({
                           </div>
                         </div>
 
+                        <label className="flex items-center justify-between gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/70 cursor-pointer select-none">
+                          <div>
+                            <span className="text-[10.5px] font-black text-slate-800 block">
+                              Show in Front Category Grid
+                            </span>
+                            <span className="text-[9px] text-slate-500 font-semibold">
+                              Include in top 8 Explore Categories circles
+                            </span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={newCatShowInGrid}
+                            onChange={(e) => setNewCatShowInGrid(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-300 text-pink-600 focus:ring-pink-500"
+                          />
+                        </label>
+
                         <button
                           type="submit"
                           className="w-full py-3 bg-slate-900 hover:bg-black text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition duration-150 cursor-pointer shadow-sm text-center flex items-center justify-center gap-1.5"
@@ -6190,12 +6408,17 @@ export default function AdminPanel({
 
                     {/* Active categories directory */}
                     <div className="lg:col-span-7 bg-white border border-slate-200 p-4.5 sm:p-5 rounded-2.5xl space-y-3 shadow-xs">
-                      <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-                        <Layers className="w-4 h-4 text-pink-600" />
-                        <h4 className="text-[10.5px] font-black uppercase text-slate-800 tracking-wider">
-                          Active Category Directories ({categories?.length || 0}
-                          )
-                        </h4>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-pink-600" />
+                          <h4 className="text-[10.5px] font-black uppercase text-slate-800 tracking-wider">
+                            Active Category Directories ({categories?.length || 0}
+                            )
+                          </h4>
+                        </div>
+                        <span className="text-[9px] font-bold text-slate-500">
+                          Top 8 Visible + Front Grid ON items appear on Home Front Grid
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[450px] overflow-y-auto pr-1">
@@ -6205,7 +6428,24 @@ export default function AdminPanel({
                             configure active indices.
                           </div>
                         ) : (
-                          categories.map((cat) => {
+                          (() => {
+                            const frontGridRankMap = new Map<string, number>();
+                            categories
+                              .filter((c) => {
+                                const lf = CATEGORY_TO_SECTION_FLAG[c.id];
+                                const secOff = Boolean(
+                                  lf && localConfig && localConfig[lf] === false,
+                                );
+                                return (
+                                  c.isVisible !== false &&
+                                  c.hidden !== true &&
+                                  !secOff &&
+                                  c.showInGrid !== false
+                                );
+                              })
+                              .slice(0, 8)
+                              .forEach((c, i) => frontGridRankMap.set(c.id, i + 1));
+                            return categories.map((cat) => {
                             const isEditing = editingCatId === cat.id;
                             if (isEditing) {
                               return (
@@ -6295,7 +6535,8 @@ export default function AdminPanel({
                                                   "Editing category image upload failed:",
                                                   err,
                                                 );
-                                                alert(
+                                                notifyAdmin(
+                                                  "error",
                                                   "Image upload failed. The photo might be too large or unsupported (HEIC). Please try another photo.",
                                                 );
                                               }
@@ -6358,6 +6599,24 @@ export default function AdminPanel({
                                         })}
                                       </div>
                                     </div>
+                                    <label className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer select-none">
+                                      <div>
+                                        <span className="text-[10px] font-black text-slate-800 block">
+                                          Show in Front Category Grid
+                                        </span>
+                                        <span className="text-[8.5px] text-slate-500 font-semibold">
+                                          Include in top 8 Explore Categories circles
+                                        </span>
+                                      </div>
+                                      <input
+                                        type="checkbox"
+                                        checked={editingCatShowInGrid}
+                                        onChange={(e) =>
+                                          setEditingCatShowInGrid(e.target.checked)
+                                        }
+                                        className="w-4 h-4 rounded border-slate-300 text-pink-600 focus:ring-pink-500"
+                                      />
+                                    </label>
                                   </div>
 
                                   <div className="flex justify-end gap-2 pt-1 font-sans">
@@ -6370,22 +6629,30 @@ export default function AdminPanel({
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => {
+                                      onClick={async () => {
                                         if (!editingCatName.trim()) return;
                                         if (onUpdateCategory) {
-                                          onUpdateCategory({
-                                            ...cat,
-                                            id: cat.id,
-                                            name: editingCatName.trim(),
-                                            image:
-                                              cleanImageUrl(editingCatImgUrl.trim()) ||
-                                              "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=300&q=80",
-                                            displayOrder:
-                                              Number(editingCatOrder),
-                                            addonProductIds: editingCatAddonIds,
-                                          });
+                                          const ok = await runAsyncSave(
+                                            `Saving category "${editingCatName.trim()}"...`,
+                                            () =>
+                                              onUpdateCategory({
+                                                ...cat,
+                                                id: cat.id,
+                                                name: editingCatName.trim(),
+                                                image:
+                                                  cleanImageUrl(editingCatImgUrl.trim()) ||
+                                                  "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=300&q=80",
+                                                displayOrder:
+                                                  Number(editingCatOrder),
+                                                addonProductIds: editingCatAddonIds,
+                                                showInGrid: editingCatShowInGrid,
+                                              }),
+                                            `Category "${editingCatName.trim()}" saved in Firebase!`,
+                                          );
+                                          if (ok) setEditingCatId(null);
+                                        } else {
+                                          setEditingCatId(null);
                                         }
-                                        setEditingCatId(null);
                                       }}
                                       className="px-4 py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-black uppercase text-[9px] tracking-wider rounded-lg transition flex items-center gap-1 shrink-0"
                                     >
@@ -6501,36 +6768,109 @@ export default function AdminPanel({
                                         ID: {cat.id}
                                       </span>
                                       {(() => {
+                                        const linkedFlag = CATEGORY_TO_SECTION_FLAG[cat.id];
+                                        const isSectionHidden = Boolean(
+                                          linkedFlag &&
+                                            localConfig &&
+                                            localConfig[linkedFlag] === false,
+                                        );
                                         const isCatVisible =
                                           cat.isVisible !== false &&
-                                          cat.hidden !== true;
+                                          cat.hidden !== true &&
+                                          !isSectionHidden;
+                                        const isInFrontGrid = cat.showInGrid !== false;
+                                        const frontRank = frontGridRankMap.get(cat.id);
                                         return (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              if (onUpdateCategory) {
-                                                onUpdateCategory({
-                                                  ...cat,
-                                                  isVisible: !isCatVisible,
-                                                  hidden: isCatVisible,
-                                                });
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={async () => {
+                                                const nextVisible = !isCatVisible;
+                                                await runAsyncSave(
+                                                  nextVisible
+                                                    ? `Showing category "${cat.name}"...`
+                                                    : `Hiding category "${cat.name}"...`,
+                                                  async () => {
+                                                    if (onUpdateCategory) {
+                                                      await onUpdateCategory({
+                                                        ...cat,
+                                                        isVisible: nextVisible,
+                                                        hidden: !nextVisible,
+                                                      });
+                                                    }
+                                                    if (linkedFlag && isStoreConfigLoaded && localConfig && onUpdateStoreConfig) {
+                                                      const syncedCfg = {
+                                                        ...localConfig,
+                                                        [linkedFlag]: nextVisible,
+                                                      };
+                                                      setRawLocalConfig(syncedCfg);
+                                                      isLocalConfigDirtyRef.current = false;
+                                                      await onUpdateStoreConfig(syncedCfg);
+                                                    }
+                                                  },
+                                                  nextVisible
+                                                    ? `Category "${cat.name}" is now visible!`
+                                                    : `Category "${cat.name}" is now hidden across the website!`,
+                                                );
+                                              }}
+                                              className={`px-1.5 py-0.5 text-[8.5px] font-black rounded uppercase tracking-wider transition cursor-pointer ${
+                                                isCatVisible
+                                                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100/80 border border-emerald-200"
+                                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200"
+                                              }`}
+                                              title={
+                                                isCatVisible
+                                                  ? "Click to set category as hidden"
+                                                  : "Click to set category as visible"
                                               }
-                                            }}
-                                            className={`px-1.5 py-0.5 text-[8.5px] font-black rounded uppercase tracking-wider transition ${
-                                              isCatVisible
-                                                ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100/80 border border-emerald-200"
-                                                : "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200"
-                                            }`}
-                                            title={
-                                              isCatVisible
-                                                ? "Click to set category as hidden"
-                                                : "Click to set category as visible"
-                                            }
-                                          >
-                                            {isCatVisible
-                                              ? "● Visible"
-                                              : "○ Hidden"}
-                                          </button>
+                                            >
+                                              {isCatVisible
+                                                ? "● Visible"
+                                                : "○ Hidden"}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={async () => {
+                                                const nextShowInGrid = !isInFrontGrid;
+                                                await runAsyncSave(
+                                                  nextShowInGrid
+                                                    ? `Adding "${cat.name}" to Front Grid...`
+                                                    : `Removing "${cat.name}" from Front Grid...`,
+                                                  async () => {
+                                                    if (onUpdateCategory) {
+                                                      await onUpdateCategory({
+                                                        ...cat,
+                                                        showInGrid: nextShowInGrid,
+                                                      });
+                                                    }
+                                                  },
+                                                  nextShowInGrid
+                                                    ? `"${cat.name}" added to Front Category Grid!`
+                                                    : `"${cat.name}" removed from Front Category Grid!`,
+                                                );
+                                              }}
+                                              className={`px-1.5 py-0.5 text-[8.5px] font-black rounded uppercase tracking-wider transition cursor-pointer ${
+                                                isInFrontGrid
+                                                  ? frontRank
+                                                    ? "bg-pink-50 text-pink-700 hover:bg-pink-100 border border-pink-200"
+                                                    : "bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200"
+                                              }`}
+                                              title={
+                                                isInFrontGrid
+                                                  ? frontRank
+                                                    ? `Shown at slot #${frontRank} in Front Category Grid (click to turn OFF)`
+                                                    : "Front Grid is ON (not in top 8 slots because of Serial Rank or Hidden status)"
+                                                  : "Hidden from Front Category Grid (click to turn ON)"
+                                              }
+                                            >
+                                              {isInFrontGrid
+                                                ? frontRank
+                                                  ? `★ Front #${frontRank}`
+                                                  : "★ Front Grid: ON"
+                                                : "○ Front Grid: OFF"}
+                                            </button>
+                                          </>
                                         );
                                       })()}
                                     </div>
@@ -6549,6 +6889,9 @@ export default function AdminPanel({
                                       setEditingCatAddonIds(
                                         cat.addonProductIds || [],
                                       );
+                                      setEditingCatShowInGrid(
+                                        cat.showInGrid !== false,
+                                      );
                                     }}
                                     className="p-1.5 border border-slate-200 hover:bg-slate-200/50 text-slate-500 rounded-lg transition"
                                     title="Edit Category"
@@ -6556,19 +6899,46 @@ export default function AdminPanel({
                                     <Edit3 className="w-3.5 h-3.5" />
                                   </button>
                                   {(() => {
+                                    const linkedFlag = CATEGORY_TO_SECTION_FLAG[cat.id];
+                                    const isSectionHidden = Boolean(
+                                      linkedFlag &&
+                                        localConfig &&
+                                        localConfig[linkedFlag] === false,
+                                    );
                                     const isCatVisible =
                                       cat.isVisible !== false &&
-                                      cat.hidden !== true;
+                                      cat.hidden !== true &&
+                                      !isSectionHidden;
                                     return (
                                       <button
-                                        onClick={() => {
-                                          if (onUpdateCategory) {
-                                            onUpdateCategory({
-                                              ...cat,
-                                              isVisible: !isCatVisible,
-                                              hidden: isCatVisible,
-                                            });
-                                          }
+                                        onClick={async () => {
+                                          const nextVisible = !isCatVisible;
+                                          await runAsyncSave(
+                                            nextVisible
+                                              ? `Showing category "${cat.name}"...`
+                                              : `Hiding category "${cat.name}"...`,
+                                            async () => {
+                                              if (onUpdateCategory) {
+                                                await onUpdateCategory({
+                                                  ...cat,
+                                                  isVisible: nextVisible,
+                                                  hidden: !nextVisible,
+                                                });
+                                              }
+                                              if (linkedFlag && isStoreConfigLoaded && localConfig && onUpdateStoreConfig) {
+                                                const syncedCfg = {
+                                                  ...localConfig,
+                                                  [linkedFlag]: nextVisible,
+                                                };
+                                                setRawLocalConfig(syncedCfg);
+                                                isLocalConfigDirtyRef.current = false;
+                                                await onUpdateStoreConfig(syncedCfg);
+                                              }
+                                            },
+                                            nextVisible
+                                              ? `Category "${cat.name}" is now visible!`
+                                              : `Category "${cat.name}" is now hidden across the website!`,
+                                          );
                                         }}
                                         className={`p-1.5 border rounded-lg transition ${!isCatVisible ? "border-slate-200 text-slate-400 hover:bg-slate-50" : "border-emerald-100 text-emerald-600 hover:bg-emerald-50"}`}
                                         title={
@@ -6601,7 +6971,8 @@ export default function AdminPanel({
                                 </div>
                               </div>
                             );
-                          })
+                          });
+                          })()
                         )}
                       </div>
                     </div>
@@ -6755,22 +7126,29 @@ export default function AdminPanel({
                             !newSlideTitle.trim() ||
                             !newSlideSubtitle.trim()
                           }
-                          onClick={() => {
+                          onClick={async () => {
                             if (!newSlideImage) {
-                              alert(
-                                "Please add a photo url or upload from your device first!",
+                              notifyAdmin(
+                                "error",
+                                "Please add a photo URL or upload from your device first!",
                               );
                               return;
                             }
                             if (onUpdateSlide) {
                               const uniqueId = `slide_${Date.now()}`;
-                              onUpdateSlide({
-                                id: uniqueId,
-                                title: newSlideTitle.trim(),
-                                badge: newSlideBadge.trim() || undefined,
-                                subtitle: newSlideSubtitle.trim(),
-                                image: newSlideImage.trim(),
-                              });
+                              const ok = await runAsyncSave(
+                                "Uploading slide image to Firebase...",
+                                () =>
+                                  onUpdateSlide({
+                                    id: uniqueId,
+                                    title: newSlideTitle.trim(),
+                                    badge: newSlideBadge.trim() || undefined,
+                                    subtitle: newSlideSubtitle.trim(),
+                                    image: newSlideImage.trim(),
+                                  }),
+                                "Slide banner added & saved permanently in Firebase!",
+                              );
+                              if (!ok) return;
                               // Clear states
                               setNewSlideTitle("");
                               setNewSlideBadge("");
@@ -6994,25 +7372,32 @@ export default function AdminPanel({
                                       <button
                                         type="button"
                                         disabled={isUploadingSlideImage}
-                                        onClick={() => {
+                                        onClick={async () => {
                                           if (
                                             !editingSlideTitle.trim() ||
                                             !editingSlideSubtitle.trim()
                                           )
                                             return;
                                           if (onUpdateSlide) {
-                                            onUpdateSlide({
-                                              id: slide.id,
-                                              title: editingSlideTitle.trim(),
-                                              badge: editingSlideBadge.trim(),
-                                              subtitle:
-                                                editingSlideSubtitle.trim(),
-                                              image:
-                                                editingSlideImage.trim() ||
-                                                slide.image,
-                                            });
+                                            const ok = await runAsyncSave(
+                                              "Saving slide banner to Firebase...",
+                                              () =>
+                                                onUpdateSlide({
+                                                  id: slide.id,
+                                                  title: editingSlideTitle.trim(),
+                                                  badge: editingSlideBadge.trim(),
+                                                  subtitle:
+                                                    editingSlideSubtitle.trim(),
+                                                  image:
+                                                    editingSlideImage.trim() ||
+                                                    slide.image,
+                                                }),
+                                              "Slide banner updated permanently in Firebase!",
+                                            );
+                                            if (ok) setEditingSlideId(null);
+                                          } else {
+                                            setEditingSlideId(null);
                                           }
-                                          setEditingSlideId(null);
                                         }}
                                         className="flex-1 py-1.5 bg-pink-600 hover:bg-pink-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                                       >
@@ -7131,13 +7516,19 @@ export default function AdminPanel({
                         <button
                           type="button"
                           disabled={!newGalleryImage || isUploadingGalleryImage}
-                          onClick={() => {
+                          onClick={async () => {
                             if (!newGalleryImage) return;
                             if (onAddGalleryItem) {
-                              onAddGalleryItem({
-                                id: "gal_" + Date.now().toString(),
-                                image: newGalleryImage.trim(),
-                              });
+                              const ok = await runAsyncSave(
+                                "Uploading lookbook photo to Firebase...",
+                                () =>
+                                  onAddGalleryItem({
+                                    id: "gal_" + Date.now().toString(),
+                                    image: newGalleryImage.trim(),
+                                  }),
+                                "Lookbook photo saved permanently in Firebase!",
+                              );
+                              if (!ok) return;
                             }
                             setNewGalleryImage("");
                           }}
@@ -7215,17 +7606,23 @@ export default function AdminPanel({
                 <TastePickCurationTab
                   localConfig={localConfig}
                   setLocalConfig={setLocalConfig}
-                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  onUpdateStoreConfig={(cfg) =>
+                    saveStoreConfigSafely(cfg, "Taste Pick categories saved permanently to Firebase!")
+                  }
+                  onNotify={notifyAdmin}
                   products={products}
                 />
               )}
 
-              {/* TAB: FLOWERS CURATION */}
-              {(activeTab === "flowers_curation" || activeTab === "flower_curation") && (
+              {/* TAB: FLOWERS CURATION (legacy route alias flower_curation only — flowers_curation already handled above) */}
+              {activeTab === "flower_curation" && (
                 <FlowersCurationTab
                   localConfig={localConfig}
                   setLocalConfig={setLocalConfig}
-                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  onUpdateStoreConfig={(cfg) =>
+                    saveStoreConfigSafely(cfg, "Flowers Curation saved permanently to Firebase!")
+                  }
+                  onNotify={notifyAdmin}
                   products={products}
                 />
               )}
@@ -7235,7 +7632,10 @@ export default function AdminPanel({
                 <BirthdayCurationTab
                   localConfig={localConfig}
                   setLocalConfig={setLocalConfig}
-                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  onUpdateStoreConfig={(cfg) =>
+                    saveStoreConfigSafely(cfg, "Birthday Curation saved permanently to Firebase!")
+                  }
+                  onNotify={notifyAdmin}
                   products={products}
                   onUpdateProduct={onUpdateProduct}
                 />
@@ -7246,7 +7646,10 @@ export default function AdminPanel({
                 <PlantCurationTab
                   localConfig={localConfig}
                   setLocalConfig={setLocalConfig}
-                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  onUpdateStoreConfig={(cfg) =>
+                    saveStoreConfigSafely(cfg, "Plant Curation config saved permanently to Firebase!")
+                  }
+                  onNotify={notifyAdmin}
                   products={products}
                   onUpdateProduct={onUpdateProduct}
                 />
@@ -7257,7 +7660,11 @@ export default function AdminPanel({
                 <CakesCurationTab
                   localConfig={localConfig}
                   setLocalConfig={setLocalConfig}
-                  onUpdateStoreConfig={onUpdateStoreConfig}
+                  onUpdateStoreConfig={(cfg) =>
+                    saveStoreConfigSafely(cfg, "Cake Landing Curation saved permanently to Firebase!")
+                  }
+                  onNotify={notifyAdmin}
+                  products={products}
                 />
               )}
 
@@ -7266,8 +7673,8 @@ export default function AdminPanel({
                 <DeliveryConfigEditor
                   localConfig={localConfig}
                   onUpdateStoreConfig={(config) => {
-                    setLocalConfig(config);
-                    if (onUpdateStoreConfig) onUpdateStoreConfig(config);
+                    setRawLocalConfig(config);
+                    saveStoreConfigSafely(config, "Delivery configuration saved permanently!");
                   }}
                 />
               )}
@@ -7313,9 +7720,10 @@ export default function AdminPanel({
                                 manualClosed: nextClosed,
                               };
                               setLocalConfig(updatedConfig);
-                              if (onUpdateStoreConfig) {
-                                onUpdateStoreConfig(updatedConfig);
-                              }
+                              saveStoreConfigSafely(
+                                updatedConfig,
+                                nextClosed ? "Store closed immediately across all devices." : "Store reopened for orders!",
+                              );
                             }}
                             className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs ${
                               localConfig?.manualClosed
@@ -7347,9 +7755,8 @@ export default function AdminPanel({
                         <button
                           type="button"
                           onClick={() => {
-                            if (localConfig && onUpdateStoreConfig) {
-                              onUpdateStoreConfig(localConfig);
-                              alert("Store closure message saved to Firestore!");
+                            if (localConfig) {
+                              saveStoreConfigSafely(localConfig, "Store closure message saved permanently to Firebase!");
                             }
                           }}
                           className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase rounded-xl cursor-pointer shrink-0"
@@ -7484,7 +7891,8 @@ export default function AdminPanel({
                                         "About image upload failed to compress:",
                                         err,
                                       );
-                                      alert(
+                                      notifyAdmin(
+                                        "error",
                                         "Image upload failed. The photo might be too large or unsupported (HEIC). Please try another photo.",
                                       );
                                     }
@@ -7555,7 +7963,7 @@ export default function AdminPanel({
                                       setLocalConfig({ ...localConfig, topOfferBannerImage: base64 });
                                     }
                                   } catch (err) {
-                                    alert("Image upload failed.");
+                                    notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
                                   }
                                 }
                               }}
@@ -7595,7 +8003,7 @@ export default function AdminPanel({
                                       setLocalConfig({ ...localConfig, personalizedGiftsBannerImage: base64 });
                                     }
                                   } catch (err) {
-                                    alert("Image upload failed.");
+                                    notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
                                   }
                                 }
                               }}
@@ -7635,7 +8043,7 @@ export default function AdminPanel({
                                       setLocalConfig({ ...localConfig, giftsForHimBannerImage: base64 });
                                     }
                                   } catch (err) {
-                                    alert("Image upload failed.");
+                                    notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
                                   }
                                 }
                               }}
@@ -7675,7 +8083,7 @@ export default function AdminPanel({
                                       setLocalConfig({ ...localConfig, giftsForHerBannerImage: base64 });
                                     }
                                   } catch (err) {
-                                    alert("Image upload failed.");
+                                    notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
                                   }
                                 }
                               }}
@@ -7715,7 +8123,7 @@ export default function AdminPanel({
                                       setLocalConfig({ ...localConfig, cakesForHimBannerImage: base64 });
                                     }
                                   } catch (err) {
-                                    alert("Image upload failed.");
+                                    notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
                                   }
                                 }
                               }}
@@ -7755,7 +8163,7 @@ export default function AdminPanel({
                                       setLocalConfig({ ...localConfig, cakesForHerBannerImage: base64 });
                                     }
                                   } catch (err) {
-                                    alert("Image upload failed.");
+                                    notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
                                   }
                                 }
                               }}
@@ -8233,19 +8641,43 @@ export default function AdminPanel({
                           icon: "📢",
                         },
                       ].map(({ flag, label, icon }) => {
-                        const isVisible = localConfig?.[flag] !== false;
+                        const linkedCatId = SECTION_FLAG_TO_CATEGORY[flag];
+                        const linkedCat = linkedCatId
+                          ? categories.find((c) => c.id === linkedCatId)
+                          : undefined;
+                        const isLinkedCatHidden = linkedCat
+                          ? linkedCat.isVisible === false ||
+                            linkedCat.hidden === true
+                          : false;
+                        const isVisible =
+                          localConfig?.[flag] !== false && !isLinkedCatHidden;
                         return (
                           <div
                             key={flag}
-                            onClick={() => {
-                              if (localConfig) {
-                                const newConfig = {
-                                  ...localConfig,
-                                  [flag]: !isVisible,
-                                };
-                                setLocalConfig(newConfig);
-                                if (onUpdateStoreConfig)
-                                  onUpdateStoreConfig(newConfig);
+                            onClick={async () => {
+                              if (!localConfig) return;
+                              const nextVisible = !isVisible;
+                              const newConfig = {
+                                ...localConfig,
+                                [flag]: nextVisible,
+                              };
+                              setLocalConfig(newConfig);
+                              await saveStoreConfigSafely(
+                                newConfig,
+                                `${label} ${nextVisible ? "turned ON" : "hidden"} permanently!`,
+                              );
+                              const linkedCatId = SECTION_FLAG_TO_CATEGORY[flag];
+                              if (linkedCatId && onUpdateCategory) {
+                                const matchingCat = categories.find((c) => c.id === linkedCatId);
+                                if (matchingCat) {
+                                  void Promise.resolve(
+                                    onUpdateCategory({
+                                      ...matchingCat,
+                                      isVisible: nextVisible,
+                                      hidden: !nextVisible,
+                                    }),
+                                  ).catch(() => {});
+                                }
                               }
                             }}
                             className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between select-none ${
@@ -8321,7 +8753,9 @@ export default function AdminPanel({
                       ].map(({ layoutConf, flag, label, icon }) => {
                         const currentLayout =
                           localConfig?.[layoutConf as keyof StoreConfig] ||
-                          "grid";
+                          (layoutConf === "valentineDayLayout"
+                            ? "slider"
+                            : "grid");
                         const isVisible =
                           localConfig?.[flag as keyof StoreConfig] !== false;
 
@@ -8347,8 +8781,7 @@ export default function AdminPanel({
                                       [layoutConf]: "grid",
                                     };
                                     setLocalConfig(newConfig);
-                                    if (onUpdateStoreConfig)
-                                      onUpdateStoreConfig(newConfig);
+                                    saveStoreConfigSafely(newConfig, "Layout updated to Grid!");
                                   }
                                 }}
                                 className={`flex-1 py-1.5 text-[9px] font-bold rounded-md transition-all ${currentLayout === "grid" ? "bg-white shadow-sm text-pink-600" : "text-slate-500 hover:bg-white/50"}`}
@@ -8363,8 +8796,7 @@ export default function AdminPanel({
                                       [layoutConf]: "slider",
                                     };
                                     setLocalConfig(newConfig);
-                                    if (onUpdateStoreConfig)
-                                      onUpdateStoreConfig(newConfig);
+                                    saveStoreConfigSafely(newConfig, "Layout updated to Slider!");
                                   }
                                 }}
                                 className={`flex-1 py-1.5 text-[9px] font-bold rounded-md transition-all ${currentLayout === "slider" ? "bg-white shadow-sm text-pink-600" : "text-slate-500 hover:bg-white/50"}`}
@@ -8526,17 +8958,24 @@ export default function AdminPanel({
                             homepageSectionsOrder: nextList,
                           };
                           setLocalConfig(newConfig);
-                          if (onUpdateStoreConfig)
-                            onUpdateStoreConfig(newConfig);
+                          saveStoreConfigSafely(newConfig, "Section order saved permanently!");
                         };
 
                         return (
                           <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl bg-slate-50/50 overflow-hidden">
                             {sortedDisplayList.map((item, index) => {
+                              const flagKey =
+                                `show${item.id === "cakes" ? "CakesSection" : item.id === "gallery" ? "CakeGallery" : item.id === "flowers" ? "FlowersSection" : item.id === "premium_bestsellers" ? "PremiumBestSellers" : item.id === "custom_cake_categories" ? "CustomCakeCategories" : item.id === "personalised_bestsellers" ? "PersonalisedBestSellers" : item.id === "gifts" ? "GiftsSection" : item.id === "plants" ? "PlantsSection" : item.id === "gifts_for_him_her" ? "GiftsForHimHer" : item.id === "new_year" ? "NewYear" : item.id === "rakhi" ? "Rakhi" : item.id === "dewali" ? "Dewali" : item.id === "hand_crafts" ? "HandCrafts" : item.id === "photo_to_art" ? "PhotoToArt" : item.id === "valentine_day" ? "ValentineDay" : item.id === "teachers_day" ? "TeachersDay" : item.id === "mothers_day" ? "MothersDay" : item.id === "fathers_day" ? "FathersDay" : item.id === "xmas" ? "XmasDay" : "AboutSection"}` as keyof StoreConfig;
+                              const linkedCat = categories.find(
+                                (c) => c.id === item.id,
+                              );
+                              const isLinkedCatHidden = linkedCat
+                                ? linkedCat.isVisible === false ||
+                                  linkedCat.hidden === true
+                                : false;
                               const isVisible =
-                                localConfig?.[
-                                  `show${item.id === "cakes" ? "CakesSection" : item.id === "gallery" ? "CakeGallery" : item.id === "flowers" ? "FlowersSection" : item.id === "premium_bestsellers" ? "PremiumBestSellers" : item.id === "custom_cake_categories" ? "CustomCakeCategories" : item.id === "personalised_bestsellers" ? "PersonalisedBestSellers" : item.id === "gifts" ? "GiftsSection" : item.id === "plants" ? "PlantsSection" : item.id === "gifts_for_him_her" ? "GiftsForHimHer" : item.id === "new_year" ? "NewYear" : item.id === "rakhi" ? "Rakhi" : item.id === "dewali" ? "Dewali" : item.id === "hand_crafts" ? "HandCrafts" : item.id === "photo_to_art" ? "PhotoToArt" : item.id === "valentine_day" ? "ValentineDay" : item.id === "teachers_day" ? "TeachersDay" : item.id === "mothers_day" ? "MothersDay" : item.id === "fathers_day" ? "FathersDay" : item.id === "xmas" ? "XmasDay" : "AboutSection"}` as keyof StoreConfig
-                                ] !== false;
+                                localConfig?.[flagKey] !== false &&
+                                !isLinkedCatHidden;
                               return (
                                 <div
                                   key={item.id}
@@ -8695,10 +9134,10 @@ export default function AdminPanel({
                     </p>
                     <button
                       onClick={() => {
-                        if (localConfig && onUpdateStoreConfig) {
-                          onUpdateStoreConfig(localConfig);
-                          alert(
-                            "Homepage visuals updated successfully! Head back to the front page.",
+                        if (localConfig) {
+                          saveStoreConfigSafely(
+                            localConfig,
+                            "All Store Customizer settings & images saved permanently to Firebase!",
                           );
                         }
                       }}
@@ -9366,7 +9805,8 @@ export default function AdminPanel({
                             "Product edit image compression failed:",
                             err,
                           );
-                          alert(
+                          notifyAdmin(
+                            "error",
                             "Image upload failed. The photo might be too large or unsupported (HEIC). Please try another photo.",
                           );
                         }
@@ -10011,13 +10451,19 @@ export default function AdminPanel({
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  onUpdateProduct({
-                    ...editingProduct,
-                    image: cleanImageUrl(editingProduct.image || ""),
-                  });
-                  setEditingProduct(null);
-                  alert("Product catalog successfully updated everywhere!");
+                onClick={async () => {
+                  const ok = await runAsyncSave(
+                    `Saving "${editingProduct.name}" to Firebase...`,
+                    () =>
+                      onUpdateProduct({
+                        ...editingProduct,
+                        image: cleanImageUrl(editingProduct.image || ""),
+                      }),
+                    `Product "${editingProduct.name}" updated permanently in Firebase!`,
+                  );
+                  if (ok) {
+                    setEditingProduct(null);
+                  }
                 }}
                 className="flex-1 py-2.5 text-white bg-pink-600 hover:bg-pink-700 text-xs font-black uppercase rounded-xl cursor-pointer shadow-lg shadow-pink-600/20"
               >

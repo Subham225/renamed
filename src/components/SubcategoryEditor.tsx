@@ -30,6 +30,7 @@ export default function SubcategoryEditor({
   accentColor = "pink",
   products = [],
 }: SubcategoryEditorProps) {
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
   const rawList = (localConfig[configKey] as StoreConfigItem[]) || [];
   const list = defaultIds.map((defId, idx) => {
     const existing = rawList[idx] || rawList.find((item) => item?.id === defId);
@@ -159,6 +160,12 @@ export default function SubcategoryEditor({
           </span>
         </div>
       </div>
+      {uploadError && (
+        <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center justify-between gap-2">
+          <span>{uploadError}</span>
+          <button type="button" onClick={() => setUploadError(null)} className="text-rose-500 hover:text-rose-700 font-black px-1">×</button>
+        </div>
+      )}
       <div className="space-y-4 max-h-[365px] overflow-y-auto pr-1">
         {defaultIds.map((_, index) => {
           const item = list[index] || {
@@ -242,14 +249,15 @@ export default function SubcategoryEditor({
                           ) {
                             const file = e.target.files[0];
                             try {
-                              const base64 = await compressImageFile(file, 350, 0.4);
+                              setUploadError(null);
+                              const base64 = await compressImageFile(file, 480, 0.55);
                               updateItem(index, { image: base64 });
                             } catch (err) {
                               console.error(
                                 "Subcategory image compression failed:",
                                 err
                               );
-                              alert("Failed to process image. Try a smaller file.");
+                              setUploadError("Failed to process image. Try a smaller JPG/PNG file.");
                             }
                           }
                         }}

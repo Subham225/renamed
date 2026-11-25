@@ -238,22 +238,30 @@ export default function App() {
   // --- DURABLE PRODUCTS CATALOG STATE (FIRESTORE AUTHORITATIVE) ---
   const [productsCatalog, setProductsCatalog] = useState<Product[]>([]);
   const [isProductsLoaded, setIsProductsLoaded] = useState(false);
+  const [isStoreConfigLoaded, setIsStoreConfigLoaded] = useState(false);
+  const [isCategoriesLoaded, setIsCategoriesLoaded] = useState(false);
 
   const handleAddProduct = async (newProd: Product) => {
     setProductsCatalog((prev) => [newProd, ...prev]);
     try {
+      setFirebaseSyncError(null);
       await addProductToFirestore(newProd);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore saving product error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
   const handleDeleteProduct = async (productId: string) => {
     setProductsCatalog((prev) => prev.filter((p) => p.id !== productId));
     try {
+      setFirebaseSyncError(null);
       await deleteProductFromFirestore(productId);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore deleting product error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -262,19 +270,25 @@ export default function App() {
       prev.map((p) => (p.id === product.id ? product : p)),
     );
     try {
+      setFirebaseSyncError(null);
       await updateProductInFirestore(product);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore updating product error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
   // --- DURABLE STORE SETTINGS STATE (FIRESTORE AUTHORITATIVE) ---
-  // Robust deep merge to preserve 100% of admin custom images and edits across deployments
+  // Robust deep merge to preserve 100% of admin custom images, false flags, and explicit arrays across deployments
   const deepMergeStoreConfig = (base: any, custom: any): any => {
-    if (!custom) return base;
-    if (!base) return custom;
+    if (custom === undefined || custom === null) return base;
+    if (base === undefined || base === null) return custom;
     if (Array.isArray(base)) {
-      return custom.length > 0 ? custom : base;
+      return Array.isArray(custom) ? custom : base;
+    }
+    if (typeof base !== "object" || typeof custom !== "object") {
+      return custom;
     }
     const merged = { ...base };
     for (const key of Object.keys(base)) {
@@ -304,11 +318,19 @@ export default function App() {
   );
 
   const handleUpdateStoreConfig = async (newConfig: StoreConfig) => {
+    if (!isStoreConfigLoaded) {
+      const msg = "Store configuration is still loading from Firebase. Please wait a second before saving.";
+      setFirebaseSyncError(msg);
+      throw new Error(msg);
+    }
     setStoreConfig(newConfig);
     try {
+      setFirebaseSyncError(null);
       await updateStoreConfigInFirestore(newConfig);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore updating store config error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -333,18 +355,71 @@ export default function App() {
     });
   }, [categoriesCatalog]);
 
+  // Unified hidden category & subcategory IDs combining Categories directory + Store Settings section flags
+  const hiddenCategoryIds = useMemo(() => {
+    const hidden = new Set<string>(
+      categoriesCatalog
+        .filter((cat) => cat.isVisible === false || cat.hidden === true)
+        .map((cat) => cat.id),
+    );
+
+    if (storeConfig?.showNewYear === false) hidden.add("new_year");
+    if (storeConfig?.showRakhi === false) hidden.add("rakhi");
+    if (storeConfig?.showDewali === false) hidden.add("dewali");
+    if (storeConfig?.showHandCrafts === false) hidden.add("hand_crafts");
+    if (storeConfig?.showPhotoToArt === false) hidden.add("photo_to_art");
+    if (storeConfig?.showValentineDay === false) hidden.add("valentine_day");
+    if (storeConfig?.showTeachersDay === false) hidden.add("teachers_day");
+    if (storeConfig?.showMothersDay === false) hidden.add("mothers_day");
+    if (storeConfig?.showFathersDay === false) hidden.add("fathers_day");
+    if (storeConfig?.showXmasDay === false) hidden.add("xmas");
+
+    // Propagate parent category hide state to its known child subcategory IDs
+    if (hidden.has("new_year")) {
+      ["new_year_cakes", "new_year_flowers", "new_year_combos", "new_year_gifts"].forEach((id) => hidden.add(id));
+    }
+    if (hidden.has("rakhi")) {
+      ["rakhi_dryfruits", "bhai_vhabi_rakhi", "rakhi_sweets", "rakhi_chocolate"].forEach((id) => hidden.add(id));
+    }
+    if (hidden.has("dewali")) {
+      ["special_chocolate", "sweets", "dryfruits", "diya_candle"].forEach((id) => hidden.add(id));
+    }
+    if (hidden.has("hand_crafts")) {
+      ["key_ring", "jewellery", "clay_art", "resin_art"].forEach((id) => hidden.add(id));
+    }
+    if (hidden.has("photo_to_art")) {
+      ["water_colour", "oil_painting", "sketch", "acrylic"].forEach((id) => hidden.add(id));
+    }
+    if (hidden.has("cakes")) {
+      ["photo_cake", "bento_cake", "pinata_cake", "kids_cake", "cakes_all", "all_cakes"].forEach((id) => hidden.add(id));
+    }
+    if (hidden.has("combos")) {
+      ["flower_combos", "cake_combos", "chocolate_flower", "personalised_combos"].forEach((id) => hidden.add(id));
+    }
+
+    return hidden;
+  }, [categoriesCatalog, storeConfig]);
+
+  const hiddenCategoryIdList = useMemo(
+    () => Array.from(hiddenCategoryIds),
+    [hiddenCategoryIds],
+  );
+
   const visibleCategories = useMemo(() => {
     return sortedCategoriesCatalog.filter(
-      (cat) => cat.isVisible !== false && cat.hidden !== true,
+      (cat) => !hiddenCategoryIds.has(cat.id),
     );
-  }, [sortedCategoriesCatalog]);
+  }, [sortedCategoriesCatalog, hiddenCategoryIds]);
 
   const handleAddCategory = async (newCat: Category) => {
     setCategoriesCatalog((prev) => [...prev, newCat]);
     try {
+      setFirebaseSyncError(null);
       await saveCategoryToFirestore(newCat);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore saving category error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -358,20 +433,26 @@ export default function App() {
       return updated;
     });
     try {
+      setFirebaseSyncError(null);
       for (const item of items) {
         await saveCategoryToFirestore(item);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore updating category error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
     setCategoriesCatalog((prev) => prev.filter((c) => c.id !== categoryId));
     try {
+      setFirebaseSyncError(null);
       await deleteCategoryFromFirestore(categoryId);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore deleting category error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -382,9 +463,12 @@ export default function App() {
     const nextCoups = [...coupons, newCoupon];
     setCoupons(nextCoups);
     try {
+      setFirebaseSyncError(null);
       await addCouponToFirestore(newCoupon);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore saving coupon error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -394,9 +478,12 @@ export default function App() {
     );
     setCoupons(nextCoups);
     try {
+      setFirebaseSyncError(null);
       await addCouponToFirestore(updatedCoupon);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore updating coupon error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -404,9 +491,12 @@ export default function App() {
     const nextCoups = coupons.filter((c) => c.code !== code);
     setCoupons(nextCoups);
     try {
+      setFirebaseSyncError(null);
       await deleteCouponFromFirestore(code);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore deleting coupon error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -415,17 +505,23 @@ export default function App() {
 
   const handleUpdateSlide = async (updatedSlide: Slide) => {
     try {
+      setFirebaseSyncError(null);
       await addSlideToFirestore(updatedSlide);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore updating banner slide error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
   const handleDeleteSlide = async (slideId: string) => {
     try {
+      setFirebaseSyncError(null);
       await deleteSlideFromFirestore(slideId);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore deleting banner slide error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -434,17 +530,23 @@ export default function App() {
 
   const handleAddGalleryItem = async (newItem: GalleryItem) => {
     try {
+      setFirebaseSyncError(null);
       await addGalleryItemToFirestore(newItem);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore adding gallery lookbook picture error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
   const handleDeleteGalleryItem = async (itemId: string) => {
     try {
+      setFirebaseSyncError(null);
       await deleteGalleryItemFromFirestore(itemId);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Firestore deleting gallery lookbook picture error:", err);
+      setFirebaseSyncError(err?.message || String(err));
+      throw err;
     }
   };
 
@@ -726,6 +828,7 @@ export default function App() {
     // 3.6 Setup real-time listener for categories database
     const unsubscribeCategories = subscribeToCategoriesFromFirestore((sorted) => {
       setCategoriesCatalog(sorted);
+      setIsCategoriesLoaded(true);
     });
 
     // 3.7 Setup real-time listener for home promo slides carousel
@@ -740,9 +843,12 @@ export default function App() {
 
     // 3.9 Setup real-time listener for dynamic store config (About section points, subcategories, settings)
     const unsubscribeStoreConfig = subscribeToStoreConfigFromFirestore(
-      (config) => {
+      (config, isLoaded) => {
         const sanitized = sanitizeStoreConfig(config);
         setStoreConfig(sanitized);
+        if (isLoaded) {
+          setIsStoreConfigLoaded(true);
+        }
       },
     );
 
@@ -999,30 +1105,13 @@ export default function App() {
 
   // --- VISIBLE PRODUCTS CATALOG ---
   const visibleProductsCatalog = useMemo(() => {
-    const hiddenCategoryIds = new Set(
-      categoriesCatalog
-        .filter((cat) => cat.isVisible === false || cat.hidden === true)
-        .map((cat) => cat.id)
-    );
-
-    // Also treat festival / special sections turned OFF in Store Settings as hidden
-    if (storeConfig?.showNewYear === false) hiddenCategoryIds.add("new_year");
-    if (storeConfig?.showRakhi === false) hiddenCategoryIds.add("rakhi");
-    if (storeConfig?.showDewali === false) hiddenCategoryIds.add("dewali");
-    if (storeConfig?.showHandCrafts === false) hiddenCategoryIds.add("hand_crafts");
-    if (storeConfig?.showPhotoToArt === false) hiddenCategoryIds.add("photo_to_art");
-    if (storeConfig?.showValentineDay === false) hiddenCategoryIds.add("valentine_day");
-    if (storeConfig?.showTeachersDay === false) hiddenCategoryIds.add("teachers_day");
-    if (storeConfig?.showMothersDay === false) hiddenCategoryIds.add("mothers_day");
-    if (storeConfig?.showFathersDay === false) hiddenCategoryIds.add("fathers_day");
-    if (storeConfig?.showXmasDay === false) hiddenCategoryIds.add("xmas");
-
     // Collect product IDs explicitly picked by admin ONLY in active/visible subcategories & curations
     const explicitlyAssignedProductIds = new Set<string>();
-    const checkSub = (items?: { productIds?: string[] }[]) => {
-      items?.forEach((item) =>
-        item.productIds?.forEach((id) => explicitlyAssignedProductIds.add(id)),
-      );
+    const checkSub = (items?: { id?: string; productIds?: string[] }[]) => {
+      items?.forEach((item) => {
+        if (item.id && hiddenCategoryIds.has(item.id)) return;
+        item.productIds?.forEach((id) => explicitlyAssignedProductIds.add(id));
+      });
     };
     if (!hiddenCategoryIds.has("gifts") && !hiddenCategoryIds.has("combos")) {
       checkSub(storeConfig?.giftSubcategories);
@@ -1104,7 +1193,7 @@ export default function App() {
 
       return hasVisiblePrimary || hasVisibleSecondary;
     });
-  }, [productsCatalog, categoriesCatalog, storeConfig]);
+  }, [productsCatalog, hiddenCategoryIds, storeConfig]);
 
   // Intercept browser back button action to return cleanly to previous views
   useEffect(() => {
@@ -1192,7 +1281,7 @@ export default function App() {
     };
   }, [visibleProductsCatalog]);
 
-  // Handle browser deep link on initial load
+  // Handle browser deep link on initial load and clear hidden categories if toggled off
   useEffect(() => {
     const handleLocationChange = () => {
       const params = new URLSearchParams(window.location.search);
@@ -1207,16 +1296,31 @@ export default function App() {
       }
 
       if (urlCategory) {
-        setSelectedCategory(urlCategory);
+        if (isCategoriesLoaded && isStoreConfigLoaded && hiddenCategoryIds.has(urlCategory)) {
+          setSelectedCategory(null);
+        } else {
+          setSelectedCategory(urlCategory);
+        }
       } else {
         setSelectedCategory(null);
       }
     };
 
-    if (visibleProductsCatalog.length > 0) {
+    if (visibleProductsCatalog.length > 0 || (isCategoriesLoaded && isStoreConfigLoaded)) {
       handleLocationChange();
     }
-  }, [visibleProductsCatalog]);
+  }, [visibleProductsCatalog, hiddenCategoryIds, isCategoriesLoaded, isStoreConfigLoaded]);
+
+  useEffect(() => {
+    if (
+      selectedCategory &&
+      isCategoriesLoaded &&
+      isStoreConfigLoaded &&
+      hiddenCategoryIds.has(selectedCategory)
+    ) {
+      setSelectedCategory(null);
+    }
+  }, [selectedCategory, hiddenCategoryIds, isCategoriesLoaded, isStoreConfigLoaded]);
 
   // --- FILTERED PRODUCTS ---
   const filteredProducts = useMemo(() => {
@@ -1724,6 +1828,7 @@ export default function App() {
         {!activePolicy && (
           <TopCategoryBar
             categories={visibleCategories}
+            hiddenCategoryIds={hiddenCategoryIdList}
             selectedCategory={selectedCategory}
             onSelectCategory={(id) => handleSelectCategoryFromGrid(id, 'top')}
           />
@@ -1928,6 +2033,7 @@ export default function App() {
                   onSelectProduct={setSelectedProduct}
                   selectedCategoryName={selectedCategoryName}
                   storeConfig={storeConfig}
+                  hiddenCategoryIds={hiddenCategoryIdList}
                   wishlistIds={wishlistProductIds}
                   onToggleWishlist={toggleWishlist}
                   onSelectCategory={(id) => {
@@ -2102,6 +2208,7 @@ export default function App() {
         onDeleteProduct={handleDeleteProduct}
         onUpdateProduct={handleUpdateProduct}
         storeConfig={storeConfig}
+        isStoreConfigLoaded={isStoreConfigLoaded}
         onUpdateStoreConfig={handleUpdateStoreConfig}
         onRestoreProducts={async () => {
           const { restoreDefaultProducts } =
@@ -2166,6 +2273,8 @@ export default function App() {
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenTrack={() => setIsTrackOpen(true)}
         onOpenCustomer={() => setIsCustomerOpen(true)}
+        categories={sortedCategoriesCatalog}
+        hiddenCategoryIds={hiddenCategoryIdList}
         onSelectCategory={(id) => {
           setCategorySource('nav');
           setSelectedCategory(id);

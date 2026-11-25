@@ -209,14 +209,14 @@ export function cleanImageUrl(inputUrl: string): string {
 
 export function compressBase64String(
   dataUrl: string,
-  maxDim: number = 350,
-  quality: number = 0.45
+  maxDim: number = 800,
+  quality: number = 0.7,
+  minLengthToCompress: number = 15000
 ): Promise<string> {
   if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
     return Promise.resolve(dataUrl || "");
   }
-  // If image base64 data URL is already short (< 15,000 characters ~ 15KB), no need to re-compress
-  if (dataUrl.length < 15000) {
+  if (dataUrl.length < minLengthToCompress) {
     return Promise.resolve(dataUrl);
   }
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -225,7 +225,6 @@ export function compressBase64String(
 
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
