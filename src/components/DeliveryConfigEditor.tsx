@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StoreConfig, DeliveryZone, DeliveryTimeSlot } from '../types';
-import { Plus, Trash2, Save, MapPin, Clock } from 'lucide-react';
+import { Plus, Trash2, Save, MapPin, Clock, Check } from 'lucide-react';
 
 interface DeliveryConfigEditorProps {
   localConfig: StoreConfig | null;
-  onUpdateStoreConfig: (config: StoreConfig) => void;
+  onUpdateStoreConfig: (config: StoreConfig) => Promise<void> | void;
 }
 
 const normalizeSlots = (slots: DeliveryTimeSlot[]): DeliveryTimeSlot[] => {
@@ -33,10 +33,19 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
   const [timeSlots, setTimeSlots] = useState<DeliveryTimeSlot[]>(() =>
     normalizeSlots(localConfig?.deliveryTimeSlots || [])
   );
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!localConfig || isDirty) return;
+    setZones(localConfig.deliveryZones || []);
+    setTimeSlots(normalizeSlots(localConfig.deliveryTimeSlots || []));
+  }, [localConfig, isDirty]);
 
   if (!localConfig) return null;
 
-  const saveConfig = () => {
+  const saveConfig = async () => {
     const sanitizedZones = zones.map((z) => ({
       ...z,
       pincodes: z.pincodes
@@ -52,35 +61,49 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
     }));
     setZones(sanitizedZones);
     setTimeSlots(sanitizedSlots);
-    onUpdateStoreConfig({
-      ...localConfig,
-      deliveryZones: sanitizedZones,
-      deliveryTimeSlots: sanitizedSlots,
-    });
-    alert('Delivery configuration saved successfully!');
+    setIsSaving(true);
+    setSaveMessage(null);
+    try {
+      await onUpdateStoreConfig({
+        ...localConfig,
+        deliveryZones: sanitizedZones,
+        deliveryTimeSlots: sanitizedSlots,
+      });
+      setIsDirty(false);
+      setSaveMessage({ type: 'success', text: 'Delivery configuration saved permanently to Firebase!' });
+    } catch (err: any) {
+      setSaveMessage({ type: 'error', text: err?.message || 'Failed to save delivery configuration.' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addZone = () => {
+    setIsDirty(true);
     setZones([...zones, { id: 'zone_' + Date.now(), name: 'New Zone', pincodes: '', basePrice: 0, allowExpress: false }]);
   };
 
   const updateZone = (index: number, updates: Partial<DeliveryZone>) => {
+    setIsDirty(true);
     const newZones = [...zones];
     newZones[index] = { ...newZones[index], ...updates };
     setZones(newZones);
   };
 
   const removeZone = (index: number) => {
+    setIsDirty(true);
     const newZones = [...zones];
     newZones.splice(index, 1);
     setZones(newZones);
   };
 
   const addTimeSlot = () => {
+    setIsDirty(true);
     setTimeSlots([...timeSlots, { id: 'ts_' + Date.now(), label: 'New Time Slot', surcharge: 0, type: 'fixed' }]);
   };
 
   const updateTimeSlot = (index: number, updates: Partial<DeliveryTimeSlot>) => {
+    setIsDirty(true);
     const newSlots = [...timeSlots];
     const nextSlot = { ...newSlots[index], ...updates };
     const lower = (nextSlot.label || '').toLowerCase();
@@ -93,6 +116,7 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
   };
 
   const removeTimeSlot = (index: number) => {
+    setIsDirty(true);
     const newSlots = [...timeSlots];
     newSlots.splice(index, 1);
     setTimeSlots(newSlots);
@@ -243,12 +267,28 @@ export default function DeliveryConfigEditor({ localConfig, onUpdateStoreConfig 
         </div>
       </div>
 
-      <div className="flex justify-end pt-4">
-        <button type="button"
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4">
+        <div className="min-h-[24px]">
+          {saveMessage && (
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border ${
+                saveMessage.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}
+            >
+              {saveMessage.type === 'success' && <Check className="w-3.5 h-3.5" />}
+              {saveMessage.text}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          disabled={isSaving}
           onClick={saveConfig}
-          className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black text-sm flex items-center gap-2 hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all"
+          className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black text-sm flex items-center gap-2 hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all disabled:opacity-60 cursor-pointer"
         >
-          <Save className="w-4 h-4" /> Save Delivery Settings
+          <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Delivery Settings'}
         </button>
       </div>
     </div>

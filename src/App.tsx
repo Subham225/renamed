@@ -323,10 +323,11 @@ export default function App() {
       setFirebaseSyncError(msg);
       throw new Error(msg);
     }
-    setStoreConfig(newConfig);
+    const sanitized = sanitizeStoreConfig(newConfig);
+    setStoreConfig(sanitized);
     try {
       setFirebaseSyncError(null);
-      await updateStoreConfigInFirestore(newConfig);
+      await updateStoreConfigInFirestore(sanitized);
     } catch (err: any) {
       console.error("Firestore updating store config error:", err);
       setFirebaseSyncError(err?.message || String(err));

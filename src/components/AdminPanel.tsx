@@ -333,13 +333,35 @@ function TastePickCurationTab({
                     type="file"
                     accept="image/*"
                     onChange={async (e) => {
-                      if (e.target.files && e.target.files[0]) {
+                      const inputEl = e.target;
+                      if (inputEl.files && inputEl.files[0]) {
                         try {
-                          const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
-                          updateCategory(activeCategory.id, { image: base64 });
+                          const base64 = await compressImageFile(inputEl.files[0], 400, 0.5);
+                          if (!localConfig) return;
+                          const cleaned = cleanImageUrl(base64);
+                          const updated = currentCategories.map((cat) =>
+                            cat.id === activeCategory.id ? { ...cat, image: cleaned } : cat
+                          );
+                          const updatedSubcategories: StoreConfigItem[] = updated.map((c) => ({
+                            id: c.id,
+                            name: c.name,
+                            image: cleanImageUrl(c.image),
+                            tag: c.name,
+                          }));
+                          const nextConfig: StoreConfig = {
+                            ...localConfig,
+                            tastePickCategories: updated,
+                            tastePickSubcategories: updatedSubcategories,
+                          };
+                          setLocalConfig(nextConfig);
+                          if (onUpdateStoreConfig) {
+                            await onUpdateStoreConfig(nextConfig);
+                          }
                         } catch (err) {
                           console.error("Image upload failed:", err);
                           onNotify?.("error", "Image upload failed. Try a smaller photo.");
+                        } finally {
+                          inputEl.value = "";
                         }
                       }
                     }}
@@ -718,16 +740,29 @@ function CakesCurationTab({
                       type="file"
                       accept="image/*"
                       onChange={async (e) => {
-                        if (e.target.files && e.target.files[0]) {
+                        const inputEl = e.target;
+                        if (inputEl.files && inputEl.files[0]) {
                           try {
                             setUploadingIdx(idx);
-                            const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
-                            updateQuickCat(idx, { image: base64 });
+                            const base64 = await compressImageFile(inputEl.files[0], 400, 0.5);
+                            if (localConfig) {
+                              const list = [...currentQuickCats];
+                              list[idx] = { ...list[idx], image: cleanImageUrl(base64) };
+                              const nextConfig: StoreConfig = {
+                                ...localConfig,
+                                quickCakeCategories: list,
+                              };
+                              setLocalConfig(nextConfig);
+                              if (onUpdateStoreConfig) {
+                                await onUpdateStoreConfig(nextConfig);
+                              }
+                            }
                           } catch (err) {
                             console.error("Image compression failed:", err);
                             onNotify?.("error", "Image compression failed. Try a smaller photo.");
                           } finally {
                             setUploadingIdx(null);
+                            inputEl.value = "";
                           }
                         }
                       }}
@@ -887,16 +922,29 @@ function CakesCurationTab({
                       type="file"
                       accept="image/*"
                       onChange={async (e) => {
-                        if (e.target.files && e.target.files[0]) {
+                        const inputEl = e.target;
+                        if (inputEl.files && inputEl.files[0]) {
                           try {
                             setUploadingIdx(idx);
-                            const base64 = await compressImageFile(e.target.files[0], 400, 0.5);
-                            updateIconicFlavor(idx, { image: base64 });
+                            const base64 = await compressImageFile(inputEl.files[0], 400, 0.5);
+                            if (localConfig) {
+                              const list = [...currentIconicFlavors];
+                              list[idx] = { ...list[idx], image: cleanImageUrl(base64) };
+                              const nextConfig: StoreConfig = {
+                                ...localConfig,
+                                iconicFlavors: list,
+                              };
+                              setLocalConfig(nextConfig);
+                              if (onUpdateStoreConfig) {
+                                await onUpdateStoreConfig(nextConfig);
+                              }
+                            }
                           } catch (err) {
                             console.error("Image compression failed:", err);
                             onNotify?.("error", "Image compression failed. Try a smaller photo.");
                           } finally {
                             setUploadingIdx(null);
+                            inputEl.value = "";
                           }
                         }
                       }}
@@ -997,10 +1045,12 @@ function FlowersCurationTab({
 
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
-  const updateFC = (updated: Partial<FlowerCurationConfig>) => {
-    if (!localConfig) return;
+  const updateFC = (updated: Partial<FlowerCurationConfig>): StoreConfig | null => {
+    if (!localConfig) return null;
     const newFC = { ...localConfig.flowerCuration, ...updated };
-    setLocalConfig({ ...localConfig, flowerCuration: newFC });
+    const nextConfig: StoreConfig = { ...localConfig, flowerCuration: newFC };
+    setLocalConfig(nextConfig);
+    return nextConfig;
   };
 
   const handleSave = async () => {
@@ -1013,12 +1063,15 @@ function FlowersCurationTab({
   const handleFileUpload = async (
     file: File,
     key: string,
-    onSuccess: (base64: string) => void
+    buildNextConfig: (base64: string) => StoreConfig | null
   ) => {
     try {
       setUploadingKey(key);
-      const base64 = await compressImageFile(file, 800, 0.6);
-      onSuccess(base64);
+      const base64 = cleanImageUrl(await compressImageFile(file, 800, 0.6));
+      const nextConfig = buildNextConfig(base64);
+      if (nextConfig && onUpdateStoreConfig) {
+        await onUpdateStoreConfig(nextConfig);
+      }
     } catch (err) {
       console.error("Flowers image upload failed:", err);
       onNotify?.("error", "Image upload failed. Try a smaller JPG/PNG photo.");
@@ -1186,14 +1239,28 @@ function FlowersCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
+                    if (file && localConfig) {
                       handleFileUpload(file, `list_${idx}`, (b64) => {
                         const next = [...list];
                         next[idx] = { ...next[idx], image: b64 };
                         onUpdateList(next);
+                        // Also construct full config snapshot if caller didn't persist
+                        if (!localConfig) return null;
+                        const nextList = next;
+                        const updatedFC = { ...localConfig.flowerCuration };
+                        if (activeSubTab === "trending") updatedFC.trendingCategories = nextList;
+                        else if (activeSubTab === "type") updatedFC.byTypeCategories = nextList;
+                        else if (activeSubTab === "color") updatedFC.byColorCategories = nextList;
+                        else if (activeSubTab === "collection") updatedFC.byCollectionCategories = nextList;
+                        else if (activeSubTab === "premium") updatedFC.premiumFlowersCategories = nextList;
+                        else if (activeSubTab === "pairings") updatedFC.luxuryPairings = nextList;
+                        else if (activeSubTab === "occasion") updatedFC.byOccasionCategories = nextList;
+                        return { ...localConfig, flowerCuration: updatedFC };
                       });
                     }
+                    inputEl.value = "";
                   }}
                   className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-rose-50 file:text-rose-700"
                 />
@@ -1356,8 +1423,12 @@ function FlowersCurationTab({
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload(file, "hero", (b64) => updateFC({ heroBannerImage: b64 }));
+                  const inputEl = e.target;
+                  const file = inputEl.files?.[0];
+                  if (file) {
+                    handleFileUpload(file, "hero", (b64) => updateFC({ heroBannerImage: b64 }));
+                  }
+                  inputEl.value = "";
                 }}
                 className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-rose-50 file:text-rose-700"
               />
@@ -1406,8 +1477,12 @@ function FlowersCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file, "luxury_banner", (b64) => updateFC({ luxuryBloomsBannerImage: b64 }));
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
+                    if (file) {
+                      handleFileUpload(file, "luxury_banner", (b64) => updateFC({ luxuryBloomsBannerImage: b64 }));
+                    }
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-rose-50 file:text-rose-700"
                 />
@@ -1439,8 +1514,12 @@ function FlowersCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file, "plants_banner", (b64) => updateFC({ plantsPromoBannerImage: b64 }));
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
+                    if (file) {
+                      handleFileUpload(file, "plants_banner", (b64) => updateFC({ plantsPromoBannerImage: b64 }));
+                    }
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-rose-50 file:text-rose-700"
                 />
@@ -1469,10 +1548,12 @@ function CurationProductMapper({
   curationType,
   products = [],
   onUpdateProduct,
+  onNotify,
 }: {
   curationType: "birthday" | "plants";
   products?: Product[];
-  onUpdateProduct?: (product: Product) => void;
+  onUpdateProduct?: (product: Product) => Promise<void> | void;
+  onNotify?: (type: SaveBannerType, text: string) => void;
 }) {
   const isBirthday = curationType === "birthday";
 
@@ -1537,7 +1618,7 @@ function CurationProductMapper({
     return false;
   };
 
-  const handleToggleTag = (prod: Product) => {
+  const handleToggleTag = async (prod: Product) => {
     if (!onUpdateProduct) return;
     const tag = activeSubCat.mainTag;
     const baseTag = isBirthday ? "birthday" : "plants";
@@ -1560,7 +1641,18 @@ function CurationProductMapper({
       if (!cats.includes(baseTag)) cats.push(baseTag);
     }
 
-    onUpdateProduct({ ...prod, categories: cats });
+    onNotify?.("saving", `Updating "${prod.name}" tags in Firebase...`);
+    try {
+      await onUpdateProduct({ ...prod, categories: cats });
+      onNotify?.(
+        "success",
+        currentlyTagged
+          ? `Removed "${prod.name}" from ${activeSubCat.label}.`
+          : `Tagged "${prod.name}" under ${activeSubCat.label} & saved!`,
+      );
+    } catch (err: any) {
+      onNotify?.("error", err?.message || `Failed to save tags for "${prod.name}".`);
+    }
   };
 
   const filteredProducts = products.filter((p) => {
@@ -1756,10 +1848,12 @@ function BirthdayCurationTab({
 
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
-  const updateBC = (updated: Partial<BirthdayCurationConfig>) => {
-    if (!localConfig) return;
+  const updateBC = (updated: Partial<BirthdayCurationConfig>): StoreConfig | null => {
+    if (!localConfig) return null;
     const newBC = { ...localConfig.birthdayCuration, ...updated };
-    setLocalConfig({ ...localConfig, birthdayCuration: newBC });
+    const nextConfig: StoreConfig = { ...localConfig, birthdayCuration: newBC };
+    setLocalConfig(nextConfig);
+    return nextConfig;
   };
 
   const handleSave = async () => {
@@ -1772,12 +1866,15 @@ function BirthdayCurationTab({
   const handleFileUpload = async (
     file: File,
     key: string,
-    onSuccess: (base64: string) => void
+    buildNextConfig: (base64: string) => StoreConfig | null
   ) => {
     try {
       setUploadingKey(key);
-      const base64 = await compressImageFile(file, 800, 0.6);
-      onSuccess(base64);
+      const base64 = cleanImageUrl(await compressImageFile(file, 800, 0.6));
+      const nextConfig = buildNextConfig(base64);
+      if (nextConfig && onUpdateStoreConfig) {
+        await onUpdateStoreConfig(nextConfig);
+      }
     } catch (err) {
       console.error("Birthday image upload failed:", err);
       onNotify?.("error", "Image upload failed. Try a smaller JPG/PNG photo.");
@@ -1921,14 +2018,22 @@ function BirthdayCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
+                    if (file && localConfig) {
                       handleFileUpload(file, `bc_list_${idx}`, (b64) => {
                         const next = [...list];
                         next[idx] = { ...next[idx], image: b64 };
                         onUpdateList(next);
+                        const updatedBC = { ...localConfig.birthdayCuration };
+                        if (activeSubTab === "quick") updatedBC.quickCategories = next;
+                        else if (activeSubTab === "premium") updatedBC.premiumCategories = next;
+                        else if (activeSubTab === "flowers_type") updatedBC.flowersByTypeCategories = next;
+                        else if (activeSubTab === "explore") updatedBC.exploreGiftsCategories = next;
+                        return { ...localConfig, birthdayCuration: updatedBC };
                       });
                     }
+                    inputEl.value = "";
                   }}
                   className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-amber-50 file:text-amber-800"
                 />
@@ -2020,8 +2125,10 @@ function BirthdayCurationTab({
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
+                  const inputEl = e.target;
+                  const file = inputEl.files?.[0];
                   if (file) handleFileUpload(file, "hero_birthday", (b64) => updateBC({ heroBannerImage: b64 }));
+                  inputEl.value = "";
                 }}
                 className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-amber-50 file:text-amber-800"
               />
@@ -2058,8 +2165,10 @@ function BirthdayCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
                     if (file) handleFileUpload(file, "her_banner", (b64) => updateBC({ giftsForHerBannerImage: b64 }));
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
                 />
@@ -2091,8 +2200,10 @@ function BirthdayCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
                     if (file) handleFileUpload(file, "him_banner", (b64) => updateBC({ giftsForHimBannerImage: b64 }));
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
                 />
@@ -2132,8 +2243,10 @@ function BirthdayCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
                     if (file) handleFileUpload(file, "kids_banner", (b64) => updateBC({ kidsCakesBannerImage: b64 }));
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
                 />
@@ -2165,8 +2278,10 @@ function BirthdayCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
                     if (file) handleFileUpload(file, "digital_banner", (b64) => updateBC({ digitalGiftsBannerImage: b64 }));
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-800"
                 />
@@ -2182,6 +2297,7 @@ function BirthdayCurationTab({
             curationType="birthday"
             products={products}
             onUpdateProduct={onUpdateProduct}
+            onNotify={onNotify}
           />
         )}
 
@@ -2222,15 +2338,17 @@ function PlantCurationTab({
 
   const pc = localConfig?.plantCuration || {};
 
-  const updatePC = (patch: Partial<PlantCurationConfig>) => {
-    if (!localConfig) return;
-    setLocalConfig({
+  const updatePC = (patch: Partial<PlantCurationConfig>): StoreConfig | null => {
+    if (!localConfig) return null;
+    const nextConfig: StoreConfig = {
       ...localConfig,
       plantCuration: {
         ...localConfig.plantCuration,
         ...patch,
       },
-    });
+    };
+    setLocalConfig(nextConfig);
+    return nextConfig;
   };
 
   const handleSave = async () => {
@@ -2245,12 +2363,15 @@ function PlantCurationTab({
   const handleFileUpload = async (
     file: File,
     key: string,
-    onSuccess: (b64: string) => void
+    buildNextConfig: (b64: string) => StoreConfig | null
   ) => {
     try {
       setUploadingKey(key);
-      const compressed = await compressImageFile(file, 800, 0.65);
-      onSuccess(compressed);
+      const compressed = cleanImageUrl(await compressImageFile(file, 800, 0.65));
+      const nextConfig = buildNextConfig(compressed);
+      if (nextConfig && onUpdateStoreConfig) {
+        await onUpdateStoreConfig(nextConfig);
+      }
     } catch (err) {
       console.error("Image upload failed", err);
       onNotify?.("error", "Failed to process image. Please try another image.");
@@ -2382,14 +2503,22 @@ function PlantCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
+                    if (file && localConfig) {
                       handleFileUpload(file, `plant_list_${idx}`, (b64) => {
                         const next = [...list];
                         next[idx] = { ...next[idx], image: b64 };
                         onUpdateList(next);
+                        const updatedPC = { ...localConfig.plantCuration };
+                        if (activeSubTab === "quick") updatedPC.quickCategories = next;
+                        else if (activeSubTab === "plant_types") updatedPC.plantsByTypeCategories = next;
+                        else if (activeSubTab === "locations") updatedPC.plantsByLocationCategories = next;
+                        else if (activeSubTab === "planters") updatedPC.explorePlantersCategories = next;
+                        return { ...localConfig, plantCuration: updatedPC };
                       });
                     }
+                    inputEl.value = "";
                   }}
                   className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-black file:bg-emerald-50 file:text-emerald-800"
                 />
@@ -2480,8 +2609,10 @@ function PlantCurationTab({
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
+                  const inputEl = e.target;
+                  const file = inputEl.files?.[0];
                   if (file) handleFileUpload(file, "hero_plants", (b64) => updatePC({ heroBannerImage: b64 }));
+                  inputEl.value = "";
                 }}
                 className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-emerald-50 file:text-emerald-800"
               />
@@ -2518,8 +2649,10 @@ function PlantCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
                     if (file) handleFileUpload(file, "air_purifying_banner", (b64) => updatePC({ airPurifyingBannerImage: b64 }));
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-emerald-50 file:text-emerald-800"
                 />
@@ -2551,8 +2684,10 @@ function PlantCurationTab({
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const inputEl = e.target;
+                    const file = inputEl.files?.[0];
                     if (file) handleFileUpload(file, "lucky_banner", (b64) => updatePC({ luckyPlantsBannerImage: b64 }));
+                    inputEl.value = "";
                   }}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-emerald-50 file:text-emerald-800"
                 />
@@ -2572,6 +2707,7 @@ function PlantCurationTab({
             curationType="plants"
             products={products}
             onUpdateProduct={onUpdateProduct}
+            onNotify={onNotify}
           />
         )}
 
@@ -2681,6 +2817,10 @@ export default function AdminPanel({
     | "gifts_curation"
     | "cakes_curation"
     | "flowers_curation"
+    | "flower_curation"
+    | "taste_pick_curation"
+    | "birthday_curation"
+    | "plants_curation"
     | "delivery"
   >("orders");
 
@@ -2797,6 +2937,7 @@ export default function AdminPanel({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [localConfig, setRawLocalConfig] = useState<StoreConfig | null>(null);
+  const [hasUnsavedConfig, setHasUnsavedConfig] = useState(false);
   const isLocalConfigDirtyRef = React.useRef(false);
   const hasHydratedServerConfigRef = React.useRef(false);
   const bannerTimerRef = React.useRef<number | null>(null);
@@ -2827,6 +2968,7 @@ export default function AdminPanel({
         | ((prev: StoreConfig | null) => StoreConfig | null),
     ) => {
       isLocalConfigDirtyRef.current = true;
+      setHasUnsavedConfig(true);
       setRawLocalConfig(value);
     },
     [],
@@ -2837,6 +2979,7 @@ export default function AdminPanel({
     if (isStoreConfigLoaded && !hasHydratedServerConfigRef.current) {
       hasHydratedServerConfigRef.current = true;
       isLocalConfigDirtyRef.current = false;
+      setHasUnsavedConfig(false);
       setRawLocalConfig(storeConfig);
       return;
     }
@@ -2848,6 +2991,7 @@ export default function AdminPanel({
   useEffect(() => {
     if (!isOpen && storeConfig && isStoreConfigLoaded) {
       isLocalConfigDirtyRef.current = false;
+      setHasUnsavedConfig(false);
       setRawLocalConfig(storeConfig);
     }
   }, [isOpen, storeConfig, isStoreConfigLoaded]);
@@ -2902,6 +3046,7 @@ export default function AdminPanel({
     try {
       await onUpdateStoreConfig(configToSave);
       isLocalConfigDirtyRef.current = false;
+      setHasUnsavedConfig(false);
       notifyAdmin("success", successText);
     } catch (err: any) {
       notifyAdmin(
@@ -3782,6 +3927,57 @@ export default function AdminPanel({
               </div>
             )}
 
+            {/* Sticky Unsaved Changes Bar for Store Config & Curation Tabs */}
+            {hasUnsavedConfig &&
+              localConfig &&
+              [
+                "settings",
+                "taste_pick_curation",
+                "cakes_curation",
+                "flowers_curation",
+                "flower_curation",
+                "birthday_curation",
+                "plants_curation",
+                "reviews",
+              ].includes(activeTab) && (
+                <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-amber-900">
+                    <span>⚠️</span>
+                    <span>
+                      You have unsaved Store Customizer / Curation changes. Save to Firebase before closing.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (storeConfig) {
+                          isLocalConfigDirtyRef.current = false;
+                          setHasUnsavedConfig(false);
+                          setRawLocalConfig(storeConfig);
+                          notifyAdmin("success", "Reverted unsaved local edits to saved Firebase state.");
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-black uppercase rounded-xl cursor-pointer transition"
+                    >
+                      Discard Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        saveStoreConfigSafely(
+                          localConfig,
+                          "All Store Customizer & Curation changes saved permanently to Firebase!",
+                        )
+                      }
+                      className="px-4 py-1.5 bg-pink-600 hover:bg-pink-700 text-white text-[10px] font-black uppercase rounded-xl shadow-xs cursor-pointer transition"
+                    >
+                      Save All Changes to Firebase
+                    </button>
+                  </div>
+                </div>
+              )}
+
             {/* Scrolling panel dashboard content - WITH GENERATIVE MOBILE SIZE PRECAUTIONS */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 text-left">
               {/* TAB 1: LIVE ORDERS MANAGER */}
@@ -3877,13 +4073,13 @@ export default function AdminPanel({
                         <button
                           type="button"
                           onClick={() => {
-                            if (
-                              window.confirm(
+                            setConfirmModal({
+                              isOpen: true,
+                              title: "Clear All Orders & Sales",
+                              message:
                                 "Are you sure you want to clear all orders, total turnover, and sales registers? Products and store configurations will NOT be touched.",
-                              )
-                            ) {
-                              onClearAllOrders();
-                            }
+                              onConfirm: () => onClearAllOrders(),
+                            });
                           }}
                           className="px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer"
                           title="Clear all orders and reset turnover/sales records"
@@ -4012,13 +4208,17 @@ export default function AdminPanel({
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (
-                                        window.confirm(
-                                          `Delete order ${order.id}? This will remove it from active orders, sales records and turnover.`,
-                                        )
-                                      ) {
-                                        onDeleteOrder(order.id);
-                                      }
+                                      setConfirmModal({
+                                        isOpen: true,
+                                        title: `Delete Order ${order.id}`,
+                                        message: `Delete order ${order.id}? This will remove it from active orders, sales records and turnover.`,
+                                        onConfirm: () =>
+                                          runAsyncSave(
+                                            `Deleting order ${order.id}...`,
+                                            () => onDeleteOrder(order.id),
+                                            `Order ${order.id} deleted permanently.`,
+                                          ),
+                                      });
                                     }}
                                     className="ml-auto p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                                     title={`Delete order ${order.id}`}
@@ -4546,11 +4746,16 @@ export default function AdminPanel({
                                     onChange={(e) => {
                                       const newOrder =
                                         parseInt(e.target.value) || 1;
-                                      onUpdateProduct({
-                                        ...prod,
-                                        personalisedBestSellerOrder: newOrder,
-                                        isPersonalisedBestSeller: true,
-                                      });
+                                      void runAsyncSave(
+                                        `Updating sequence order for "${prod.name}"...`,
+                                        () =>
+                                          onUpdateProduct({
+                                            ...prod,
+                                            personalisedBestSellerOrder: newOrder,
+                                            isPersonalisedBestSeller: true,
+                                          }),
+                                        `"${prod.name}" sequence updated!`,
+                                      );
                                     }}
                                   />
                                 </div>
@@ -4718,9 +4923,13 @@ export default function AdminPanel({
                                   } else {
                                     if (!cats.includes("gifts_for_him")) cats.push("gifts_for_him");
                                   }
-                                  onUpdateProduct({ ...prod, categories: cats });
+                                  void runAsyncSave(
+                                    `Updating Gifts for Him for "${prod.name}"...`,
+                                    () => onUpdateProduct({ ...prod, categories: cats }),
+                                    `"${prod.name}" Gifts for Him mapping saved!`,
+                                  );
                                 }}
-                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isHim ? "bg-sky-500 text-white border-sky-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isHim ? "bg-sky-500 text-white border-sky-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                               >
                                 {isHim ? "✓ In Him" : "+ Him"}
                               </button>
@@ -4733,9 +4942,13 @@ export default function AdminPanel({
                                   } else {
                                     if (!cats.includes("gifts_for_her")) cats.push("gifts_for_her");
                                   }
-                                  onUpdateProduct({ ...prod, categories: cats });
+                                  void runAsyncSave(
+                                    `Updating Gifts for Her for "${prod.name}"...`,
+                                    () => onUpdateProduct({ ...prod, categories: cats }),
+                                    `"${prod.name}" Gifts for Her mapping saved!`,
+                                  );
                                 }}
-                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isHer ? "bg-pink-500 text-white border-pink-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isHer ? "bg-pink-500 text-white border-pink-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                               >
                                 {isHer ? "✓ In Her" : "+ Her"}
                               </button>
@@ -4814,9 +5027,13 @@ export default function AdminPanel({
                                       } else {
                                         if (!cats.includes(flavor.id)) cats.push(flavor.id);
                                       }
-                                      onUpdateProduct({ ...prod, categories: cats });
+                                      void runAsyncSave(
+                                        `Updating Taste Pick for "${prod.name}"...`,
+                                        () => onUpdateProduct({ ...prod, categories: cats }),
+                                        `"${prod.name}" Taste Pick saved!`,
+                                      );
                                     }}
-                                    className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isAssigned ? "bg-pink-500 text-white border-pink-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                    className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isAssigned ? "bg-pink-500 text-white border-pink-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                                   >
                                     {isAssigned ? `✓ ${flavor.name.replace(' (Taste Pick)', '')}` : `+ ${flavor.name.replace(' (Taste Pick)', '')}`}
                                   </button>
@@ -4887,9 +5104,13 @@ export default function AdminPanel({
                                   } else {
                                     if (!cats.includes("cakes_for_him")) cats.push("cakes_for_him");
                                   }
-                                  onUpdateProduct({ ...prod, categories: cats });
+                                  void runAsyncSave(
+                                    `Updating Cakes for Him for "${prod.name}"...`,
+                                    () => onUpdateProduct({ ...prod, categories: cats }),
+                                    `"${prod.name}" Cakes for Him saved!`,
+                                  );
                                 }}
-                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isHim ? "bg-sky-500 text-white border-sky-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isHim ? "bg-sky-500 text-white border-sky-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                               >
                                 {isHim ? "✓ In Him" : "+ Him"}
                               </button>
@@ -4902,9 +5123,13 @@ export default function AdminPanel({
                                   } else {
                                     if (!cats.includes("cakes_for_her")) cats.push("cakes_for_her");
                                   }
-                                  onUpdateProduct({ ...prod, categories: cats });
+                                  void runAsyncSave(
+                                    `Updating Cakes for Her for "${prod.name}"...`,
+                                    () => onUpdateProduct({ ...prod, categories: cats }),
+                                    `"${prod.name}" Cakes for Her saved!`,
+                                  );
                                 }}
-                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isHer ? "bg-pink-500 text-white border-pink-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isHer ? "bg-pink-500 text-white border-pink-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                               >
                                 {isHer ? "✓ In Her" : "+ Her"}
                               </button>
@@ -4917,9 +5142,13 @@ export default function AdminPanel({
                                   } else {
                                     if (!cats.includes("cakes_with_flowers")) cats.push("cakes_with_flowers");
                                   }
-                                  onUpdateProduct({ ...prod, categories: cats });
+                                  void runAsyncSave(
+                                    `Updating Cakes with Flowers for "${prod.name}"...`,
+                                    () => onUpdateProduct({ ...prod, categories: cats }),
+                                    `"${prod.name}" Cakes with Flowers saved!`,
+                                  );
                                 }}
-                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isFlowers ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isFlowers ? "bg-emerald-500 text-white border-emerald-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                               >
                                 {isFlowers ? "✓ With Flowers" : "+ With Flowers"}
                               </button>
@@ -4997,9 +5226,13 @@ export default function AdminPanel({
                                   } else {
                                     if (!cats.includes("flowers_with_cakes")) cats.push("flowers_with_cakes");
                                   }
-                                  onUpdateProduct({ ...prod, categories: cats });
+                                  void runAsyncSave(
+                                    `Updating Flowers with Cakes for "${prod.name}"...`,
+                                    () => onUpdateProduct({ ...prod, categories: cats }),
+                                    `"${prod.name}" Flowers with Cakes saved!`,
+                                  );
                                 }}
-                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isCakes ? "bg-amber-500 text-white border-amber-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isCakes ? "bg-amber-500 text-white border-amber-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                               >
                                 {isCakes ? "✓ With Cakes" : "+ With Cakes"}
                               </button>
@@ -5012,9 +5245,13 @@ export default function AdminPanel({
                                   } else {
                                     if (!cats.includes("flowers_with_chocolates")) cats.push("flowers_with_chocolates");
                                   }
-                                  onUpdateProduct({ ...prod, categories: cats });
+                                  void runAsyncSave(
+                                    `Updating Flowers with Chocolates for "${prod.name}"...`,
+                                    () => onUpdateProduct({ ...prod, categories: cats }),
+                                    `"${prod.name}" Flowers with Chocolates saved!`,
+                                  );
                                 }}
-                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border ${isChocolates ? "bg-purple-500 text-white border-purple-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                                className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg transition-colors border cursor-pointer ${isChocolates ? "bg-purple-500 text-white border-purple-600" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
                               >
                                 {isChocolates ? "✓ With Chocolates" : "+ With Chocolates"}
                               </button>
@@ -6689,7 +6926,11 @@ export default function AdminPanel({
                                 updatedPrev &&
                                 onUpdateCategory
                               ) {
-                                onUpdateCategory([updatedCurrent, updatedPrev]);
+                                void runAsyncSave(
+                                  `Reordering "${cat.name}"...`,
+                                  () => onUpdateCategory([updatedCurrent, updatedPrev]),
+                                  `Category order saved permanently!`,
+                                );
                               }
                             };
 
@@ -6713,7 +6954,11 @@ export default function AdminPanel({
                                 updatedNext &&
                                 onUpdateCategory
                               ) {
-                                onUpdateCategory([updatedCurrent, updatedNext]);
+                                void runAsyncSave(
+                                  `Reordering "${cat.name}"...`,
+                                  () => onUpdateCategory([updatedCurrent, updatedNext]),
+                                  `Category order saved permanently!`,
+                                );
                               }
                             };
 
@@ -6805,6 +7050,7 @@ export default function AdminPanel({
                                                       };
                                                       setRawLocalConfig(syncedCfg);
                                                       isLocalConfigDirtyRef.current = false;
+                                                      setHasUnsavedConfig(false);
                                                       await onUpdateStoreConfig(syncedCfg);
                                                     }
                                                   },
@@ -6932,6 +7178,7 @@ export default function AdminPanel({
                                                 };
                                                 setRawLocalConfig(syncedCfg);
                                                 isLocalConfigDirtyRef.current = false;
+                                                setHasUnsavedConfig(false);
                                                 await onUpdateStoreConfig(syncedCfg);
                                               }
                                             },
@@ -7069,7 +7316,8 @@ export default function AdminPanel({
                             type="file"
                             accept="image/*"
                             onChange={async (e) => {
-                              const file = e.target.files?.[0];
+                              const inputEl = e.currentTarget;
+                              const file = inputEl.files?.[0];
                               if (!file) return;
                               setIsUploadingNewSlideImage(true);
                               try {
@@ -7084,8 +7332,10 @@ export default function AdminPanel({
                                   "Local slide upload failure:",
                                   err,
                                 );
+                                notifyAdmin("error", "Slide image compression failed. Try another JPG/PNG photo.");
                               } finally {
                                 setIsUploadingNewSlideImage(false);
+                                inputEl.value = "";
                               }
                             }}
                             className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-extrabold file:uppercase file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer animate-pulse"
@@ -7313,7 +7563,8 @@ export default function AdminPanel({
                                         type="file"
                                         accept="image/*"
                                         onChange={async (e) => {
-                                          const file = e.target.files?.[0];
+                                          const inputEl = e.currentTarget;
+                                          const file = inputEl.files?.[0];
                                           if (!file) return;
                                           setIsUploadingSlideImage(true);
                                           try {
@@ -7329,8 +7580,10 @@ export default function AdminPanel({
                                               "Local slide upload failure:",
                                               err,
                                             );
+                                            notifyAdmin("error", "Slide image compression failed. Try another JPG/PNG photo.");
                                           } finally {
                                             setIsUploadingSlideImage(false);
+                                            inputEl.value = "";
                                           }
                                         }}
                                         className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-extrabold file:uppercase file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
@@ -7462,7 +7715,8 @@ export default function AdminPanel({
                             type="file"
                             accept="image/*"
                             onChange={async (e) => {
-                              const file = e.target.files?.[0];
+                              const inputEl = e.currentTarget;
+                              const file = inputEl.files?.[0];
                               if (!file) return;
                               setIsUploadingGalleryImage(true);
                               try {
@@ -7477,8 +7731,10 @@ export default function AdminPanel({
                                   "Local lookbook upload failure:",
                                   err,
                                 );
+                                notifyAdmin("error", "Gallery image compression failed. Try another JPG/PNG photo.");
                               } finally {
                                 setIsUploadingGalleryImage(false);
+                                inputEl.value = "";
                               }
                             }}
                             className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[9px] file:font-extrabold file:uppercase file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer"
@@ -7674,7 +7930,11 @@ export default function AdminPanel({
                   localConfig={localConfig}
                   onUpdateStoreConfig={(config) => {
                     setRawLocalConfig(config);
-                    saveStoreConfigSafely(config, "Delivery configuration saved permanently!");
+                    setHasUnsavedConfig(false);
+                    return saveStoreConfigSafely(
+                      config,
+                      "Delivery configuration saved permanently!",
+                    );
                   }}
                 />
               )}
@@ -7787,17 +8047,33 @@ export default function AdminPanel({
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* LEFT PANEL: ABOUT SECTION CONTROLLERS */}
                     <div className="bg-white rounded-3xl p-5 border border-slate-150 space-y-4 shadow-sm">
-                      <div className="flex items-center gap-2 border-b border-slate-50 pb-3">
-                        <span className="text-lg">📢</span>
-                        <div>
-                          <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                            Section: About segment points
-                          </h4>
-                          <span className="text-[9px] text-slate-400 font-bold">
-                            Write up to 3 gorgeous points to express store
-                            specialty
-                          </span>
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-50 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">📢</span>
+                          <div>
+                            <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                              Section: About segment points
+                            </h4>
+                            <span className="text-[9px] text-slate-400 font-bold">
+                              Write up to 3 gorgeous points to express store
+                              specialty
+                            </span>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (localConfig) {
+                              void saveStoreConfigSafely(
+                                localConfig,
+                                "About section saved permanently to Firebase!",
+                              );
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white text-[9.5px] font-black uppercase rounded-xl cursor-pointer shrink-0 transition"
+                        >
+                          Save About
+                        </button>
                       </div>
 
                       {[0, 1, 2].map((idx) => {
@@ -7857,7 +8133,7 @@ export default function AdminPanel({
                                 if (localConfig) {
                                   setLocalConfig({
                                     ...localConfig,
-                                    aboutBgImage: e.target.value,
+                                    aboutBgImage: cleanImageUrl(e.target.value),
                                   });
                                 }
                               }}
@@ -7866,14 +8142,15 @@ export default function AdminPanel({
 
                             <div className="mt-2">
                               <label className="text-[9px] text-slate-500 font-bold block mb-1">
-                                Upload Local Image
+                                Upload Local Image (Auto-saves to Firebase)
                               </label>
                               <input
                                 type="file"
                                 accept="image/*"
                                 onChange={async (e) => {
-                                  if (e.target.files && e.target.files[0]) {
-                                    const file = e.target.files[0];
+                                  const inputEl = e.currentTarget;
+                                  const file = inputEl.files?.[0];
+                                  if (file) {
                                     try {
                                       const base64 = await compressImageFile(
                                         file,
@@ -7881,10 +8158,15 @@ export default function AdminPanel({
                                         0.6,
                                       );
                                       if (localConfig) {
-                                        setLocalConfig({
+                                        const nextConfig = {
                                           ...localConfig,
                                           aboutBgImage: base64,
-                                        });
+                                        };
+                                        setLocalConfig(nextConfig);
+                                        await saveStoreConfigSafely(
+                                          nextConfig,
+                                          "About section backdrop uploaded & saved permanently to Firebase!",
+                                        );
                                       }
                                     } catch (err) {
                                       console.error(
@@ -7895,6 +8177,8 @@ export default function AdminPanel({
                                         "error",
                                         "Image upload failed. The photo might be too large or unsupported (HEIC). Please try another photo.",
                                       );
+                                    } finally {
+                                      inputEl.value = "";
                                     }
                                   }
                                 }}
@@ -7908,16 +8192,32 @@ export default function AdminPanel({
 
                     {/* BOTTOM PANEL: CUSTOM BANNERS */}
                     <div className="bg-white rounded-3xl p-5 border border-slate-150 space-y-4 shadow-sm lg:col-span-3">
-                      <div className="flex items-center gap-2 border-b border-slate-50 pb-3">
-                        <span className="text-lg">🖼️</span>
-                        <div>
-                          <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                            Custom Banners
-                          </h4>
-                          <span className="text-[9px] text-slate-400 font-bold">
-                            Modify top offer banner and personalized gifts banner
-                          </span>
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-50 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🖼️</span>
+                          <div>
+                            <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                              Custom Banners
+                            </h4>
+                            <span className="text-[9px] text-slate-400 font-bold">
+                              Modify top offer banner and personalized gifts banner (uploads save automatically)
+                            </span>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (localConfig) {
+                              void saveStoreConfigSafely(
+                                localConfig,
+                                "Custom Banners saved permanently to Firebase!",
+                              );
+                            }
+                          }}
+                          className="px-4 py-1.5 bg-pink-600 hover:bg-pink-700 text-white text-[10px] font-black uppercase rounded-xl cursor-pointer shrink-0 transition"
+                        >
+                          Save Banners
+                        </button>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -7943,27 +8243,33 @@ export default function AdminPanel({
                             value={localConfig?.topOfferBannerImage || ""}
                             onChange={(e) => {
                               if (localConfig) {
-                                setLocalConfig({ ...localConfig, topOfferBannerImage: e.target.value });
+                                setLocalConfig({ ...localConfig, topOfferBannerImage: cleanImageUrl(e.target.value) });
                               }
                             }}
                             className="w-full text-xs font-semibold p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
                           />
                           <div>
                             <label className="text-[9px] text-slate-500 font-bold block mb-1">
-                              Upload Local Image
+                              Upload Local Image (Auto-saves)
                             </label>
                             <input
                               type="file"
                               accept="image/*"
                               onChange={async (e) => {
-                                if (e.target.files && e.target.files[0]) {
+                                const inputEl = e.currentTarget;
+                                const file = inputEl.files?.[0];
+                                if (file) {
                                   try {
-                                    const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                                    const base64 = await compressImageFile(file, 800, 0.6);
                                     if (localConfig) {
-                                      setLocalConfig({ ...localConfig, topOfferBannerImage: base64 });
+                                      const nextCfg = { ...localConfig, topOfferBannerImage: base64 };
+                                      setLocalConfig(nextCfg);
+                                      await saveStoreConfigSafely(nextCfg, "Top Offer Banner uploaded & saved permanently to Firebase!");
                                     }
                                   } catch (err) {
                                     notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
+                                  } finally {
+                                    inputEl.value = "";
                                   }
                                 }
                               }}
@@ -7983,27 +8289,33 @@ export default function AdminPanel({
                             value={localConfig?.personalizedGiftsBannerImage || ""}
                             onChange={(e) => {
                               if (localConfig) {
-                                setLocalConfig({ ...localConfig, personalizedGiftsBannerImage: e.target.value });
+                                setLocalConfig({ ...localConfig, personalizedGiftsBannerImage: cleanImageUrl(e.target.value) });
                               }
                             }}
                             className="w-full text-xs font-semibold p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
                           />
                           <div>
                             <label className="text-[9px] text-slate-500 font-bold block mb-1">
-                              Upload Local Image
+                              Upload Local Image (Auto-saves)
                             </label>
                             <input
                               type="file"
                               accept="image/*"
                               onChange={async (e) => {
-                                if (e.target.files && e.target.files[0]) {
+                                const inputEl = e.currentTarget;
+                                const file = inputEl.files?.[0];
+                                if (file) {
                                   try {
-                                    const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                                    const base64 = await compressImageFile(file, 800, 0.6);
                                     if (localConfig) {
-                                      setLocalConfig({ ...localConfig, personalizedGiftsBannerImage: base64 });
+                                      const nextCfg = { ...localConfig, personalizedGiftsBannerImage: base64 };
+                                      setLocalConfig(nextCfg);
+                                      await saveStoreConfigSafely(nextCfg, "Personalized Gifts Banner uploaded & saved permanently to Firebase!");
                                     }
                                   } catch (err) {
                                     notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
+                                  } finally {
+                                    inputEl.value = "";
                                   }
                                 }
                               }}
@@ -8023,27 +8335,33 @@ export default function AdminPanel({
                             value={localConfig?.giftsForHimBannerImage || ""}
                             onChange={(e) => {
                               if (localConfig) {
-                                setLocalConfig({ ...localConfig, giftsForHimBannerImage: e.target.value });
+                                setLocalConfig({ ...localConfig, giftsForHimBannerImage: cleanImageUrl(e.target.value) });
                               }
                             }}
                             className="w-full text-xs font-semibold p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
                           />
                           <div>
                             <label className="text-[9px] text-slate-500 font-bold block mb-1">
-                              Upload Local Image
+                              Upload Local Image (Auto-saves)
                             </label>
                             <input
                               type="file"
                               accept="image/*"
                               onChange={async (e) => {
-                                if (e.target.files && e.target.files[0]) {
+                                const inputEl = e.currentTarget;
+                                const file = inputEl.files?.[0];
+                                if (file) {
                                   try {
-                                    const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                                    const base64 = await compressImageFile(file, 800, 0.6);
                                     if (localConfig) {
-                                      setLocalConfig({ ...localConfig, giftsForHimBannerImage: base64 });
+                                      const nextCfg = { ...localConfig, giftsForHimBannerImage: base64 };
+                                      setLocalConfig(nextCfg);
+                                      await saveStoreConfigSafely(nextCfg, "Gifts for Him Banner uploaded & saved permanently to Firebase!");
                                     }
                                   } catch (err) {
                                     notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
+                                  } finally {
+                                    inputEl.value = "";
                                   }
                                 }
                               }}
@@ -8063,27 +8381,33 @@ export default function AdminPanel({
                             value={localConfig?.giftsForHerBannerImage || ""}
                             onChange={(e) => {
                               if (localConfig) {
-                                setLocalConfig({ ...localConfig, giftsForHerBannerImage: e.target.value });
+                                setLocalConfig({ ...localConfig, giftsForHerBannerImage: cleanImageUrl(e.target.value) });
                               }
                             }}
                             className="w-full text-xs font-semibold p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
                           />
                           <div>
                             <label className="text-[9px] text-slate-500 font-bold block mb-1">
-                              Upload Local Image
+                              Upload Local Image (Auto-saves)
                             </label>
                             <input
                               type="file"
                               accept="image/*"
                               onChange={async (e) => {
-                                if (e.target.files && e.target.files[0]) {
+                                const inputEl = e.currentTarget;
+                                const file = inputEl.files?.[0];
+                                if (file) {
                                   try {
-                                    const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                                    const base64 = await compressImageFile(file, 800, 0.6);
                                     if (localConfig) {
-                                      setLocalConfig({ ...localConfig, giftsForHerBannerImage: base64 });
+                                      const nextCfg = { ...localConfig, giftsForHerBannerImage: base64 };
+                                      setLocalConfig(nextCfg);
+                                      await saveStoreConfigSafely(nextCfg, "Gifts for Her Banner uploaded & saved permanently to Firebase!");
                                     }
                                   } catch (err) {
                                     notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
+                                  } finally {
+                                    inputEl.value = "";
                                   }
                                 }
                               }}
@@ -8103,27 +8427,33 @@ export default function AdminPanel({
                             value={localConfig?.cakesForHimBannerImage || ""}
                             onChange={(e) => {
                               if (localConfig) {
-                                setLocalConfig({ ...localConfig, cakesForHimBannerImage: e.target.value });
+                                setLocalConfig({ ...localConfig, cakesForHimBannerImage: cleanImageUrl(e.target.value) });
                               }
                             }}
                             className="w-full text-xs font-semibold p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
                           />
                           <div>
                             <label className="text-[9px] text-slate-500 font-bold block mb-1">
-                              Upload Local Image
+                              Upload Local Image (Auto-saves)
                             </label>
                             <input
                               type="file"
                               accept="image/*"
                               onChange={async (e) => {
-                                if (e.target.files && e.target.files[0]) {
+                                const inputEl = e.currentTarget;
+                                const file = inputEl.files?.[0];
+                                if (file) {
                                   try {
-                                    const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                                    const base64 = await compressImageFile(file, 800, 0.6);
                                     if (localConfig) {
-                                      setLocalConfig({ ...localConfig, cakesForHimBannerImage: base64 });
+                                      const nextCfg = { ...localConfig, cakesForHimBannerImage: base64 };
+                                      setLocalConfig(nextCfg);
+                                      await saveStoreConfigSafely(nextCfg, "Cakes for Him Banner uploaded & saved permanently to Firebase!");
                                     }
                                   } catch (err) {
                                     notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
+                                  } finally {
+                                    inputEl.value = "";
                                   }
                                 }
                               }}
@@ -8143,27 +8473,33 @@ export default function AdminPanel({
                             value={localConfig?.cakesForHerBannerImage || ""}
                             onChange={(e) => {
                               if (localConfig) {
-                                setLocalConfig({ ...localConfig, cakesForHerBannerImage: e.target.value });
+                                setLocalConfig({ ...localConfig, cakesForHerBannerImage: cleanImageUrl(e.target.value) });
                               }
                             }}
                             className="w-full text-xs font-semibold p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500"
                           />
                           <div>
                             <label className="text-[9px] text-slate-500 font-bold block mb-1">
-                              Upload Local Image
+                              Upload Local Image (Auto-saves)
                             </label>
                             <input
                               type="file"
                               accept="image/*"
                               onChange={async (e) => {
-                                if (e.target.files && e.target.files[0]) {
+                                const inputEl = e.currentTarget;
+                                const file = inputEl.files?.[0];
+                                if (file) {
                                   try {
-                                    const base64 = await compressImageFile(e.target.files[0], 800, 0.6);
+                                    const base64 = await compressImageFile(file, 800, 0.6);
                                     if (localConfig) {
-                                      setLocalConfig({ ...localConfig, cakesForHerBannerImage: base64 });
+                                      const nextCfg = { ...localConfig, cakesForHerBannerImage: base64 };
+                                      setLocalConfig(nextCfg);
+                                      await saveStoreConfigSafely(nextCfg, "Cakes for Her Banner uploaded & saved permanently to Firebase!");
                                     }
                                   } catch (err) {
                                     notifyAdmin("error", "Image upload failed. Try another JPG/PNG photo.");
+                                  } finally {
+                                    inputEl.value = "";
                                   }
                                 }
                               }}
@@ -8176,22 +8512,37 @@ export default function AdminPanel({
 
                     {/* RIGHT PANEL: CAKE CATEGORY DIRECT CUSTOMIZABILITY */}
                     <div className="bg-white rounded-3xl p-5 border border-slate-150 space-y-4 shadow-sm">
-                      <div className="flex items-center gap-2 border-b border-slate-50 pb-3">
-                        <span className="text-lg">🎂</span>
-                        <div>
-                          <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                            4 Main Cake Category Cards
-                          </h4>
-                          <span className="text-[9px] text-slate-400 font-bold">
-                            Customize name tags & backdrop banners for the 4
-                            core columns
-                          </span>
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-50 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🎂</span>
+                          <div>
+                            <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                              4 Main Cake Category Cards
+                            </h4>
+                            <span className="text-[9px] text-slate-400 font-bold">
+                              Customize name tags & backdrop banners for the 4
+                              core columns
+                            </span>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (localConfig) {
+                              void saveStoreConfigSafely(
+                                localConfig,
+                                "4 Main Cake Category Cards saved permanently to Firebase!",
+                              );
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[9.5px] font-black uppercase rounded-xl cursor-pointer shrink-0 transition"
+                        >
+                          Save Cakes
+                        </button>
                       </div>
 
                       <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
-                        {[0, 1, 2, 3].map((index) => {
-                          // Get dynamic values
+                        {(() => {
                           const defaultIds = [
                             "photo_cake",
                             "bento_cake",
@@ -8210,18 +8561,18 @@ export default function AdminPanel({
                             "Hammer Surprise",
                             "Fun Theme Designs",
                           ];
+                          const rawList = localConfig?.cakeSubcategories || [];
+                          const normalizedList: StoreConfigItem[] = [0, 1, 2, 3].map(
+                            (i) =>
+                              rawList[i] || {
+                                id: defaultIds[i],
+                                name: defaultNames[i],
+                                image: "",
+                                tag: defaultTags[i],
+                              },
+                          );
 
-                          const list = [
-                            ...(localConfig?.cakeSubcategories || []),
-                          ];
-                          const item = list[index] || {
-                            id: defaultIds[index],
-                            name: defaultNames[index],
-                            image: "",
-                            tag: defaultTags[index],
-                          };
-
-                          return (
+                          return normalizedList.map((item, index) => (
                             <div
                               key={index}
                               className="p-3 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-2.5"
@@ -8245,7 +8596,7 @@ export default function AdminPanel({
                                     value={item.name}
                                     placeholder={defaultNames[index]}
                                     onChange={(e) => {
-                                      const nextList = [...list];
+                                      const nextList = [...normalizedList];
                                       nextList[index] = {
                                         ...item,
                                         name: e.target.value,
@@ -8269,7 +8620,7 @@ export default function AdminPanel({
                                     value={item.tag}
                                     placeholder={defaultTags[index]}
                                     onChange={(e) => {
-                                      const nextList = [...list];
+                                      const nextList = [...normalizedList];
                                       nextList[index] = {
                                         ...item,
                                         tag: e.target.value,
@@ -8307,7 +8658,7 @@ export default function AdminPanel({
                                       value={item.image}
                                       placeholder="https://images.unsplash.com/..."
                                       onChange={(e) => {
-                                        const nextList = [...list];
+                                        const nextList = [...normalizedList];
                                         nextList[index] = {
                                           ...item,
                                           image: cleanImageUrl(e.target.value),
@@ -8326,11 +8677,9 @@ export default function AdminPanel({
                                         type="file"
                                         accept="image/*"
                                         onChange={async (e) => {
-                                          if (
-                                            e.target.files &&
-                                            e.target.files[0]
-                                          ) {
-                                            const file = e.target.files[0];
+                                          const inputEl = e.currentTarget;
+                                          const file = inputEl.files?.[0];
+                                          if (file) {
                                             try {
                                               const base64 =
                                                 await compressImageFile(
@@ -8338,25 +8687,33 @@ export default function AdminPanel({
                                                   400,
                                                   0.5,
                                                 );
-                                              const nextList = [...list];
+                                              const nextList = [...normalizedList];
                                               nextList[index] = {
                                                 ...item,
                                                 image: base64,
                                               };
                                               if (localConfig) {
-                                                setLocalConfig({
+                                                const nextCfg = {
                                                   ...localConfig,
                                                   cakeSubcategories: nextList,
-                                                });
+                                                };
+                                                setLocalConfig(nextCfg);
+                                                await saveStoreConfigSafely(
+                                                  nextCfg,
+                                                  `${item.name || defaultNames[index]} photo uploaded & saved permanently!`,
+                                                );
                                               }
                                             } catch (err) {
                                               console.error(
                                                 "Subcategory image compression failed:",
                                                 err,
                                               );
-                                              alert(
+                                              notifyAdmin(
+                                                "error",
                                                 "Image upload failed. The photo might be too large or unsupported (HEIC). Please try another photo.",
                                               );
+                                            } finally {
+                                              inputEl.value = "";
                                             }
                                           }
                                         }}
@@ -8367,8 +8724,8 @@ export default function AdminPanel({
                                 </div>
                               </div>
                             </div>
-                          );
-                        })}
+                          ));
+                        })()}
                       </div>
                     </div>
                     {/* YOUR TASTE PICK FLAVORS */}
@@ -8393,6 +8750,8 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      onAutoSaveConfig={(cfg, msg) => saveStoreConfigSafely(cfg, msg)}
+                      onNotify={notifyAdmin}
                       products={products}
                     />
 
@@ -8413,6 +8772,8 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      onAutoSaveConfig={(cfg, msg) => saveStoreConfigSafely(cfg, msg)}
+                      onNotify={notifyAdmin}
                       accentColor="pink"
                       products={products}
                     />
@@ -8434,6 +8795,8 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      onAutoSaveConfig={(cfg, msg) => saveStoreConfigSafely(cfg, msg)}
+                      onNotify={notifyAdmin}
                       accentColor="rose"
                       products={products}
                     />
@@ -8455,6 +8818,8 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      onAutoSaveConfig={(cfg, msg) => saveStoreConfigSafely(cfg, msg)}
+                      onNotify={notifyAdmin}
                       accentColor="teal"
                       products={products}
                     />
@@ -8476,6 +8841,8 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      onAutoSaveConfig={(cfg, msg) => saveStoreConfigSafely(cfg, msg)}
+                      onNotify={notifyAdmin}
                       accentColor="indigo"
                       products={products}
                     />
@@ -8497,6 +8864,8 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      onAutoSaveConfig={(cfg, msg) => saveStoreConfigSafely(cfg, msg)}
+                      onNotify={notifyAdmin}
                       accentColor="blue"
                       products={products}
                     />
@@ -8518,6 +8887,8 @@ export default function AdminPanel({
                       ]}
                       localConfig={localConfig}
                       setLocalConfig={setLocalConfig}
+                      onAutoSaveConfig={(cfg, msg) => saveStoreConfigSafely(cfg, msg)}
+                      onNotify={notifyAdmin}
                       accentColor="indigo"
                       products={products}
                     />
@@ -9045,17 +9416,33 @@ export default function AdminPanel({
 
                   {/* Social Media Config Container */}
                   <div className="bg-white rounded-3xl p-6 border border-slate-150 shadow-sm space-y-4 text-left">
-                    <div className="flex items-center gap-2.5 border-b border-rose-50 pb-3">
-                      <span className="text-xl">🌐</span>
-                      <div>
-                        <h4 className="text-[11.5px] font-black uppercase tracking-wider text-slate-850">
-                          Social Media & Links Integration
-                        </h4>
-                        <span className="text-[9.5px] text-slate-400 font-bold">
-                          Configure external links that will appear in the
-                          footer. Empty fields will be hidden.
-                        </span>
+                    <div className="flex items-center justify-between gap-2.5 border-b border-rose-50 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl">🌐</span>
+                        <div>
+                          <h4 className="text-[11.5px] font-black uppercase tracking-wider text-slate-850">
+                            Social Media & Links Integration
+                          </h4>
+                          <span className="text-[9.5px] text-slate-400 font-bold">
+                            Configure external links that will appear in the
+                            footer. Empty fields will be hidden.
+                          </span>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (localConfig) {
+                            void saveStoreConfigSafely(
+                              localConfig,
+                              "Social media links saved permanently to Firebase!",
+                            );
+                          }
+                        }}
+                        className="px-4 py-1.5 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase rounded-xl cursor-pointer shrink-0 transition"
+                      >
+                        Save Social Links
+                      </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -9171,34 +9558,51 @@ export default function AdminPanel({
 
                   <div className="bg-white rounded-3xl p-5 border border-slate-200">
                     <div className="flex flex-col gap-5">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-black text-slate-800 uppercase">
-                          Select Category to Edit Reviews
-                        </label>
-                        <select
-                          value={reviewSelectedCategory}
-                          onChange={(e) =>
-                            setReviewSelectedCategory(e.target.value)
-                          }
-                          className="w-full sm:w-1/2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 outline-none"
-                        >
-                          <option value="default">
-                            ⭐ Default Reviews (Fallback)
-                          </option>
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              📁 {cat.name}
+                      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                        <div className="flex flex-col gap-2 flex-1">
+                          <label className="text-xs font-black text-slate-800 uppercase">
+                            Select Category to Edit Reviews
+                          </label>
+                          <select
+                            value={reviewSelectedCategory}
+                            onChange={(e) =>
+                              setReviewSelectedCategory(e.target.value)
+                            }
+                            className="w-full sm:w-2/3 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                          >
+                            <option value="default">
+                              ⭐ Default Reviews (Fallback)
                             </option>
-                          ))}
-                        </select>
+                            {categories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                📁 {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (localConfig) {
+                              void saveStoreConfigSafely(
+                                localConfig,
+                                "Category reviews saved permanently to Firebase!",
+                              );
+                            }
+                          }}
+                          className="px-5 py-2.5 bg-pink-600 hover:bg-pink-700 text-white text-xs font-black uppercase rounded-xl cursor-pointer shadow-sm transition shrink-0"
+                        >
+                          Save Reviews to Firebase
+                        </button>
                       </div>
 
                       <div className="space-y-6">
                         {(
-                          storeConfig?.categoryReviews?.[
+                          localConfig?.categoryReviews?.[
                             reviewSelectedCategory
                           ] ||
-                          storeConfig?.categoryReviews?.["default"] ||
+                          localConfig?.categoryReviews?.["default"] ||
                           []
                         ).map((rev, idx) => (
                           <div
@@ -9213,30 +9617,23 @@ export default function AdminPanel({
                                 type="text"
                                 value={rev.name}
                                 onChange={(e) => {
-                                  const newConfig = { ...storeConfig! };
-                                  if (!newConfig.categoryReviews)
-                                    newConfig.categoryReviews = { default: [] };
-
-                                  // Clone reviews if modifying a new category for the first time
-                                  if (
-                                    !newConfig.categoryReviews[
-                                      reviewSelectedCategory
-                                    ]
-                                  ) {
-                                    newConfig.categoryReviews[
-                                      reviewSelectedCategory
-                                    ] = JSON.parse(
-                                      JSON.stringify(
-                                        newConfig.categoryReviews["default"],
-                                      ),
-                                    );
-                                  }
-
-                                  newConfig.categoryReviews[
-                                    reviewSelectedCategory
-                                  ][idx].name = e.target.value;
-                                  if (onUpdateStoreConfig)
-                                    onUpdateStoreConfig(newConfig);
+                                  if (!localConfig) return;
+                                  const existingReviews =
+                                    localConfig.categoryReviews || { default: [] };
+                                  const sourceList =
+                                    existingReviews[reviewSelectedCategory] ||
+                                    existingReviews["default"] ||
+                                    [];
+                                  const nextCategoryList = sourceList.map((r, rIdx) =>
+                                    rIdx === idx ? { ...r, name: e.target.value } : { ...r },
+                                  );
+                                  setLocalConfig({
+                                    ...localConfig,
+                                    categoryReviews: {
+                                      ...existingReviews,
+                                      [reviewSelectedCategory]: nextCategoryList,
+                                    },
+                                  });
                                 }}
                                 className="bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 w-full"
                                 placeholder="Reviewer Name"
@@ -9251,34 +9648,25 @@ export default function AdminPanel({
                                   max="5"
                                   value={rev.rating}
                                   onChange={(e) => {
+                                    if (!localConfig) return;
                                     let val = parseInt(e.target.value) || 5;
                                     val = Math.max(1, Math.min(5, val));
-                                    const newConfig = { ...storeConfig! };
-                                    if (!newConfig.categoryReviews)
-                                      newConfig.categoryReviews = {
-                                        default: [],
-                                      };
-
-                                    // Clone reviews if modifying a new category for the first time
-                                    if (
-                                      !newConfig.categoryReviews[
-                                        reviewSelectedCategory
-                                      ]
-                                    ) {
-                                      newConfig.categoryReviews[
-                                        reviewSelectedCategory
-                                      ] = JSON.parse(
-                                        JSON.stringify(
-                                          newConfig.categoryReviews["default"],
-                                        ),
-                                      );
-                                    }
-
-                                    newConfig.categoryReviews[
-                                      reviewSelectedCategory
-                                    ][idx].rating = val;
-                                    if (onUpdateStoreConfig)
-                                      onUpdateStoreConfig(newConfig);
+                                    const existingReviews =
+                                      localConfig.categoryReviews || { default: [] };
+                                    const sourceList =
+                                      existingReviews[reviewSelectedCategory] ||
+                                      existingReviews["default"] ||
+                                      [];
+                                    const nextCategoryList = sourceList.map((r, rIdx) =>
+                                      rIdx === idx ? { ...r, rating: val } : { ...r },
+                                    );
+                                    setLocalConfig({
+                                      ...localConfig,
+                                      categoryReviews: {
+                                        ...existingReviews,
+                                        [reviewSelectedCategory]: nextCategoryList,
+                                      },
+                                    });
                                   }}
                                   className="bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 w-20"
                                 />
@@ -9287,30 +9675,23 @@ export default function AdminPanel({
                             <textarea
                               value={rev.text}
                               onChange={(e) => {
-                                const newConfig = { ...storeConfig! };
-                                if (!newConfig.categoryReviews)
-                                  newConfig.categoryReviews = { default: [] };
-
-                                // Clone reviews if modifying a new category for the first time
-                                if (
-                                  !newConfig.categoryReviews[
-                                    reviewSelectedCategory
-                                  ]
-                                ) {
-                                  newConfig.categoryReviews[
-                                    reviewSelectedCategory
-                                  ] = JSON.parse(
-                                    JSON.stringify(
-                                      newConfig.categoryReviews["default"],
-                                    ),
-                                  );
-                                }
-
-                                newConfig.categoryReviews[
-                                  reviewSelectedCategory
-                                ][idx].text = e.target.value;
-                                if (onUpdateStoreConfig)
-                                  onUpdateStoreConfig(newConfig);
+                                if (!localConfig) return;
+                                const existingReviews =
+                                  localConfig.categoryReviews || { default: [] };
+                                const sourceList =
+                                  existingReviews[reviewSelectedCategory] ||
+                                  existingReviews["default"] ||
+                                  [];
+                                const nextCategoryList = sourceList.map((r, rIdx) =>
+                                  rIdx === idx ? { ...r, text: e.target.value } : { ...r },
+                                );
+                                setLocalConfig({
+                                  ...localConfig,
+                                  categoryReviews: {
+                                    ...existingReviews,
+                                    [reviewSelectedCategory]: nextCategoryList,
+                                  },
+                                });
                               }}
                               className="bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 w-full resize-none h-20"
                               placeholder="Review Text"
@@ -9408,7 +9789,10 @@ export default function AdminPanel({
                                     onConfirm: () => onDeleteRider(rider.id),
                                   });
                                 } else {
-                                  alert("Deletion not configured.");
+                                  notifyAdmin(
+                                    "error",
+                                    "Rider deletion handler is not configured.",
+                                  );
                                 }
                               }}
                               className="p-2 border border-red-100 hover:bg-red-50 text-red-500 rounded-xl transition cursor-pointer shrink-0"

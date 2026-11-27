@@ -12,6 +12,8 @@ interface SubcategoryEditorProps {
   defaultImages: string[];
   localConfig: StoreConfig;
   setLocalConfig: (config: StoreConfig) => void;
+  onAutoSaveConfig?: (config: StoreConfig, successMsg?: string) => Promise<void> | void;
+  onNotify?: (type: "saving" | "success" | "error", text: string) => void;
   accentColor?: "pink" | "teal" | "indigo" | "blue" | "emerald" | "rose";
   products?: Product[];
 }
@@ -27,10 +29,13 @@ export default function SubcategoryEditor({
   defaultImages,
   localConfig,
   setLocalConfig,
+  onAutoSaveConfig,
+  onNotify,
   accentColor = "pink",
   products = [],
 }: SubcategoryEditorProps) {
   const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [isSavingGroup, setIsSavingGroup] = React.useState(false);
   const rawList = (localConfig[configKey] as StoreConfigItem[]) || [];
   const list = defaultIds.map((defId, idx) => {
     const existing = rawList[idx] || rawList.find((item) => item?.id === defId);
@@ -108,30 +113,36 @@ export default function SubcategoryEditor({
 
   const colors = colorClasses[accentColor];
 
-  const updateItem = (index: number, updates: Partial<StoreConfigItem>) => {
-    const nextList = [...list];
-    
-    // Fill in default values if the item is being edited for the first time
-    if (!nextList[index]) {
+  const buildConfigForUpdate = (
+    index?: number,
+    updates?: Partial<StoreConfigItem>,
+  ): StoreConfig => {
+    const nextList = list.map((item) => ({
+      ...item,
+      image: cleanImageUrl(item.image || ""),
+    }));
+
+    if (typeof index === "number" && updates) {
+      if (!nextList[index]) {
+        nextList[index] = {
+          id: defaultIds[index],
+          name: defaultNames[index],
+          image: defaultImages[index] || "",
+          tag: defaultTags[index],
+          productIds: [],
+        };
+      }
+      const cleanedUpdates = { ...updates };
+      if (cleanedUpdates.image !== undefined) {
+        cleanedUpdates.image = cleanImageUrl(cleanedUpdates.image);
+      }
       nextList[index] = {
+        ...nextList[index],
         id: defaultIds[index],
-        name: defaultNames[index],
-        image: defaultImages[index] || "",
-        tag: defaultTags[index],
-        productIds: [],
+        ...cleanedUpdates,
       };
     }
-    
-    const cleanedUpdates = { ...updates };
-    if (cleanedUpdates.image !== undefined) {
-      cleanedUpdates.image = cleanImageUrl(cleanedUpdates.image);
-    }
 
-    nextList[index] = {
-      ...nextList[index],
-      id: defaultIds[index],
-      ...cleanedUpdates,
-    };
     const newConfig: StoreConfig = { ...localConfig, [configKey]: nextList };
     if (configKey === "tastePickSubcategories") {
       newConfig.tastePickCategories = nextList.map((item) => {
@@ -140,25 +151,58 @@ export default function SubcategoryEditor({
           id: item.id,
           name: item.name,
           image: cleanImageUrl(item.image),
-          productIds: existingCat?.productIds || [],
+          productIds: item.productIds?.length ? item.productIds : existingCat?.productIds || [],
         };
       });
     }
+    return newConfig;
+  };
+
+  const updateItem = (index: number, updates: Partial<StoreConfigItem>) => {
+    const newConfig = buildConfigForUpdate(index, updates);
     setLocalConfig(newConfig);
+    return newConfig;
+  };
+
+  const handleSaveGroup = async () => {
+    if (!onAutoSaveConfig) return;
+    setIsSavingGroup(true);
+    try {
+      const sanitizedConfig = buildConfigForUpdate();
+      setLocalConfig(sanitizedConfig);
+      await onAutoSaveConfig(
+        sanitizedConfig,
+        `${title} saved permanently to Firebase!`,
+      );
+    } finally {
+      setIsSavingGroup(false);
+    }
   };
 
   return (
     <div className="bg-white rounded-3xl p-5 border border-slate-150 space-y-4 shadow-sm">
-      <div className="flex items-center gap-2 border-b border-slate-50 pb-3">
-        <span className="text-lg">{icon}</span>
-        <div>
-          <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-            {title}
-          </h4>
-          <span className="text-[9px] text-slate-400 font-bold">
-            {description}
-          </span>
+      <div className="flex items-start justify-between gap-2 border-b border-slate-50 pb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-lg shrink-0">{icon}</span>
+          <div className="min-w-0">
+            <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+              {title}
+            </h4>
+            <span className="text-[9px] text-slate-400 font-bold block">
+              {description}
+            </span>
+          </div>
         </div>
+        {onAutoSaveConfig && (
+          <button
+            type="button"
+            disabled={isSavingGroup}
+            onClick={handleSaveGroup}
+            className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white text-[9.5px] font-black uppercase rounded-xl shrink-0 cursor-pointer transition disabled:opacity-50"
+          >
+            {isSavingGroup ? "Saving..." : "Save Group"}
+          </button>
+        )}
       </div>
       {uploadError && (
         <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center justify-between gap-2">
@@ -243,21 +287,29 @@ export default function SubcategoryEditor({
                         type="file"
                         accept="image/*"
                         onChange={async (e) => {
-                          if (
-                            e.target.files &&
-                            e.target.files[0]
-                          ) {
-                            const file = e.target.files[0];
+                          const inputEl = e.target;
+                          if (inputEl.files && inputEl.files[0]) {
+                            const file = inputEl.files[0];
                             try {
                               setUploadError(null);
                               const base64 = await compressImageFile(file, 480, 0.55);
-                              updateItem(index, { image: base64 });
+                              const nextCfg = updateItem(index, { image: base64 });
+                              if (onAutoSaveConfig) {
+                                await onAutoSaveConfig(
+                                  nextCfg,
+                                  `${title} (#${index + 1}) image uploaded & saved permanently to Firebase!`,
+                                );
+                              }
                             } catch (err) {
                               console.error(
                                 "Subcategory image compression failed:",
                                 err
                               );
-                              setUploadError("Failed to process image. Try a smaller JPG/PNG file.");
+                              const errMsg = "Failed to process image. Try a smaller JPG/PNG file.";
+                              setUploadError(errMsg);
+                              onNotify?.("error", errMsg);
+                            } finally {
+                              inputEl.value = "";
                             }
                           }
                         }}

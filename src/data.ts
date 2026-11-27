@@ -77,20 +77,11 @@ export const ACCESSORY_ADDONS: Product[] = [
 
 import { Product, Category } from './types';
 
-// @ts-ignore
-import heroImage from './assets/images/hero_gifts_banner_1780500446361.png';
-// @ts-ignore
-import cakeImage from './assets/images/cakes_category_img_1780500466165.png';
-// @ts-ignore
-import flowerImage from './assets/images/flowers_category_img_1780500483282.png';
-// @ts-ignore
-import personalizedImage from './assets/images/personalized_gifts_img_1780500500855.png';
-
 export const GENERATED_IMAGES = {
-  hero: heroImage,
-  cake: cakeImage,
-  flower: flowerImage,
-  personalized: personalizedImage,
+  hero: '/images/hero_gifts_banner.png',
+  cake: '/images/cakes_category.png',
+  flower: '/images/flowers_category.png',
+  personalized: '/images/personalized_gifts.png',
 };
 
 export const CATEGORIES: Category[] = [
